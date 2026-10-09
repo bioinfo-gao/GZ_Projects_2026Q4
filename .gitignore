@@ -1,0 +1,353 @@
+# ==========================================
+# 1. 优先排除所有内容 (全局兜底)
+# ==========================================
+# 如果项目非常大，通常建议只追踪代码。以下是具体的排除规则：
+# ==========================================
+# 强力拦截所有存放在代码目录下的生物数据库、参考基因组以及外部大存储盘挂载
+/Work_bio//references/
+/home/gao/projects_2026H1/Utilities/Code/*
+testfile
+*.pyc
+*.pyo
+*.pyd
+*Summary.csv
+*summary.csv
+*Results.csv
+*results.csv
+
+
+# ==========================================
+# 2. Nextflow & nf-core 运行过程文件 (核心排除)
+# ==========================================
+.nextflow/
+.nextflow.log*
+work/
+bin/
+*/work/*
+*-nf-*
+*-nf-*
+*.nf
+*.nextflow*
+# Singularity/Apptainer container images & cache (large, auto-pulled, never in git)
+*.img
+*.sif
+singularity_cache/
+**/singularity_cache/
+.singularity/
+*.yml
+*/modules/*
+*.html
+# 报告类 HTML 永远正常提交（user directive 2026-08-15）—— 它们是交付物的一部分，
+# 且体积可控（本仓库现存最大 multiqc 8.4 MB / igv 6.0 MB，均低于 .githooks/pre-commit 的
+# 10 MB 拦截线）。**新增此类文件前先确认 <10 MB，否则 hook 会拦下整个提交。**
+# ⚠ 生效范围：negation 只能救**文件级**排除。以下是**目录级**排除，git 不会进入，
+#   本行到不了里面 —— work/(24) 与 **/output_results/(97) 属期望行为（临时/可再生产物）；
+#   但 QC/(106) 也在此列，故旧项目交付目录里位于 QC/ 下的 multiqc 仍未被跟踪。
+!**/multiqc*.html
+!**/*igv*.html
+*.log
+*.json
+*.gz
+# ==========================================
+# 3. 测序原始数据与大型中间结果 (重点排除)
+# ==========================================
+# --- 原始数据 ---
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.fast5
+*.pod5
+*_1.fq.gz
+*_2.fq.gz
+
+# --- 对比与索引文件 (BAM/SAM/CRAM/BAI/Index) ---
+*.bam
+*.bai
+*.sam
+*.cram
+*.crai
+*.bw
+*.bigWig
+*.bt2
+*.fai
+*.tbi
+*.index*
+*.fasta
+*.fa
+*.gz
+*.stats
+*.bam.bai
+*.dat
+*/SortMeRNA_issue/*
+
+# --- nf-core/rnaseq & 组装特定输出 ---
+*.transcripts.gtf
+*.gtf
+*.gff*
+*.bed
+*.coverage.gtf
+*.merged.gtf
+*.bam.flagstat
+*.bam.idxstats
+*.bam.stats
+salmon_quant/
+star_salmon/
+stringtie/
+samtools_stats/
+multiqc_data/
+
+# ==========================================
+# 4. 项目特定的输出目录 (按你提供的路径)
+# ==========================================
+2026_Item6_UIC_02122603/output_nf_fast/
+*/Final_Filtered_Results/
+**/output_results/
+13_Ellen_knockin_wgs/OLD/
+*/output/
+*/conda_envs/
+conda_envs/
+.conda/
+venv/
+
+# QC folders (root and nested)
+QC/
+*/QC/
+
+# gene and genome folders (root and nested)
+Genes/
+*/Genes/
+
+# data directory (added to fix sparse-checkout issue)
+local_data/
+local/
+# data/ # 这个非常重要，用来同步的 <<==============
+
+# ==========================================
+# 4. IDE and Editor Settings (Local Only)
+# ==========================================
+.vscode/
+
+# ==========================================
+# 5. 临时文件、日志与备份
+# ==========================================
+*.log
+*.err
+*.tmp
+*.command*
+*.exitcode
+*/execution_trace_2026*
+tmp/
+temp/
+local_tmp/
+rubbish/
+junk/
+bak/
+bac/
+pilot/
+pilot_work/
+pilot_results/
+# BACKUP/  # 这个非常重要，是用来同步的 <<==============
+# Backup/  # 这个非常重要，是用来同步的 <<==============
+# backup/  # 这个非常重要，是用来同步的 <<==============
+# BACK/    # 这个非常重要，是用来同步的 <<==============
+# Back/    # 这个非常重要，是用来同步的 <<==============
+# back/    # 这个非常重要，是用来同步的 <<==============
+local_bak/
+local_backup/
+local_bac/
+download/
+downloads/
+__pycache__/
+.ipynb_checkpoints/
+.snakemake/
+*/QC/
+
+
+
+
+# ==========================================
+# 6. 压缩包与二进制大文件
+# ==========================================
+*.zip
+*.tar.gz
+*.7z
+*.rar
+*.iso
+*.h5
+*.h5ad
+*.h5seurat
+*x86_64.sh
+
+# ==========================================
+# 7. 操作系统与编辑器文件
+# ==========================================
+.DS_Store
+Thumbs.db
+.RData
+.Rhistory
+.Rproj.user/
+.vscode/
+
+# ==========================================
+# 8. 数据库文件和大型数据, 地理文件， license 文件
+# ==========================================
+*bad*
+*.pdb
+*.db
+*.sql
+*.sqlite
+*.pkl
+*.cif
+*LICENSE*
+*license*
+*.geojson
+*_db*
+
+# ==========================================
+# 9. js and css
+# ==========================================
+*.js
+*.css
+
+# ==========================================
+# 8. 个人设置垃圾位置
+# ==========================================
+*bad*
+.copy*
+
+# 9. 特例白名单 (明确需要 Git 追踪的小型文件)
+# ==========================================
+# 使用 ! 符号确保这些目录及其内容不被上述规则过滤
+!2026_Item6_UIC_02122603/results/
+!2026_Item6_UIC_02122603/scripts/
+!2026_Item6_UIC_02122603/config/data/
+
+
+
+# 项目14 sarek 输出与中间件（大、可重生，永不进 git）—— 目录级，覆盖所有未来文件
+14_geneedit_lats12_wgs/output_A/
+14_geneedit_lats12_wgs/output_B/
+14_geneedit_lats12_wgs/work_A/
+14_geneedit_lats12_wgs/work_B/
+14_geneedit_lats12_wgs/logs/
+14_geneedit_lats12_wgs/refs/hybrid/
+29_Keqiang_Xie_wgs_5_vectors/refs/hybrid/
+# bwa-mem2 索引后缀（2026-08-12 补：hybrid ref 的 .bwt.2bit.64 9.4G / .0123 5.9G / .pac 739M
+#   不被 *.fa/*.fai 覆盖，差点被提交。索引可由 5_build_hybrid_ref.sh 重建，永不入库）
+*.bwt.2bit.64
+*.0123
+*.pac
+*.amb
+*.ann
+
+# 15_mag_setup: nf-core/mag 5.4.2 test-profile validation scratch (keep out of VCS)
+15_mag_setup/test_run/results/
+15_mag_setup/test_run/*.log
+
+# sFTP client credentials (never commit)
+client_credentials.env
+13_Ellen_knockin_wgs/custom_research_report_20260711/qc/
+13_Ellen_knockin_wgs/analysis/**/*.mosdepth.global.dist.txt
+
+# 17_Daniel_Mendes 大型可再生中间/输出（HUMAnN 输出 167G + taxprofiler nextflow work 91G，永不进 git）
+17_Daniel_Mendes_gut_metagenomics/humann_out/
+17_Daniel_Mendes_gut_metagenomics/work_taxprofiler/
+
+# 通用：nextflow work 目录（任意 work_ 前缀）与 HUMAnN 输出，任意项目层级
+humann_out/
+**/humann_out/
+work_taxprofiler/
+**/work_taxprofiler/
+work_*/
+**/work_*/
+# Kraken2/Bracken 数据库与 metaphlan bowtie2out 大文件
+*.k2d
+*.bowtie2out.txt
+*_bowtie2_aligned.tsv
+*.ffn
+
+# ==========================================
+# 7. 大型数据表（交付目录/HUMAnN）—— pre-commit hook 按大小兜底(.githooks/pre-commit)
+# ==========================================
+# HUMAnN gene-family 表恒为数十 MB，任何位置都不入库
+*genefamilies*.tsv
+*_genefamilies.tsv
+# 交付目录里的大 HUMAnN/丰度数据表（小的 composition/differential/distance 表仍追踪）
+custom_research_report_*/**/genefamilies*.tsv
+custom_research_report_*/**/*_pathabundance.tsv
+
+
+# ==========================================
+# 8. 临时文件、日志与备份
+# ==========
+**/output_results_mag/Annotation/Prokka/*
+# nf-core/mag GenomeBinning：bins/unbinned contigs + BUSCO/CheckM2/DASTool 原始 QC 产物(合计13G+)恒为大文件，只留 bin_summary.tsv
+**/output_results_mag/GenomeBinning/*
+!**/output_results_mag/GenomeBinning/bin_summary.tsv
+
+# /21_Daniel_Mendes_gut_meta_redesign/
+
+# full gene-level TPM expression matrix, regenerable from pipeline, >10MB
+**/All_sample_gene_tpm.tsv
+# 重跑归档守卫的中间落点：整理进具名版本目录后即可丢弃，不入库
+26_Ellen_MTTH_junction_sequences/superseded_for_comparison/_auto/
+
+# proj31 CNVkit 大中间产物（12-17MB，超过 pre-commit 的 10MB 上限；可由 .cns/.cnr 之外的产物重生成）
+31_Yeji_Park_RPE1_CRISPR_dual_cut_wgs/analysis/**/cnvkit/reference.cnn
+31_Yeji_Park_RPE1_CRISPR_dual_cut_wgs/analysis/**/cnvkit/*.targetcoverage.cnn
+31_Yeji_Park_RPE1_CRISPR_dual_cut_wgs/analysis/**/cnvkit/*.markdup.cnr
+
+# --- pre-commit hook 自动追加 2026-08-25 ---
+/31_Yeji_Park_RPE1_CRISPR_dual_cut_wgs/custom_research_report_20260825/.round2
+
+# --- pre-commit hook 自动追加 2026-08-27 ---
+/31_Yeji_Park_RPE1_CRISPR_dual_cut_wgs/custom_research_report_20260827/.round2
+
+# 交付包构建状态标记（我方内部记账，绝不进交付目录、也不入库）
+.delivery_round2_*
+
+# --- proj34 exon-splicing pipeline dev（2026-09-09）---
+# 第三方工具源码克隆：leafcutter 11M 且自带 .git，由 scripts/0c_fix_leafcutter.sh 重装
+34_exon_splicing_pipeline_dev/tools/
+**/tools/leafcutter/
+# 参考对象：DEXSeq exonicParts .rds 15M，由 GENCODE vM35 GTF 重生成（5_run_dexseq.R）
+34_exon_splicing_pipeline_dev/data/ref/
+
+# --- pre-commit hook 自动追加 2026-10-07 ---
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S01_DLD1_pop/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S01_DLD1_pop/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S02_DLD1_c1_ctrl/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S02_DLD1_c1_ctrl/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S03_DLD1_c2_ctrl/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S03_DLD1_c2_ctrl/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S04_DLD1_c3_dox/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S04_DLD1_c3_dox/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S05_DLD1_c4_dox/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S05_DLD1_c4_dox/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S06_GM12878_pop/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S06_GM12878_pop/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S07_GM12878_c5/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S07_GM12878_c5/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S08_GM12878_c6/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S08_GM12878_c6/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S09_GM12878_c7/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S09_GM12878_c7/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S10_GM12878_c8/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S10_GM12878_c8/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S11_MutuI_pop/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S11_MutuI_pop/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S12_MutuI_c9/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S12_MutuI_c9/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S13_MutuI_c10/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S13_MutuI_c10/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S14_MutuI_c11/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S14_MutuI_c11/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S15_DG75_pop/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S15_DG75_pop/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S16_DG75_c12/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S16_DG75_c12/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S17_DG75_c13/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S17_DG75_c13/workspace/svLocusGraph.bin
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S18_DG75_c14/workspace/svHyGen/candidateSV.0000.vcf
+/41_Vedict_18_wgs/analysis/sv/manta_gw/S18_DG75_c14/workspace/svLocusGraph.bin
