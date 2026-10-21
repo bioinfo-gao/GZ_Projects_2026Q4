@@ -47,3 +47,36 @@ Best regards,
 Zhen Gao, PhD
 Principal Bioinformatics Scientist
 Athenomics
+
+============
+
+Hi Dr. Li and Xin,
+
+To be fully transparent, this revised project will take a minimum of 16-20 hours to complete properly. 
+
+That said, I know your funding is very tight right now. Because I really want to help you get this done, I’ve decided to go ahead and complete the analysis to my usual high standard. We can lock in your current budget cap of $840. If you find any extra room in your budget later to help cover the remaining hours, I would greatly appreciate it, but I leave that completely up to you.
+
+Let me know if this is acceptable.
+
+Best,
+
+Zhen
+
+
+=================
+Hi Zhen,
+
+Thank you so much for your understanding and flexibility with our budget. We truly appreciate your willingness to accommodate our funding constraints while maintaining the quality of the analysis.
+To make sure we're on the same page, could you confirm that the $840 budget cap would cover the full scope of the revised analysis (approximately 16–20 hours of work), rather than limiting the analysis to the hours covered by that amount?
+Once the analysis is complete, we'd also love to schedule a meeting with you to review the results, discuss the findings, and address any questions together.
+Thank you again for your generosity and support. We really appreciate your efforts and look forward to seeing the results!
+Best,
+Xin
+=================
+Hi Xin,
+
+Yes, the $840 budget cap will cover the full scope of the revised project (approximately 16–20 hours of work). This includes the complete Analysis 1 pipeline: the junction-level analysis and read rescue for the 8 samples.
+
+Best,
+
+Zhen
