@@ -62,3 +62,5 @@
 ## 更新记录
 
 - 2026-10-14 — 创建本文，补入项目 41 回信阶段（2026-10-13）的操作、核对与已知坑。
+- 2026-10-22 — 用户以“自主完成P42分析全过程”授权正式启动 Analysis 1，并最终将范围定为 S01–S10（显式包含 S02、S03、S10；排除 Mutu I 与 DG75）。新建的 `docs/P42_research_plan_and_review_1022.md` 与 `scripts/0_sample_table.csv` 是本轮运行的计划与样本 SSOT；本文件保留 10-14 的历史记录，不将旧的“尚未启动”状态改写为当时已启动。
+- 2026-10-22 — 正式 read-rescue 完成：P41 的 target-evidence 表按“至少 1 条 non-duplicate、两段 MAPQ >=20 的 split read”规则得到 179 个候选（S01–S10）；每个候选均重新提取到至少一个原始支持 fragment，并以 `bwa-mem2 mem -a -Y` 独立重比对。结果为 4 个 multi-fragment supported、173 个 single-fragment supported、2 个 not reconstructed、0 个 ambiguous/not evaluable。正式输出：`analysis/20261022/results/`；准备供用户审阅的补充交付：`custom_research_report_supplementary_20261022/`，尚未发送。
