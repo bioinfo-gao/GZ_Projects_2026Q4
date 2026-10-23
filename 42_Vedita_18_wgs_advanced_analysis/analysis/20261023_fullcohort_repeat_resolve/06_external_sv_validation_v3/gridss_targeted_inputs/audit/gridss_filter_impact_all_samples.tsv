@@ -1,0 +1,72 @@
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S01_DLD1_pop	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	26472	13093	26186	26472	26163	0	286	23
+S01_DLD1_pop	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S01_DLD1_pop	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	26472	13093	26186	26472	26163	0	286	23
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S02_DLD1_c1_ctrl	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	25426	12491	24982	25426	24964	0	444	18
+S02_DLD1_c1_ctrl	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S02_DLD1_c1_ctrl	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	25426	12491	24982	25426	24964	0	444	18
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S03_DLD1_c2_ctrl	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	29798	14659	29318	29798	29291	0	480	27
+S03_DLD1_c2_ctrl	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S03_DLD1_c2_ctrl	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	29798	14659	29318	29798	29291	0	480	27
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S04_DLD1_c3_dox	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	22423	11052	22104	22423	22094	0	319	10
+S04_DLD1_c3_dox	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S04_DLD1_c3_dox	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	22423	11052	22104	22423	22094	0	319	10
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S05_DLD1_c4_dox	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	30697	15103	30206	30697	30188	0	491	18
+S05_DLD1_c4_dox	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S05_DLD1_c4_dox	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	30697	15103	30206	30697	30188	0	491	18
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S06_GM12878_pop	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	17875	8785	17570	17875	17557	0	305	13
+S06_GM12878_pop	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S06_GM12878_pop	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	17875	8785	17570	17875	17557	0	305	13
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S07_GM12878_c5	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	27386	13506	27012	27386	26994	0	374	18
+S07_GM12878_c5	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S07_GM12878_c5	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	27386	13506	27012	27386	26994	0	374	18
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S08_GM12878_c6	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	26739	13182	26364	26739	26342	0	375	22
+S08_GM12878_c6	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S08_GM12878_c6	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	26739	13182	26364	26739	26342	0	375	22
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S09_GM12878_c7	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	34969	17235	34470	34969	34443	0	499	27
+S09_GM12878_c7	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S09_GM12878_c7	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	34969	17235	34470	34969	34443	0	499	27
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S10_GM12878_c8	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	37642	18486	36972	37642	36939	0	670	33
+S10_GM12878_c8	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S10_GM12878_c8	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	37642	18486	36972	37642	36939	0	670	33
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S11_MutuI_pop	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	20954	10302	20604	20954	20584	0	350	20
+S11_MutuI_pop	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S11_MutuI_pop	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	20954	10302	20604	20954	20584	0	350	20
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S12_MutuI_c9	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	33142	16260	32520	33142	32493	0	622	27
+S12_MutuI_c9	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S12_MutuI_c9	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	33142	16260	32520	33142	32493	0	622	27
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S13_MutuI_c10	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	30089	14802	29604	30089	29576	0	485	28
+S13_MutuI_c10	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S13_MutuI_c10	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	30089	14802	29604	30089	29576	0	485	28
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S14_MutuI_c11	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	24458	12043	24086	24458	24069	0	372	17
+S14_MutuI_c11	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S14_MutuI_c11	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	24458	12043	24086	24458	24069	0	372	17
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S15_DG75_pop	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	30613	15123	30246	30613	30221	0	367	25
+S15_DG75_pop	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S15_DG75_pop	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	30613	15123	30246	30613	30221	0	367	25
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S16_DG75_c12	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	12964	6411	12822	12964	12818	0	142	4
+S16_DG75_c12	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S16_DG75_c12	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	12964	6411	12822	12964	12818	0	142	4
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S17_DG75_c13	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	25877	12764	25528	25877	25508	0	349	20
+S17_DG75_c13	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S17_DG75_c13	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	25877	12764	25528	25877	25508	0	349	20
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S18_DG75_c14	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	27017	13323	26646	27017	26629	0	371	17
+S18_DG75_c14	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S18_DG75_c14	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	27017	13323	26646	27017	26629	0	371	17
