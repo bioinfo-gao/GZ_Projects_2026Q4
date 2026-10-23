@@ -134,8 +134,8 @@ supplementary alignment（FLAG `0x800`）通常表示同一 read 的另一非重
 
 | 文件（相对于项目根目录） | 本审计中的角色 |
 | :--- | :---: |
-| `docs/P42_chr11_junction_read_rescue_method_and_conclusions_1022.md` | 旧流程的详细方法与条件化结论说明；已补充 FLAG / `SEQ` 边界 |
-| `docs/P42_research_plan_and_review_1022.md` | 当前已执行旧流程的计划、输入和预注册判据 |
+| `docs/P42/P42_chr11_junction_read_rescue_method_and_conclusions_1022.md` | 旧流程的详细方法与条件化结论说明；已补充 FLAG / `SEQ` 边界 |
+| `docs/P42/P42_research_plan_and_review_1022.md` | 当前分析指南、计划与审阅真源；其中保留旧流程的问题审计与重跑判据 |
 | `scripts/20261022/1_prepare_candidates.py` | 旧 candidate universe 的构建逻辑 |
 | `scripts/20261022/2_extract_support_reads.py` | 旧 read retrieval、secondary exclusion 和 sequence selection 逻辑 |
 | `scripts/20261022/3_classify_rescue.py` | 旧 endpoint-pair classification 逻辑 |
