@@ -1,0 +1,4 @@
+sample_id	category	reason	records	qnames_templates	qname_read_ends	sequence_available_records	primary_records	secondary_records	supplementary_records	unmapped_records
+S12_MutuI_c9	raw_gridss_extractor_output	all records for ROI-overlap fragment QNAMEs retained	33142	16260	32520	33142	32493	0	622	27
+S12_MutuI_c9	excluded_from_gridss_input	secondary alignment FLAG 0x100 excluded only from caller-compatible BAM	0	0	0	0	0	0	0	0
+S12_MutuI_c9	gridss_caller_compatible_input	primary, supplementary and unmapped records retained	33142	16260	32520	33142	32493	0	622	27

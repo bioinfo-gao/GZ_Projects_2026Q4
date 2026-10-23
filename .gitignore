@@ -365,4 +365,10 @@ custom_research_report_*/**/*_pathabundance.tsv
 *.Rproj.user/*/.Rhistory
 *.Rproj.user/*/.Rhistory.gz
 *.fa.info
-
+# bwa索引
+*fasta.amb
+*fasta.ann
+*fasta.bwt
+*fasta.pac
+*fasta.sa
+*metrics

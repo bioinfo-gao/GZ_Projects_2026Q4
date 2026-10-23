@@ -31,7 +31,8 @@
 
 旧版以 P41 的 179 个候选和已记录 QNAME 为入口，并使用 `read.query_name not in wanted or read.is_secondary`。这不是靶窗口的完整证据模型：遗漏了不在 179 个候选中的 read，也在比较替代位置前直接排除了 FLAG `0x100` secondary alignment。对于重复区“真实位置”的问题，这造成确认偏差。
 
-本轮不再用候选表限制 read universe。discovery window 内全部 **primary、secondary（0x100）、supplementary（0x800）** records 都保留并分层；MAPQ0/multi-mapping、soft-clipped records，以及“mate 在窗口而本身 unmapped”的 records 全部纳入。`SEQ='*'` 仅表示该 BAM record 未存储 sequence；它被单列为“不能 sequence rescue”，绝不被误称无证据或 unmapped。
+本轮不再用候选表限制 read universe。discovery window 内全部 **primary、secondary（0x100）、supplementary（0x800）** records 都保留并分层；
+
 
 分析单位明确分两层：
 
@@ -45,12 +46,12 @@
 
 ### 4.0 Junction evidence decision table（本轮主线的可审查口径）
 
-| 研究问题 | 观察/证据单位 | 保留与去重规则 | 判定指标 | 可允许的结论；若删除会漏掉什么 |
-| :--- | :---: | :---: | :---: | :---: |
-| 是否存在断点的原始 short-read 迹象 | BAM alignment record：soft clip、SA/split、supplementary、discordant mate、unmapped mate | discovery window 内 primary/secondary/supplementary 全保留；同一 QNAME+read-end 仅计为一个 molecule，但每个 record 的 FLAG、MAPQ、CIGAR、SA 与坐标均保留 | record class、clip 方向/长度、SA endpoint、mate endpoint、序列可用性 | 只能说明某类 mapping/junction 迹象是否存在；删掉 secondary 会丢掉替代位置，删 supplementary 会丢掉 split/chimeric 结构，删 MAPQ0 会掩盖 repeat ambiguity |
-| 迹象能否支持一个 chr11 junction | molecule：同一 QNAME+read-end 的完整 alignment context | molecule 去重只用于独立支持计数；不丢弃其同一分子的 alternative records | 两端坐标与方向、是否双端锚定、独立 molecule 数、同一 molecule 的所有 placement | 可称 read-level candidate 或 ambiguous candidate；不能把多个 records 夸大成多个分子 |
-| 是否可给出 base-pair breakpoint | assembly contig 或跨 junction 的 sequence-bearing molecule | 每样本/候选独立 assembly；全 contig placement 均保留；hard/soft clipping 与 SEQ 完整性另审计 | contig 双端锚定、方向、microhomology、inserted sequence、竞争 placement | 只有通过全部检查才报告精确 breakpoint；重比对/assembly 属算法复现，不是独立生物学验证 |
-| 是否为 Dox-clone-specific | 统一候选在 5 个 DLD1 样本的 molecule/coverage 证据 | 候选以双端各 50 bp、SV type/方向一致合并；S01/S02/S03 是生物对照，其他细胞系仅背景 | S04/S05 与 controls 的 standard/inclusive molecule 数、AF、局部有效深度及检测下限 | 只能称 Dox-shared、clone-private、candidate 或 negative-at-available-sensitivity；不能将单 clone 直接称 Dox-induced |
+| 研究问题                           |                                      观察/证据单位                                      |                                                                      保留与去重规则                                                                      |                                     判定指标                                     |                                                              可允许的结论；若删除会漏掉什么                                                              |
+| :--------------------------------- | :--------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| 是否存在断点的原始 short-read 迹象 | BAM alignment record：soft clip、SA/split、supplementary、discordant mate、unmapped mate | discovery window 内 primary/secondary/supplementary 全保留；同一 QNAME+read-end 仅计为一个 molecule，但每个 record 的 FLAG、MAPQ、CIGAR、SA 与坐标均保留 |       record class、clip 方向/长度、SA endpoint、mate endpoint、序列可用性       | 只能说明某类 mapping/junction 迹象是否存在；删掉 secondary 会丢掉替代位置，删 supplementary 会丢掉 split/chimeric 结构，删 MAPQ0 会掩盖 repeat ambiguity |
+| 迹象能否支持一个 chr11 junction    |                  molecule：同一 QNAME+read-end 的完整 alignment context                  |                                         molecule 去重只用于独立支持计数；不丢弃其同一分子的 alternative records                                         |  两端坐标与方向、是否双端锚定、独立 molecule 数、同一 molecule 的所有 placement  |                                   可称 read-level candidate 或 ambiguous candidate；不能把多个 records 夸大成多个分子                                   |
+| 是否可给出 base-pair breakpoint    |                assembly contig 或跨 junction 的 sequence-bearing molecule                |                               每样本/候选独立 assembly；全 contig placement 均保留；hard/soft clipping 与 SEQ 完整性另审计                               |      contig 双端锚定、方向、microhomology、inserted sequence、竞争 placement      |                                  只有通过全部检查才报告精确 breakpoint；重比对/assembly 属算法复现，不是独立生物学验证                                  |
+| 是否为 Dox-clone-specific          |                    统一候选在 5 个 DLD1 样本的 molecule/coverage 证据                    |                                    候选以双端各 50 bp、SV type/方向一致合并；S01/S02/S03 是生物对照，其他细胞系仅背景                                    | S04/S05 与 controls 的 standard/inclusive molecule 数、AF、局部有效深度及检测下限 |                   只能称 Dox-shared、clone-private、candidate 或 negative-at-available-sensitivity；不能将单 clone 直接称 Dox-induced                   |
 
 每一类保留/排除都会输出 filter-impact audit，依次给出 record、QNAME/read-end、molecule、candidate 与 sequence-available 数。此表的唯一原始数据 universe 是 discovery window 及其 unmapped mates；P41 179 candidates 只作后续注释列。
 
@@ -82,13 +83,13 @@
 
 本轮调研的目的不是以某一个新 caller 取代 Manta/DELLY，而是核对成熟 short-read WGS SV 项目如何区分 discovery、局部组装、multi-mapping 分配和跨样本再分型。
 
-| 项目 | 其可验证的工作流要点 | P42 采用的部分 | 不可错误外推的部分 |
-| :--- | :---: | :---: | :---: |
-| [Manta](https://github.com/Illumina/manta) | 全基因组 breakend graph 后按候选进行 assembly/评分；discovery scan 排除 secondary、supplementary 与 unmapped record。 | 既有 Manta 调用作为独立 caller 注释；如历史配置未证明解除 repeat-edge 限制，则新目录补跑靶向 repeat-unmasked Manta。 | Manta 未使用的 record 不是无生物学价值；其内部过滤不得变成 P42 原始证据的删除规则。 |
-| [GRIDSS2](https://github.com/PapenfussLab/gridss) | 靶向提取 ROI-overlap fragment 的 mate 与 supplementary record；可报告 single breakend，且将 multi-mapping unique allocation 前的 raw breakpoint 与分配后支持区分。 | 建立独立的 raw-versus-allocated caller evidence 表，保留 single breakend 与 assembly sequence。 | GRIDSS 要求每个 read 一条主要 alignment，不能直接吞入 secondary；这只是 caller 输入约束。 |
-| [SvABA](https://github.com/walaj/svaba) | 对目标 BED/区域 local assembly、BWA-MEM 重比对 contig，输出 VCF 与每样本 detailed evidence。 | 作为 MEGAHIT + all-placement contig 的独立算法复核。 | caller score 或一条 primary contig placement 不能证明真实唯一位置。 |
-| [UCLA call-gSV](https://github.com/uclahs-cds/pipeline-call-gSV) | 将 SV/CNV discovery 与已发现候选的 regenotyping 分开。 | DLD1 的 clone-specific 判定在固定候选坐标对 S01–S05 用同一规则重测。 | 控制样本 VCF 没有一行 call 不能替代可量化的阴性/检测下限。 |
-| [nf-core/sarek](https://github.com/nf-core/sarek) | 以可复现输入、caller 标准化、QC 和可审计交付组织多 caller 工作流。 | 记录版本、参数、manifest、per-sample QC 和标准化 caller 字段。 | 多 caller 的严格交集不能作为重复区候选的硬淘汰门槛。 |
+| 项目                                                            |                                                                        其可验证的工作流要点                                                                        |                                                    P42 采用的部分                                                    |                                    不可错误外推的部分                                    |
+| :-------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: |
+| [Manta](https://github.com/Illumina/manta)                       |                       全基因组 breakend graph 后按候选进行 assembly/评分；discovery scan 排除 secondary、supplementary 与 unmapped record。                       | 既有 Manta 调用作为独立 caller 注释；如历史配置未证明解除 repeat-edge 限制，则新目录补跑靶向 repeat-unmasked Manta。 |    Manta 未使用的 record 不是无生物学价值；其内部过滤不得变成 P42 原始证据的删除规则。    |
+| [GRIDSS2](https://github.com/PapenfussLab/gridss)                | 靶向提取 ROI-overlap fragment 的 mate 与 supplementary record；可报告 single breakend，且将 multi-mapping unique allocation 前的 raw breakpoint 与分配后支持区分。 |           建立独立的 raw-versus-allocated caller evidence 表，保留 single breakend 与 assembly sequence。           | GRIDSS 要求每个 read 一条主要 alignment，不能直接吞入 secondary；这只是 caller 输入约束。 |
+| [SvABA](https://github.com/walaj/svaba)                          |                                    对目标 BED/区域 local assembly、BWA-MEM 重比对 contig，输出 VCF 与每样本 detailed evidence。                                    |                                 作为 MEGAHIT + all-placement contig 的独立算法复核。                                 |            caller score 或一条 primary contig placement 不能证明真实唯一位置。            |
+| [UCLA call-gSV](https://github.com/uclahs-cds/pipeline-call-gSV) |                                                       将 SV/CNV discovery 与已发现候选的 regenotyping 分开。                                                       |                        DLD1 的 clone-specific 判定在固定候选坐标对 S01–S05 用同一规则重测。                        |                控制样本 VCF 没有一行 call 不能替代可量化的阴性/检测下限。                |
+| [nf-core/sarek](https://github.com/nf-core/sarek)                |                                                 以可复现输入、caller 标准化、QC 和可审计交付组织多 caller 工作流。                                                 |                            记录版本、参数、manifest、per-sample QC 和标准化 caller 字段。                            |                   多 caller 的严格交集不能作为重复区候选的硬淘汰门槛。                   |
 
 Manta 的 record 过滤行为以其[方法文档](https://github.com/Illumina/manta/blob/master/docs/methods/primary/methods.tex)为准；GRIDSS 的 targeted extraction、single-breakend、raw-before-allocation 输出与 joint calling 建议以其[README](https://github.com/PapenfussLab/gridss)和[QuickStart](https://github.com/PapenfussLab/gridss/blob/master/QuickStart.md)为准；SvABA 的 targeted local assembly 和 per-sample evidence 以其[官方 README](https://github.com/walaj/svaba)为准。
 
@@ -101,12 +102,12 @@ P42 明确维持两条不可互相替代的轨道：
 
 二者的计数与结论边界如下：
 
-| 研究问题 | evidence universe / 单位 | 计数或过滤口径 | 允许结论 |
-| :--- | :---: | :---: | :---: |
-| repeat 区有哪些异常 mapping/junction 线索？ | 18 样本的 record、QNAME+read-end、QNAME/template 三层 ledger。 | 先完整保留 FLAG 类别；template count 为主，read-end count 并列。 | 观察到某类证据、或在可用数据中未观察到；不单独宣布唯一断点。 |
-| 局部 assembly 是否支持候选？ | full-evidence track 的 59 local locus；FASTQ 仅是组装输入，完整 BAM ledger 另存。 | 同 QNAME/read-end FASTQ 选最长可用 stored `SEQ`；其他 alignment context 不删除。 | `assembly-supported`、`unresolved` 或 `repeat-ambiguous`；primary placement 不是充分定位证据。 |
-| 外部 caller 是否算法上重现？ | 靶向 caller-compatible 衍生输入；S01–S05 为 DLD1 主比较，18 样本保留背景。 | GRIDSS secondary exclusion 只发生在衍生输入；raw/allocated support、single breakend、assembly score 分开报告。 | `algorithmically concordant`、`discordant` 或 `not evaluable`；并非独立生物学验证。 |
-| 是否 Dox clone-specific？ | 固定候选在 S01–S05 的同规则逐样本再分型。 | 不用 VCF 缺失代替 0；报告 template/read-end support、reference support、coverage、ambiguity 与检测下限。 | `Dox-enriched/clone-specific candidate`、`shared`、`insufficient evidence` 或 `ambiguous`。 |
+| 研究问题                                    |                             evidence universe / 单位                             |                                                 计数或过滤口径                                                 |                                               允许结论                                               |
+| :------------------------------------------ | :-------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+| repeat 区有哪些异常 mapping/junction 线索？ |          18 样本的 record、QNAME+read-end、QNAME/template 三层 ledger。          |                        先完整保留 FLAG 类别；template count 为主，read-end count 并列。                        |                     观察到某类证据、或在可用数据中未观察到；不单独宣布唯一断点。                     |
+| 局部 assembly 是否支持候选？                | full-evidence track 的 59 local locus；FASTQ 仅是组装输入，完整 BAM ledger 另存。 |               同 QNAME/read-end FASTQ 选最长可用 stored `SEQ`；其他 alignment context 不删除。               | `assembly-supported`、`unresolved` 或 `repeat-ambiguous`；primary placement 不是充分定位证据。 |
+| 外部 caller 是否算法上重现？                |    靶向 caller-compatible 衍生输入；S01–S05 为 DLD1 主比较，18 样本保留背景。    | GRIDSS secondary exclusion 只发生在衍生输入；raw/allocated support、single breakend、assembly score 分开报告。 |      `algorithmically concordant`、`discordant` 或 `not evaluable`；并非独立生物学验证。      |
+| 是否 Dox clone-specific？                   |                    固定候选在 S01–S05 的同规则逐样本再分型。                    |    不用 VCF 缺失代替 0；报告 template/read-end support、reference support、coverage、ambiguity 与检测下限。    | `Dox-enriched/clone-specific candidate`、`shared`、`insufficient evidence` 或 `ambiguous`。 |
 
 #### 4.2.3 外部验证的实现与审计状态
 
