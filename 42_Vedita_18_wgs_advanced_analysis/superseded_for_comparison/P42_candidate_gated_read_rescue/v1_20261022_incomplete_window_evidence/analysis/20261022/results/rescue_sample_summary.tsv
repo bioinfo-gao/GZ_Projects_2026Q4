@@ -1,0 +1,11 @@
+sample	candidates	multi_fragment_supported	single_fragment_supported	ambiguous_reconstruction	not_reconstructed	not_evaluable
+S01_DLD1_pop	20	1	19	0	0	0
+S02_DLD1_c1_ctrl	14	0	14	0	0	0
+S03_DLD1_c2_ctrl	13	0	13	0	0	0
+S04_DLD1_c3_dox	17	0	17	0	0	0
+S05_DLD1_c4_dox	12	1	10	0	1	0
+S06_GM12878_pop	22	2	19	0	1	0
+S07_GM12878_c5	24	0	24	0	0	0
+S08_GM12878_c6	13	0	13	0	0	0
+S09_GM12878_c7	26	0	26	0	0	0
+S10_GM12878_c8	18	0	18	0	0	0
