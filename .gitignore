@@ -352,4 +352,17 @@ custom_research_report_*/**/*_pathabundance.tsv
 /41_Vedict_18_wgs/analysis/sv/manta_gw/S18_DG75_c14/workspace/svHyGen/candidateSV.0000.vcf
 /41_Vedict_18_wgs/analysis/sv/manta_gw/S18_DG75_c14/workspace/svLocusGraph.bin
 *.complete
+*done
+*.done
+*log
+*.log
+*.err
+*.out
+*.tmp
+*.RData
+*.Rhistory
+*.Rproj.user
+*.Rproj.user/*/.Rhistory
+*.Rproj.user/*/.Rhistory.gz
+*.fa.info
 

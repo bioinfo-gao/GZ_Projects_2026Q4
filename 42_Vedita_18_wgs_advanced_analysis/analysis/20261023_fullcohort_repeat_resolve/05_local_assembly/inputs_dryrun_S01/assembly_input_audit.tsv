@@ -1,0 +1,2 @@
+locus_id	sample_id	chrom	start_1based	end_1based	context_records	fastq_paired_templates	fastq_unpaired_read_ends	ledger_hard_clip_0	ledger_has_sequence_1	ledger_primary	ledger_supplementary	ledger_unmapped	mate_lookup_records	priority_evidence_qnames
+S01_DLD1_pop_L001_chr11_114596801_114599701	S01_DLD1_pop	chr11	114596801	114599701	613	304	6	616	616	612	3	1	64	65

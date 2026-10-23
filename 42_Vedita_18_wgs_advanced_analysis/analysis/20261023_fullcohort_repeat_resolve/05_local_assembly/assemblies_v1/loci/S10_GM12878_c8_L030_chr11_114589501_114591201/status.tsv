@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S10_GM12878_c8_L030_chr11_114589501_114591201	S10_GM12878_c8	312	4	1	completed	success

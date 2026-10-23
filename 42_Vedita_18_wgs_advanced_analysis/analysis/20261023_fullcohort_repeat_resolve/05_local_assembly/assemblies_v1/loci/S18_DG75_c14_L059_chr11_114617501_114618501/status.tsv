@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S18_DG75_c14_L059_chr11_114617501_114618501	S18_DG75_c14	155	3	0	completed	success

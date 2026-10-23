@@ -1,0 +1,2 @@
+locus_id	sample_id	chrom	start_1based	end_1based	width_bp	priority_cluster_bins	priority_evidence_qnames
+S01_DLD1_pop_L001_chr11_114596801_114599701	S01_DLD1_pop	chr11	114596801	114599701	2901	33	65

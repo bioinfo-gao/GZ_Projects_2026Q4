@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S02_DLD1_c1_ctrl_L003_chr11_114624501_114625501	S02_DLD1_c1_ctrl	147	8	0	completed	success

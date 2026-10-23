@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S11_MutuI_pop_L038_chr11_114647201_114648201	S11_MutuI_pop	75	7	0	completed	success

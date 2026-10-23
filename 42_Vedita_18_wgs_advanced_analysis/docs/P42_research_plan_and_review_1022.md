@@ -35,11 +35,25 @@
 分析单位明确分两层：
 
 - **alignment-record 层：** 保留 mapping hypotheses，判断重复区定位歧义；record 数不能作为独立支持数。
-- **molecule 层：** 以 read name + mate/read-end 归并，记录 primary/secondary/supplementary 所有成员；同一分子至多给一个独立支持。duplicate flag 作为属性保留，在主计数与敏感性分析分别报告。
+- **read-end 层：** 以 `(sample, QNAME, read-end)` 归并同一 sequenced end 的 primary/secondary/supplementary 成员，完整保留其定位 context；这是 read-level 支持数，不能替代独立 template 数。
+- **fragment/template 层：** 以 `(sample, QNAME)` 归并 paired-end 的 R1/R2；同一 template 在主支持计数中至多计一次。duplicate flag 作为属性保留，在主计数与敏感性分析分别报告。
 
-每一个 filter 输出 filter-impact audit：输入/输出 record、QNAME、molecule、sequence-available 数与原因。P41 179 行仅作为“新全窗口是否重新发现/支持”的注释，绝不是发现闸门。
+每一个 filter 输出 filter-impact audit：输入/输出 record、QNAME/read-end、fragment/template、sequence-available 数与原因。P41 179 行仅作为“新全窗口是否重新发现/支持”的注释，绝不是发现闸门。
 
 ## 4. 预注册分析设计
+
+### 4.0 Junction evidence decision table（本轮主线的可审查口径）
+
+| 研究问题 | 观察/证据单位 | 保留与去重规则 | 判定指标 | 可允许的结论；若删除会漏掉什么 |
+| :--- | :---: | :---: | :---: | :---: |
+| 是否存在断点的原始 short-read 迹象 | BAM alignment record：soft clip、SA/split、supplementary、discordant mate、unmapped mate | discovery window 内 primary/secondary/supplementary 全保留；同一 QNAME+read-end 仅计为一个 molecule，但每个 record 的 FLAG、MAPQ、CIGAR、SA 与坐标均保留 | record class、clip 方向/长度、SA endpoint、mate endpoint、序列可用性 | 只能说明某类 mapping/junction 迹象是否存在；删掉 secondary 会丢掉替代位置，删 supplementary 会丢掉 split/chimeric 结构，删 MAPQ0 会掩盖 repeat ambiguity |
+| 迹象能否支持一个 chr11 junction | molecule：同一 QNAME+read-end 的完整 alignment context | molecule 去重只用于独立支持计数；不丢弃其同一分子的 alternative records | 两端坐标与方向、是否双端锚定、独立 molecule 数、同一 molecule 的所有 placement | 可称 read-level candidate 或 ambiguous candidate；不能把多个 records 夸大成多个分子 |
+| 是否可给出 base-pair breakpoint | assembly contig 或跨 junction 的 sequence-bearing molecule | 每样本/候选独立 assembly；全 contig placement 均保留；hard/soft clipping 与 SEQ 完整性另审计 | contig 双端锚定、方向、microhomology、inserted sequence、竞争 placement | 只有通过全部检查才报告精确 breakpoint；重比对/assembly 属算法复现，不是独立生物学验证 |
+| 是否为 Dox-clone-specific | 统一候选在 5 个 DLD1 样本的 molecule/coverage 证据 | 候选以双端各 50 bp、SV type/方向一致合并；S01/S02/S03 是生物对照，其他细胞系仅背景 | S04/S05 与 controls 的 standard/inclusive molecule 数、AF、局部有效深度及检测下限 | 只能称 Dox-shared、clone-private、candidate 或 negative-at-available-sensitivity；不能将单 clone 直接称 Dox-induced |
+
+每一类保留/排除都会输出 filter-impact audit，依次给出 record、QNAME/read-end、molecule、candidate 与 sequence-available 数。此表的唯一原始数据 universe 是 discovery window 及其 unmapped mates；P41 179 candidates 只作后续注释列。
+
+**计数单位（用户于 2026-10-23 确认）：** `QNAME+read-end` 用于正确合并同一 sequenced read-end 的 primary/secondary/supplementary records；paired-end 的 R1、R2 通常来自同一个 library fragment，不能被称为两个 independent molecules。cluster 表同时输出 `(sample,QNAME)` 的 **independent fragment/template count** 与 `(sample,QNAME,read-end)` 的 **independent read-end count**，所有 raw records 均不删除。高置信候选的 `≥3 independent molecules` 主阈值固定以 fragment/template count 评估；read-end count 作为 read-level 辅助证据并列报告。
 
 ### 4.1 全窗口 read rescue 与局部重建
 
@@ -48,6 +62,16 @@
 3. 以 soft clips、split/SA、discordant pairs、跨断点 contig 和 caller 端点聚类生成**新候选**；先检查每个 read 的全 mapping 集，再评估对 chr11 的支持。
 4. 每样本、每候选独立 local assembly（不同样本 raw reads 不混合）。contig 允许多重 placement 地重新比对 GRCh38；只有双端锚定、方向一致且替代 placement 已审计时才报告 base-pair junction。microhomology/insertion 从 contig/read CIGAR 与局部序列比对导出，保存序列来源。
 5. 每候选分别给出 standard high-confidence 与 inclusive-rescue 计数：前者为主规则下独立 molecule；后者显示 MAPQ0/secondary/supplementary/mate rescue 贡献。两者绝不混写为“read count”。
+
+**首轮 assembly 候选分层（2026-10-23）：** `5c_triage_assembly_candidates.py` 对 5b 的每一个 bin 写入 `cluster_candidate_audit.tsv`，不删除低支持或 soft-clip-only evidence。为了使首轮 local assembly 有界，只有以下 bin 进入 `assembly_candidate_manifest.tsv`：（i）`SA/split` 且 `independent_fragment_count ≥3`；（ii）跨染色体或相距 >5 kb 的 discordant pair 且 fragment count ≥3；（iii）supplementary evidence 且 fragment count ≥3；或（iv）距可读 caller endpoint ≤1 kb、且 fragment count ≥2 的任一 evidence。未进入首轮 assembly 的 bin 被明确标为 retained context，而非阴性；DLD1 comparison 与后续结果审阅可把它们重新纳入敏感性分析。
+
+**assembly 输入与 sequence 完整性审计（2026-10-23）：** 同一样本内距离 ≤500 bp、其 ±500-bp local windows 重叠的 priority bin 合并成一个 assembly locus，避免把同一重复背景附近的多个 100-bp bin 错当为独立重建。每个 locus 取 window 内的全部 BAM records，并对 priority-evidence QNAME 查回 mate（含 unmapped mate）；所有 primary/secondary/supplementary/unmapped record 写入 `alignment_record_ledger.tsv.gz`，每次无法经 BAM index 查回 mate 的 QNAME、源 FLAG/坐标与异常原因另写 `mate_lookup_failures.tsv`。FASTQ 仅为 assembler 输入而去重：同一 QNAME/read-end 选择最长非空 stored `SEQ`，并保留原 FLAG、CIGAR、MAPQ、坐标、hard-clip 与 sequence-source 审计；非空 `SEQ` 绝不被解释为完整原始 read。
+
+**无法 index-rescue 的 unmapped mate（2026-10-23）：** 若 coordinate-sorted BAM 的 `mate()` 反馈 mate unmapped，不能把该 mate 写成“不存在”：BAM index 本身不能按坐标定位未比对记录。对每个此类 QNAME，顺序扫描其所属样本的完整 BAM 至 EOF，只检索该 QNAME 的 matching records；恢复到的 unmapped `SEQ` 单列为 `reads_recovered_mates.fastq.gz` 并加入同一 local-locus assembly 的 single-end 输入。全扫描仍未恢复者写为 `not_recovered_after_full_bam_scan`，不被解释为 SV 阴性或无原始证据。
+
+**de novo assembly 的资源与解释边界（2026-10-23）：** 每个 sample/local locus 独立用 MEGAHIT 1.2.9 组装（k=21–141、最短 contig 100 bp），最多 4 个 job 并发、每 job 6 threads，持续预算为 24 threads（低于本机 28 physical-core 上限），每 job 内存上限 12 GB。assembly 采用 inclusive rescue sequence input（MAPQ0、secondary、supplementary、duplicate 状态均不作为删除条件），但 contig 的存在不改变独立 fragment 支持数，后者始终回到 QNAME/template 口径。任何失败或 input不足 locus 写独立 status，不能被默认为阴性。
+
+**contig repeat-aware placement（2026-10-23）：** 汇合所有成功 local assembly 的 contig 后，使用同一 GRCh38 / GATK reference 的 `bwa-mem2 mem -a -Y` 一次性重比对，保留 primary、secondary 与 supplementary contig placements，输出每条 placement 的 FLAG、坐标、CIGAR、MAPQ、AS、NM 与每 contig 的 alternative-locus ledger。primary label 不是“真实位置”的充分证据；后续只在双端锚定、方向与 raw read evidence 一致、且替代 placement 被审计的情况下讨论 base-pair breakpoint。
 
 ### 4.2 SV caller 与全基因组结构背景
 
@@ -95,10 +119,13 @@
 2. `1_inventory_full_window.py`：完整 record/molecule/mate rescue inventory。闸门：18 个完成标志；secondary/supplementary/MAPQ0/SEQ=* 都有显式计数。
 3. `2_make_coverage_bins.py` 与 `3_coverage_cnv.sh`：两套 coverage。闸门：每 bin 可追到样本、flag/MAPQ 口径，样本总深度与 BAM 规模相符。
 4. `4_parse_callers.py`：Manta/DELLY raw/filtered 标准化和匹配。闸门：明确每份 caller 文件是否存在、可读及 record 数；空文件绝不伪装阴性。
-5. `5_cluster_junction_evidence.py`：从全窗口、非 P41 candidate list 聚类断点并写 molecule 级支持。
-6. `6_local_assembly_and_align.sh`：按样本/候选 assembly、全 placement 比对、junction 判定。
-7. `7_dld1_comparison.py`：DLD1 阈值、AF、检测下限与敏感性分析。
-8. `8_make_figures.py` / `9_write_report.py`：图片、报告与主张→来源对照。
+5. `5_cluster_junction_evidence.py`：从全窗口、非 P41 candidate list 聚类断点，并同时写 fragment/template 主支持和 read-end 辅助支持。
+6. `5c_triage_assembly_candidates.py`：对全部 bin 写出含选择理由的 audit，并生成首轮 bounded local-assembly manifest；未选中 bin 不删除。
+7. `6a_prepare_local_assembly_inputs.py`：将 priority bins 合并为同样本 local loci，写 FASTQ、全 record ledger、mate-rescue 与 sequence-completeness audit。
+8. `6b_run_local_assembly.sh`：按样本/local locus 运行 MEGAHIT，并逐 locus 写成功、输入不足或失败状态。
+9. `6c_align_local_contigs.sh` 与 `6d_summarize_contig_placements.py`：以 `-a -Y` 全 placement 比对 contig 并输出定位歧义 ledger。
+10. `7_dld1_comparison.py`：DLD1 阈值、AF、检测下限与敏感性分析。
+11. `8_make_figures.py` / `9_write_report.py`：图片、报告与主张→来源对照。
 
 超过数分钟的步骤仅在 tmux 运行，单一长任务最多 28 physical cores / 56 threads，并启动 watchdog。先做语法检查、小范围 dry-run、BAM/VCF 可读性检查；失败只新建阶段目录，不清除任何旧文件。
 
@@ -112,4 +139,13 @@
 ## 8. 变更记录
 
 - 2026-10-23 — 用户审阅完成并要求重新制定严谨计划、分析全部 18 样本；旧版 179 candidates/QNAME gate 及直接排除 secondary 的主线废止。旧结果/脚本复制归档；当前改为 full-window、molecule-aware、repeat-aware，新增 CNV、local assembly、DLD1 clone-specific 与大量图形交付。
+- 2026-10-23 — 用户确认主支持单位为 `(sample,QNAME)` fragment/template，`(sample,QNAME,read-end)` 仅作并列 read-level 指标；聚类脚本据此更正并恢复运行。
+- 2026-10-23 — 5b 输出显示大量 repeat-associated soft-clip bins；新增 5c 作为全量 bin 的可审计分层，而非把单类 soft clip 直接解释为 SV。首轮 assembly 仅运行于高信息量或 caller-anchored evidence，所有未入选 bin 仍保留在审计表。
+- 2026-10-23 — 5c 首次运行发现 supplementary cluster-key parser 将两段 key 错误按三段读取，使 16 个 supplementary priority bin 缺失 anchor 坐标；首次脚本与输出归档于 `superseded_for_comparison/P42_assembly_triage/v1_20261023_supplementary_key_parser/`，修复后写入新的 `assembly_triage_v2/`，不覆盖旧产物。
+- 2026-10-23 — 在 corrected 5c v2 的 priority manifest 基础上，新增 6a：同样本相邻 priority bin 以重叠的 ±500-bp window 合并，先写全 alignment ledger 与 sequence-completeness audit，再将最长 stored `SEQ` 作为 de novo assembly 输入；FASTQ 去重不删除原始 alignment context。
+- 2026-10-23 — 新增 6b：以每 sample/local locus 独立 MEGAHIT assembly，4×6 threads 的资源上限；每个 locus 记录成功、输入不足或失败状态，assembly contig 仅为 mapping/sequence reconstruction evidence，不重定义 fragment-level support。
+- 2026-10-23 — 新增 6c/6d：成功 contig 统一以 `bwa-mem2 mem -a -Y` 重比对同一 GRCh38 reference；输出所有 placement 及 alternative-locus ledger，禁止将 primary label 单独解释为真实 locus。
+- 2026-10-23 — 6a 全队列初次运行记录 5 次 mate lookup 失败；在启动 assembly 前补写 QNAME/FLAG/坐标/异常原因的 machine-readable failure audit。该 failure 表示无法经 BAM index 取回 mate，不等同于无原始 read 证据或 SV 阴性。
+- 2026-10-23 — 5 条 failure 均明确为 `mate is unmapped`。因原始 FASTQ 在 P41 文档所记 Dropbox 路径已不在磁盘，以完整 BAM 顺序扫描作为可用的 source-record rescue：仅扫描受影响的 5 个样本，恢复到的 unmapped mate 追加进入对应 local assembly，逐 QNAME 报告恢复成败。
+- 2026-10-23 — mate rescue、local assembly 与 contig placement 以可见的 6ac stage chain 串接：只有 rescue completion marker 存在才可进入 assembly，任何前置阶段失败均终止 chain 并保留已有日志/产物，禁止静默跳步。
 - 2026-10-22 — 旧版建立；原文与实际脚本在顶部指定归档中保留，供逐项比较。

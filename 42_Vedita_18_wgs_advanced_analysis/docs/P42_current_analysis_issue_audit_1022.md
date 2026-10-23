@@ -2,8 +2,8 @@
 
 - **文档性质**：内部技术审计与重跑设计输入。记录当前 Analysis 1 已发现的方法学不足，不替代任何结果表，不删除或改写已生成的历史产物。
 - **创建日期**：2026-10-22
-- **当前状态**：用户正在审阅全文；已明确“值得重跑”，但尚未授权启动重跑。本文件只定义问题、影响和下次运行必须满足的要求。
-- **适用范围**：S01–S10、GRCh38 `chr11:114,604,000–114,625,500` 及其 read-level evidence。Mutu I、DG75 仍不在本轮范围内。
+- **当前状态**：用户已完成审阅并授权按严格新设计分析全 18 个样本。历史 candidate-gated 结果已归档保留；新版 full-window inventory、caller audit、coverage 与 18 样本 raw junction-evidence extraction 已完成。本文件继续记录新旧主线切换中发现的任何 evidence-model 问题；在本文件标为“待确认”的实质口径解决前，不将新版中间产物表述为完整答案。
+- **适用范围**：全 18 个样本、GRCh38 `chr11:114,604,000–114,625,500` target window、`chr11:114,554,000–114,675,500` discovery window 及其 read-level evidence。DLD1 主比较为 S04/S05 对 S01/S02/S03。
 
 ## 1. 审计结论
 
@@ -84,6 +84,17 @@ supplementary alignment（FLAG `0x800`）通常表示同一 read 的另一非重
 
 **影响**：没有这份 audit，无法区分“某类 evidence 根本不存在”与“它存在但被代码过滤”。严谨的过滤不仅要写条件，还要报告每个条件对 data universe 的实际影响。
 
+### 3.8 问题 H：read-end 去重不能替代 fragment/template 去重
+
+新版预注册表最初把 `QNAME+read-end` 称为 molecule。这一规则对 **alignment context 去重**是必要的：同一 read-end 的 primary、secondary、supplementary records 不得被重复计成支持。然而 paired-end WGS 中，同一 QNAME 的 R1、R2 通常来自同一个 library template/fragment；两端都落入同一 cluster 时，若把它们直接加为两个“independent molecules”，会在 fragment-level support 和 AF 阈值上放大证据。
+
+这不意味着必须丢弃任一 mate：两端可提供互补的 orientation、insert size 和跨 breakpoint 信息，仍须完整保留。正确做法是并列两个不可混用的量：
+
+- **independent read-end count**：`(sample, QNAME, read-end)` 去重，回答有多少不同 sequenced read ends 给出该证据；
+- **independent fragment/template count**：`(sample, QNAME)` 去重，回答有多少独立 library fragments 支持该 cluster；高置信 SV 的“≥3 independent molecules”应以此口径评估。
+
+**处理与当前状态**：cluster 输出同时写两列、逐 row 保留 QNAME/read-end/FLAG。用户于 2026-10-23 确认：`(sample,QNAME)` fragment/template count 是 `≥3 independent molecules` 的主阈值，`(sample,QNAME,read-end)` 作为 read-level 支持数并列报告；据此归档未运行的旧脚本、修订脚本并恢复 cluster 运行。此前暂停是记录明确的科学口径阻塞，不是无人监控或无理由空转。
+
 ## 4. 对现有结果应保持的正确表述
 
 下列已运行的事实仍然可以保留，但必须带上完整限定语：
@@ -99,8 +110,8 @@ supplementary alignment（FLAG `0x800`）通常表示同一 read 的另一非重
 
 用户尚未授权重跑。待全文审阅完成并明确启动后，新的 workflow 在写任何正式脚本和执行前必须具有以下可审查设计：
 
-1. **Window-wide record inventory**：对每个 S01–S10 BAM 读取目标窗口及经定义的必要 flank 内的全部 primary、secondary、supplementary record，而不是从 P41 candidate/read-name 列表起步。输出 raw audit table，至少包含 sample、QNAME、mate、FLAG / primary-secondary-supplementary class、RNAME、POS、MAPQ、CIGAR、`SEQ` length、hard/soft clip、SA tag 和 duplicate/QC state。
-2. **Evidence 与 molecule 分层**：保留每一条 alignment record 作为定位 evidence；在统计独立支持分子时，按 `(sample, QNAME, mate)` 或经论证的 fragment identity 去重。绝不以“避免重复计数”为由删除 alignment context。
+1. **Window-wide record inventory**：对每个 S01–S18 BAM 读取目标窗口及经定义的必要 flank 内的全部 primary、secondary、supplementary record，而不是从 P41 candidate/read-name 列表起步。输出 raw audit table，至少包含 sample、QNAME、mate、FLAG / primary-secondary-supplementary class、RNAME、POS、MAPQ、CIGAR、`SEQ` length、hard/soft clip、SA tag 和 duplicate/QC state。
+2. **Evidence、read-end 与 fragment/template 分层**：保留每一条 alignment record 作为定位 evidence；以 `(sample, QNAME, read-end)` 合并同一 read-end 的 alternative records，以 `(sample, QNAME)` 统计独立 fragment/template support。绝不以“避免重复计数”为由删除 alignment context。
 3. **Candidate discovery 不依赖旧候选 gate**：从 window-wide evidence 建立新的 junction / competing-locus candidates；P41 179 个候选只能作为 comparison annotation，不可作为唯一输入。
 4. **Repeat-aware localization**：对同一 read 的 primary、secondary、supplementary placement 显式比较，而不是将 primary label或单一 `MAPQ` 当作真实 locus。报告所有竞争位置、相对 alignment score、MAPQ、CIGAR / clipping、endpoint overlap 及其对定位结论的影响。
 5. **Sequence completeness audit**：识别 `SEQ='*'`、hard clipping、缺 quality 和 read-end 缺失；对于需要完整 sequence 的 read，定义回溯原始 FASTQ 或其他完整 record 的规则，并报告未能恢复的数量。

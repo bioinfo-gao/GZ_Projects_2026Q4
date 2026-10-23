@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S15_DG75_pop_L052_chr11_114596801_114599701	S15_DG75_pop	386	10	1	completed	success

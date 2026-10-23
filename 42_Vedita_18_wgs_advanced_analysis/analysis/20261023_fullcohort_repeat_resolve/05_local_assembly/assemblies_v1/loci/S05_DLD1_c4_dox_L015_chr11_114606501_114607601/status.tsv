@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S05_DLD1_c4_dox_L015_chr11_114606501_114607601	S05_DLD1_c4_dox	161	2	0	completed	success

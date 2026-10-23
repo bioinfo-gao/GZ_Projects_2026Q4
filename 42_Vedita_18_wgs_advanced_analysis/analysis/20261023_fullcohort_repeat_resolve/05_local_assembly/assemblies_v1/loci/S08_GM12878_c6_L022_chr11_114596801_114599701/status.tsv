@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S08_GM12878_c6_L022_chr11_114596801_114599701	S08_GM12878_c6	315	4	0	completed	success

@@ -1,0 +1,2 @@
+locus_id	sample_id	paired_templates	unpaired_read_ends	recovered_unmapped_read_ends	status	detail
+S13_MutuI_c10_L048_chr11_114628801_114629801	S13_MutuI_c10	144	12	0	completed	success
