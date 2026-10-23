@@ -3,6 +3,7 @@
 ## 当前唯一真源
 
 - [`P42_research_plan_and_review_1022.md`](P42_research_plan_and_review_1022.md)：当前分析指南、研究计划与审阅记录。它定义完整 read-evidence universe、QNAME/template 主计数口径、重复区替代定位审计、外部 caller 验证和后续结果解释边界。
+- [`P42_alignment_evidence_glossary_1023.md`](P42_alignment_evidence_glossary_1023.md)：BAM alignment、soft/hard clip、SA/split、primary/secondary/supplementary、MAPQ 与 paired-end evidence 的内部术语和 P42 判读边界。
 
 ## 历史上下文与审计材料
 
