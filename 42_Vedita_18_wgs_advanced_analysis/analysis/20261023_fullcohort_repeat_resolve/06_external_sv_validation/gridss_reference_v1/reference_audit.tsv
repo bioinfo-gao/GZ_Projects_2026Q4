@@ -1,0 +1,6 @@
+field	value
+source_reference	/Work_bio/references/Homo_sapiens/GRCh38/GATK.GRCh38/Homo_sapiens_assembly38.fasta
+project_private_reference_link	analysis/20261023_fullcohort_repeat_resolve/06_external_sv_validation/gridss_reference_v1/Homo_sapiens_assembly38.fasta
+representative_bam	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S04_DLD1_c3_dox.markdup.bam
+dictionary_match	yes
+bwa	Program: bwa (alignment via Burrows-Wheeler transformation)
