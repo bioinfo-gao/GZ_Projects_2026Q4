@@ -18,7 +18,8 @@ for sample in csv.DictReader(open(samples_csv)):
         for read in bam.fetch(chrom, start - 1, end):
             if read.query_name not in wanted or read.is_secondary or not read.query_sequence: continue
             key = (read.query_name, 1 if read.is_read1 else 2 if read.is_read2 else 0)
-            # Prefer primary over supplementary; either record retains the same full sequence.
+            # Prefer a primary record when present in the fetched window; otherwise retain a
+            # non-secondary record (including a supplementary record) for this read end.
             if key not in selected or (selected[key].is_supplementary and not read.is_supplementary): selected[key] = read
     with (out / f"{sid}.fastq").open("w") as fq:
         for (qname, mate), read in sorted(selected.items()):

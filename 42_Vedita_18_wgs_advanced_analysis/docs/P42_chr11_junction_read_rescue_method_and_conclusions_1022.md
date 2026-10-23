@@ -119,20 +119,57 @@ P41 target-evidence tables
 
 这里的 query sequence 是 BAM/SAM record 的 `SEQ` 字段：即该 read end 实际测得且随该 record 保存的碱基串；它不是参考基因组序列、不是该 read 的 CIGAR string，也不是“此 record 是否已经比对到某处”的判断。SAM/BAM 规范允许 `SEQ` 写为 `*`，其准确含义是**sequence 未被存储**；BAM 中对应的 `l_seq=0`。在 `pysam` 中，这表现为 `read.query_sequence` 为空或 `None`。P42 的下一步要把这个碱基串写成 FASTQ，再交给 `bwa-mem2` 从头搜索其可能的 reference placement；没有 `SEQ` 的 record 没有可供重新比对的输入，不能用参考碱基、CIGAR、同名的另一条 alignment 或人为补齐的 sequence 来替代。
 
+最典型的情况是：BAM 中该 record 的 `SEQ` 被有意省略，写作 `*`（BAM 内为 `l_seq=0`）。常见于只保留 alignment metadata 的转换、存储压缩、脱敏或不完整数据导出。`QNAME`、坐标和 CIGAR 仍可存在，但没有碱基串，就无法写 FASTQ 重新比对。
+
+它不等于：
+
+- unmapped：未比对 read 通常仍可保存原始 sequence；
+- secondary / supplementary：这是 alignment 关系，未必缺 sequence；
+- low MAPQ、duplicate 或 QC flag：与 sequence 是否存储无必然关系；
+- QUAL='*'：可只有 quality 缺失，SEQ 仍完整。
+
 常见情形与不应混淆的情形如下：
 
-| 情形 | `SEQ` 是否可能为空 | 对本流程的含义 |
-| :--- | :---: | :--- |
-| 在 BAM 生成、转换、脱敏或节省存储空间时，有意丢弃 bases，仅保留 alignment metadata | 是 | 这是最直接的情形；必须回到保留原始 bases 的 FASTQ/BAM/CRAM 才可能重新比对 |
-| 某些 alignment-only export、下游处理或不完整数据传输产生 record | 是 | record 仍可能有 QNAME、位置、CIGAR、FLAG 等信息，但不能成为 read-rescue 输入 |
-| Unmapped record | 可以，但并非必然 | unmapped read 通常也可以保存原始 bases；`unmapped` 不等于 `SEQ` 缺失 |
-| Secondary 或 supplementary alignment | 可以，但并非必然 | 这些是 alignment relationship 的 FLAG，不是 sequence-storage 标志；本流程因计数策略排除 secondary，但窗口内 supplementary record 可在没有对应 primary record 时提供 sequence |
-| Low `MAPQ`、duplicate flag 或 vendor/QC flag | 否，二者没有必然关系 | 它们不是 `SEQ` 是否存在的判据；`MAPQ` 只在后续 unique reconstruction 判定时使用 |
-| QUAL 缺失 | 否 | `QUAL='*'` 可以与非空 `SEQ` 共存；脚本会写入 quality placeholder，但不会补造 sequence |
+| 情形                                                                               | `SEQ` 是否可能为空 | 对本流程的含义                                                                                                                                                               |
+| :--------------------------------------------------------------------------------- | :------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 在 BAM 生成、转换、脱敏或节省存储空间时，有意丢弃 bases，仅保留 alignment metadata |          是          | 这是最直接的情形；必须回到保留原始 bases 的 FASTQ/BAM/CRAM 才可能重新比对                                                                                                    |
+| 某些 alignment-only export、下游处理或不完整数据传输产生 record                    |          是          | record 仍可能有 QNAME、位置、CIGAR、FLAG 等信息，但不能成为 read-rescue 输入                                                                                                 |
+| Unmapped record                                                                    |   可以，但并非必然   | unmapped read 通常也可以保存原始 bases；`unmapped` 不等于 `SEQ` 缺失                                                                                                     |
+| Secondary 或 supplementary alignment                                               |   可以，但并非必然   | 这些是 alignment relationship 的 FLAG，不是 sequence-storage 标志；本流程因计数策略排除 secondary，但窗口内 supplementary record 可在没有对应 primary record 时提供 sequence |
+| Low `MAPQ`、duplicate flag 或 vendor/QC flag                                     | 否，二者没有必然关系 | 它们不是 `SEQ` 是否存在的判据；`MAPQ` 只在后续 unique reconstruction 判定时使用                                                                                          |
+| QUAL 缺失                                                                          |          否          | `QUAL='*'` 可以与非空 `SEQ` 共存；脚本会写入 quality placeholder，但不会补造 sequence                                                                                    |
 
 另一个需要区分的情况是 **hard clipping（CIGAR 中的 `H`）**。hard-clipped record 的 `SEQ` 不是空的，但被 hard clip 的那部分 bases 不在该 record 的 `SEQ` 中；它与 `SEQ='*'` 的“完全未存储”不同。相反，soft clipping（`S`）的 clipped bases 仍在 `SEQ` 中。P42 的提取条件只要求 `SEQ` 非空，并未对每个 selected record 再作“是否含完整原始 read length”断言；因此流程优先选择查询窗口内的 primary record、仅在 primary 不在该窗口时采用可用 supplementary record，以尽量避免把 clipped representation 当作首选输入。该实现足以回答本轮已定义的 read-rescue 问题，但若某个候选需要 base-pair-level 结构判断，应进一步审阅对应 record 的 CIGAR、clipping 和原始 FASTQ，而不能仅以“`SEQ` 非空”作为完整 read 已恢复的证明。
 
-这个筛选对应脚本中的条件 `if read.query_name not in wanted or read.is_secondary or not read.query_sequence: continue`。它依次排除三类 record：并非 P41 支持 read name 的 record、secondary alignment record、以及缺少实际 query bases 的 record。第三类的排除是一个**输入可用性条件**，不是对 read 质量、`MAPQ`、base quality 或 SV 真实性的过滤：
+这个筛选对应脚本中的条件 `if read.query_name not in wanted or read.is_secondary or not read.query_sequence: continue`。满足任意一个条件即跳过；三类被跳过的 record 明确如下：
+
+1. **非目标 read-name record**：`read.query_name not in wanted`。`wanted` 是当前样本 P41 `source_reads` 中、已被某个保留 candidate 引用的 read-name 集合。即使一个 record 落在该 chr11 查询窗口内，只要其 read name 不在该集合，便不是本轮 179 个候选的原始支持 read，不能写入 rescue FASTQ。
+2. **Secondary alignment record**：`read.is_secondary` 为真，即 FLAG `0x100`。它表示同一 read 的 alternative mapping representation；本轮的 candidate-supported-read rescue 不以它作为 source-sequence 代表 record。它与 FLAG `0x800` 的 supplementary alignment 不同，后者不会被这个条件排除。 # 下面有详细解释
+3. **缺少已存储 query bases 的 record**：`not read.query_sequence`，对应 SAM `SEQ='*'` 或 `pysam` 读出的空/`None` sequence。此类 record 有 alignment metadata 也没有可写入 FASTQ、供 `bwa-mem2` 重比对的碱基串。
+
+##### Secondary、supplementary 与 primary record 的区别
+
+一个物理 sequenced read（以同一个 QNAME、以及 paired-end 时相同的 read1/read2 身份识别）可以在 BAM 中有多个 alignment record。多个 record **不等于多个独立 DNA fragment**；它们可能只是同一段 sequence 的不同解释。与本流程有关的三种 FLAG 状态如下。
+
+| Record 类型             |             FLAG             | 产生原因                                                                                                        | 同一 read 的 sequence 关系                                       | 在原 P42 提取脚本中的处理                                                               |
+| :---------------------- | :---------------------------: | :-------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| Primary alignment       | 既无 `0x100` 也无 `0x800` | aligner 为该 read 选择的代表 alignment                                                                          | 是该 read 的一个代表性 mapping                                   | 若在查询窗口中发现且有 `SEQ`，优先写入 FASTQ                                          |
+| Secondary alignment     |           `0x100`           | 同一 read 在重复序列等背景下有多个竞争 placement；一个被标为 primary，其余 alternative alignment 标为 secondary | 不是新的测序分子；是同一 read 的另一种 mapping placement         | 直接跳过                                                                                |
+| Supplementary alignment |           `0x800`           | 同一 read 的不同、通常不大幅重叠的 query segment 分别对到不同位置，即 chimeric/split alignment 的组成部分       | 不是新的测序分子，但可携带 junction 一侧的关键 alignment segment | 不被第 19 行跳过；若窗口中没有已选 primary record，可以作为该 read end 的 sequence 来源 |
+
+换言之，secondary 主要回答“**同一整段或高度重叠的 read 还可以放到哪里**”，而 supplementary 主要回答“**同一 read 的另一段 sequence 还对到了哪里**”。在 SV/junction 语境中，后者通常直接构成 split-read 结构的组成部分，因此不能与 secondary 混为一谈。SAM/BAM 规范也将 multiple mapping 与 chimeric alignment 分开定义：前者的非代表 alignment 使用 secondary FLAG；后者的非代表线性 segment 使用 supplementary FLAG。
+
+这两个 FLAG 是 bit field，不应假定在所有软件输出中绝对互斥。旧脚本的条件是 `read.is_secondary`，所以任何带 `0x100` 的 record 都会跳过；即使某个非常规 record 同时带 `0x800`，也不会因“它是 supplementary”而被保留。上表中“supplementary 不被跳过”指的是带 `0x800` 且**不带** `0x100` 的常规 supplementary record。
+
+原 P42 脚本排除 secondary 的理由是其当时唯一目标是：针对已经由 P41 选中的 candidate-supporting read name，抽取**一个**可重比对的 source-sequence representation，而不是把 BAM 对同一 read 的多个 alternative placement 当成多个支持 fragment。重比对步骤随后用 `bwa-mem2 -a` 自己输出该 sequence 的全部 alternative alignment，因此不需要把原 BAM 中的 secondary record 再次计为独立输入证据。
+
+第 22 行的选择逻辑是：某个 `(QNAME, mate)` 第一次遇到符合条件的 non-secondary record 时先保存；如果已保存的是 supplementary record，随后又在同一查询窗口遇到 primary record，则以 primary 替换 supplementary。反过来，若 primary record 位于窗口外、未被 `bam.fetch()` 返回，窗口内带 `SEQ` 的 supplementary record 会保留并写入 FASTQ。它不会因 `read.is_secondary` 条件而被过滤。
+
+也应明确这个旧流程的边界：若一个 P41 source read 在查询窗口内**只**以 secondary record 形式出现，且没有可用 primary 或 supplementary record 被选中，该 read 会被旧脚本跳过。对已经完成的 179 个候选，这没有造成 candidate-level `not_evaluable`，因为每个候选至少回收到了一个 source fragment；但这不能证明 secondary record 在该窗口中不具有信息价值。
+
+特别是您已提出、但尚待全文审阅后才重跑的“窗口内全部 read”设计，不能沿用“secondary 一律丢弃”的研究口径。新流程应把窗口内的 primary、supplementary 和 secondary record 都记录为 mapping evidence，同时按 `(QNAME, mate)` 去重，绝不能把多个 FLAG record 当作多个独立 fragment；并应单独报告一个 read 的 primary 与 secondary placements、其 MAPQ、CIGAR 和与 junction endpoint 的关系。此处只记录重跑设计要求，不改动当前已完成的结果或旧脚本的历史行为。
+
+第三类的排除是一个**输入可用性条件**，不是对 read 质量、`MAPQ`、base quality 或 SV 真实性的过滤：
 
 - `MAPQ` 在后续 endpoint reconstruction 阶段才用于判定 alignment 是否达到 `>=20`；本步骤不会因 `MAPQ` 低而删除 sequence。
 - base quality 不会决定一个 `SEQ` 是否存在。若 BAM record 有 sequence 但没有可写出的 quality string，脚本会以长度相同的 `I` 作为 FASTQ quality placeholder；这只让 FASTQ 格式完整，不会补造或改变碱基序列。
