@@ -198,7 +198,7 @@ P41 target-evidence tables
 
 对于候选的每一端，必须同时满足：
 
-1. alignment reference chromosome 与记录的 `chr1` 或 `chr2` 相同；
+1. 对第一个 breakpoint endpoint，alignment reference chromosome 必须与该 candidate 记录的 `chr1` 相同；对第二个 endpoint，必须与其 `chr2` 相同。两端按各自字段逐端匹配，不能把命中 `chr1` 的 alignment 当作 `chr2` 端（或反过来）。这里的 `chr1` / `chr2` 是 candidate 表中两个端点的 chromosome 字段名，不是字面意义上的人类 1 号、2 号染色体；
 2. 使用与 P41 `dir1` / `dir2` 一致的 alignment endpoint：`+` 端比较 `reference_end`，`-` 端比较 `reference_start + 1`；
 3. 该 endpoint 与 P41 记录位置的绝对差不超过 20 bp；
 4. 用于左右端的两个 alignment record 必须不同，避免把同一条普通 alignment 同时冒充两个断点端。

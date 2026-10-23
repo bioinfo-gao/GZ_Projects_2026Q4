@@ -4,4 +4,5 @@
 - `P42_key_operations_and_parameters_log_1014.md` — immutable-in-spirit operational history with appended updates.
 - `P42_research_plan_and_review_1022.md` — current internal plan and pre-registered read-rescue criteria.
 - `P42_chr11_junction_read_rescue_method_and_conclusions_1022.md` — detailed Chinese internal explanation of the completed P42 Analysis 1 method, validation, results, interpretation and limitations.
+- `P42_current_analysis_issue_audit_1022.md` — detailed Chinese audit of the current Analysis 1 limitations and mandatory design requirements before the user-authorised rerun.
 - `_client_report_source.md` — sole source of the client-facing supplementary report; generated into the delivery directory by `scripts/20261022/5_build_delivery.sh`.
