@@ -126,6 +126,18 @@ GRIDSS 2.13.2 与 SvABA 1.2.0 安装在独立环境 `p42_sv_validation_20261023`
 
 `≥3 molecule / ≥5%` 是初始阈值，原始计数始终并列报告。若 5% 小于 3 molecule，则 3 molecule 仍为下限；局部有效深度不足时降级为不可判定。
 
+#### 4.3.1 Fixed-candidate raw-evidence re-genotyping decision table
+
+本轮将对 external-caller 产生的 **282 个 BND caller events** 做固定候选再分型；这不是用 VCF QNAME 回查，而是从先前全窗口、未按候选过滤的 raw-evidence ledger 中以端点几何关系重新取证。它不关闭 full-evidence discovery universe，未匹配任一 fixed candidate 的原始 evidence 继续保留在 `04_junction_evidence/raw_evidence/` 与 cluster audit 中。
+
+| 研究问题 | 观察 / 证据单位 | 保留与去重规则 | 判定指标 | 允许结论 |
+| :--- | :---: | :---: | :---: | :---: |
+| 某 caller BND 是否有原始两端 read evidence？ | 每个 `(fixed caller event, sample, QNAME)`；同一 QNAME 的 R1/R2、primary/secondary/supplementary 记录均保留。 | full track 不因 FLAG、MAPQ、duplicate 或 QNAME 合并而删除；独立 fragment 只在同一 event/sample 内按 QNAME 计一次，read-end 与 record-class 另列。 | chr11 anchor 与 SA destination 或 discordant mate 均在 caller 两端各 ±50 bp 内，才计为 `raw_dual_endpoint_fragment`；仅 soft clip/supplementary anchor 是 context，不能充当两端支持。 | `raw dual-endpoint evidence observed`、`anchor-only context` 或 `no matching raw dual-endpoint evidence`；不能从任一项推断真实唯一 locus。 |
+| DLD1 cases 相对 controls 的候选模式如何？ | S01–S05 的同规则 raw dual-endpoint QNAME counts，加每样本 standard local depth。 | `standard-eligible` 是 primary、non-duplicate、non-QC-fail、MAPQ≥20 的 **匹配 read record 子集**；full track 不被替换。未匹配不写为 0 biological evidence。 | 预注册的 3 independent fragments / 5% 门槛；5% 对应 local depth ≥60× 才有 `3/depth≤0.05` 的 sensitivity context。 | `case-only raw candidate requiring sensitivity/assembly`、`shared raw evidence`、`control-only raw evidence` 或 `insufficient`；不能把 caller absence 写成 event absence。 |
+| local assembly 是否完成克隆特异性 gate？ | 在候选 chr11 anchor ±50 bp 内覆盖的 assembly locus 和其 all-placement summary。 | 所有 contig placement（含 secondary/supplementary）不删除；locus overlap 与 `distinct_loci` 仅作为 context。 | 本阶段不将仅覆盖一个 anchor 的 contig 当作 junction assembly；必须有同一 contig 的两端/sequence-level junction 才满足该 gate。 | 只能写 `assembly context available` 或 `no sequence-level junction assessment`；不满足时不得宣布 Dox high confidence。 |
+
+固定候选表会给出 raw-input、anchor-context match、two-endpoint match、standard-eligible subset 与未解析 caller BND 的逐项数量；后者是 filter-impact audit，而不是从 discovery 数据中移除记录。所有两个端点的几何比较使用同一 reference coordinate 和 ±50 bp tolerance。该 re-genotyping 与 GRIDSS/SvABA 使用同一 BAM，属于 mapping/algorithmic concordance 审计，**不构成独立生物学验证**。
+
 ### 4.4 Coverage / CNV 验证轨
 
 全队列做两种分辨率 coverage/CNV 审计：全基因组 100-kb bins 检查样本深度和大片段 CN；chr11 10-kb、靶位点 1-kb bins 定位连续 CN boundary。standard CN 使用 primary、non-duplicate、非 QC-fail、非 supplementary、MAPQ≥20 records；另给 MAPQ≥0 inclusive track。每轨明确 flag、MAPQ、normalisation 与 mappability 限制，禁止把重复区 mapping-depth 当真实 CN。
@@ -181,6 +193,21 @@ GRIDSS 2.13.2 与 SvABA 1.2.0 安装在独立环境 `p42_sv_validation_20261023`
 
 ## 8. 变更记录
 
+- 2026-10-23 — fixed-candidate raw re-genotyping 完成：stage-7 的全部 282 BND caller events 均进入 S01–S05 固定候选 audit；94 个有唯一解析的两端几何，188 个为 anchor-only/unparsed，原始 rows 均不删除。分类为 7 shared、21 control-only、4 case-only、62 anchor-context-without-dual、188 not-evaluable；四个 case-only candidates 的 control standard depth 为 14.7–23.1×，且无 sequence-level contig junction，故 0 个达到预注册 Dox/clone-specific high-confidence gate。
+- 2026-10-23 — full client-delivery package 已准备在 `custom_research_report_20261023/`：英文报告、12 PNG + 12 PDF figures、fixed-candidate tables、contig placement table、raw-match audit 和 methods audit 均为新文件，未修改 2026-10-22 supplementary delivery。`11_prepared_delivery_self_audit_v1/` 逐项核对 282 candidates、1,410 candidate-sample rows、90 contigs / 32 alternative-placement contigs、日期/章节/签名、图形数和所有交付拷贝 SHA-256，结果 pass。包仅供用户审阅，未发送。
+- 2026-10-23 — delivery figure suite v7 完整生成 12 张 PNG/PDF 并逐图视觉复核；这是当前有效的 delivery suite。v1–v6 均保留为可比较的试运行/非最终版本，v7 的 Figure 9 integer annotations 已由 `{:.0f}` 修正为 `0/1/3`。
+- 2026-10-23 — delivery figure suite v6 的 12 张 PNG/PDF 均生成并通过脚本断言；逐图视觉复核发现 Figure 9 将 `make_heatmap` 的注释 format 误传为 `.0f`，呈现为 `0f/3f` 而不是整数。v6 保留为 non-final comparison version；v7 使用 API 要求的 `{:.0f}` 并重新完整渲染。数据矩阵和结论不变。
+- 2026-10-23 — delivery figure suite v5 成功渲染 Figure 1–9；Figure 10 把 partner-coordinate annotation 置于基因组 x 轴外推位置，使两个文本压到右 spine。v5 保留为不完整；v6 将 partner coordinate 和 S04/S05 support 放到 axes-fraction annotation column，保留 chr11 x 轴只表示 anchor。
+- 2026-10-23 — delivery figure suite v4 成功渲染 Figure 1–8；Figure 9 的双行 x 标签和置于 axes 外的解释句在渲染前几何检查中越出画布，故 v4 保留为不完整。v5 将样本 tick 缩为 S01–S05、以 x-axis title 解释组别、移除重复说明句，并使每张图在文字质检前先完成 tight layout。
+- 2026-10-23 — delivery figure suite v3 再次被 Figure 5 的 `S10` 文本拦截；根因定位为 right-hand mate-rescue scatter 的逐样本注释，而非 left panel x-axis。v3 保留为不完整版本；v4 用实际聚合事实“5 个样本、各 recovered 1 read end”代替逐点文字，不改变图中点的原始数据。
+- 2026-10-23 — delivery figure suite v2 将 Figure 5 样本标签缩至 8 pt，仍由同一 `S10`-spine 几何碰撞拦截；v2 保留为不完整版本。该 panel 的每样本标签对“59 个 assembly 都完成”的读图并非必要，v3 改为明确的 canonical S01–S18 order 说明，完整 sample identities 继续在 Figure 1/3/4 逐一显示。
+- 2026-10-23 — 12 张 client-delivery figure suite 的 v1 在 Figure 5 保存前由文字几何闸门拦截：18 个旋转样本标签中 `S10` 与坐标轴 spine 重叠。前四张图和源代码保留为不完整 v1；v2 改为 8-pt 水平样本标签后从未改变的数据源完整重建。
+- 2026-10-23 — v11 的 S01–S18 visible-state assertion 已通过；但新增 labels 使冗余的 `Sample` x-axis title 与独立 cell-line legend 的标题发生几何重叠，渲染闸门阻止保存最终图。v11 保留为不完整试运行；v12 去除重复轴标题，保留显式样本标签与 legend。
+- 2026-10-23 — v10 已尝试直接设置 Figure 3 的 bottom tick positions/labels，但逐 panel 图像复核确认标签仍被 shared-axis behaviour 隐藏；v10 保留为非最终候选。v11 改为 `set_xticklabels`、`labelbottom=True` 与 visible-state assertion 三重闸门，只有 18 个 S01–S18 标签均实际可见才会输出。
+- 2026-10-23 — v9 已完整写出三张图与 manifest 并通过脚本断言；但逐 panel 人工视觉质检发现 Figure 3 的 bottom x-axis 没有显示 sample identity，不能让 bar 追溯到样本。v9 保留为非最终候选，v10 显式设置 S01–S18 bottom ticks/labels 后重新渲染；此次更改只修正图形可追溯性，不改变数据、计数或结论。
+- 2026-10-23 — 首轮外部验证审计图在保存前由跨 panel 配色断言拦截：不同语义 panel 的两种低饱和填充色 RGB 距离 0.094，小于 0.10 的可读性阈值。失败时未生成图件；空的 `figures/20261023_fullcohort_repeat_resolve_v1/` 保留作审计记录。图形脚本改用 disjoint cool versus warm/highlight fills；v2 随后被渲染后文字几何检查拦截（长 x 标签相撞、顶部图例压标题），也未生成图件并保留为空目录。v3 缩短标签、将图例移至 panel 下方，但渲染检查发现该图例被裁出画布，故未生成图件并保留为空目录。v4 使用独立 legend panel，但 Fig2 纵轴长标签被裁切；该目录也保留为空。v5 将全量/no-top-N 信息放入标题、缩短纵轴标签，成功写出 Fig1/2 后因将 CSV 样本表错按 TSV 读取而在 Fig3 前停止；v5 是不完整试运行，保留但不交付。v6 修正 delimiter 后，又在 Fig3 发现原始样本表标签 `Mutu I` 与脚本 `MutuI` 不一致；v6 同为不完整试运行。v7 标签映射修正后，渲染检查仍发现 Fig3 顶部 legend 与标题相撞，故 v7 不完整试运行不交付。v8 使用独立 legend panel 后三张图均已渲染，但 JSON manifest 不能序列化一个 `numpy.int64` 值，故 v8 不交付。v9 显式将 numpy scalar 转为 native Python scalar，完整重建图件与 manifest。
+- 2026-10-23 — SvABA 1.2.0 本地帮助确认其多 BAM 输入须对每一个 case/control BAM 重复 `-t`/`-n` flag；v4 虽成功完成但日志明确只解析 S01 与 S04，故保留为单对照工具验证，不能用于五样本 DLD1 比较。新增 v5，在新目录对 S04/S05 与 S01/S02/S03 分别显式传入 5 个 BAM，并以 SvABA log 的五条 `BAM PARAMS FOR` 和逐路径匹配作为 completion gate。
+- 2026-10-23 — external validation v3 已保留全部 18 个 caller-compatible BAM 的 filter-impact audit 及联合 GRIDSS VCF/assembly；GRIDSS 以 0 errors 完成后，SvABA 因共享 reference 未建 BWA index 而在加载时退出。v3 的成功产物和失败日志原样保留；新增独立 v4 SvABA stage，仅以已审计、具传统 BWA index 的项目私有同一 reference 对 DLD1 五样本补跑，不重复或覆盖 v3 GRIDSS。
 - 2026-10-23 — 将开源 WGS SV workflow 调研、外部 caller 验证 decision table 和已完成的 assembly/input 完整性审计合并进本文件，使其成为唯一当前分析 guide、plan 和 review；原独立 benchmark 文档归入 `docs/P42/superseded_for_comparison/`，仅供历史逐项比较。
 - 2026-10-23 — 用户审阅完成并要求重新制定严谨计划、分析全部 18 样本；旧版 179 candidates/QNAME gate 及直接排除 secondary 的主线废止。旧结果/脚本复制归档；当前改为 full-window、molecule-aware、repeat-aware，新增 CNV、local assembly、DLD1 clone-specific 与大量图形交付。
 - 2026-10-23 — 用户确认主支持单位为 `(sample,QNAME)` fragment/template，`(sample,QNAME,read-end)` 仅作并列 read-level 指标；聚类脚本据此更正并恢复运行。
