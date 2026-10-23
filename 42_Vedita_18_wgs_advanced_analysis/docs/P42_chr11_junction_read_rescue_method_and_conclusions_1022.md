@@ -34,12 +34,12 @@ P42 Analysis 1 的问题被限定为：**对于每一个保留的 P41 junction�
 
 ### 3.1 输入来源
 
-| 输入 | 本轮用途 | 状态与来源 |
-| :--- | :---: | :--- |
-| 10 个 duplicate-marked BAM（Binary Alignment/Map）及其索引 | 提取原始支持 fragment 的 sequence | `/home/gao/Dropbox/Vedita_Bam/`；十个 BAM 合计约 482 GiB；只读查询，未复制或修改 BAM |
-| P41 target-evidence junction 表 | 建立候选及记录初始 breakpoint / support | `/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/region/evidence/target/` |
-| GATK GRCh38 analysis-set reference | 独立重比对参考 | P41 使用的同一 GRCh38 reference 与 `bwa-mem2` index |
-| P42 样本表 | 本轮唯一的样本与预期候选数来源（SSOT） | `scripts/0_sample_table.csv` |
+| 输入                                                       |                本轮用途                | 状态与来源                                                                             |
+| :--------------------------------------------------------- | :-------------------------------------: | :------------------------------------------------------------------------------------- |
+| 10 个 duplicate-marked BAM（Binary Alignment/Map）及其索引 |    提取原始支持 fragment 的 sequence    | `/home/gao/Dropbox/Vedita_Bam/`；十个 BAM 合计约 482 GiB；只读查询，未复制或修改 BAM |
+| P41 target-evidence junction 表                            | 建立候选及记录初始 breakpoint / support | `/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/region/evidence/target/`   |
+| GATK GRCh38 analysis-set reference                         |             独立重比对参考             | P41 使用的同一 GRCh38 reference 与 `bwa-mem2` index                                  |
+| P42 样本表                                                 | 本轮唯一的样本与预期候选数来源（SSOT） | `scripts/0_sample_table.csv`                                                         |
 
 `samtools quickcheck` 已对 10 个纳入 BAM 逐一通过。P41 的已有交付目录保持冻结；P42 只在新建的 `analysis/20261022/` 与 supplementary delivery directory 中写入结果。
 
@@ -54,19 +54,19 @@ P42 Analysis 1 的问题被限定为：**对于每一个保留的 P41 junction�
 
 ### 3.3 候选数的样本分布
 
-| 样本 | 客户标签 | 候选数 | Multi-fragment | Single-fragment | Not reconstructed |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| S01_DLD1_pop | DLD1_pop | 20 | 1 | 19 | 0 |
-| S02_DLD1_c1_ctrl | DLD1_c1_ctrl | 14 | 0 | 14 | 0 |
-| S03_DLD1_c2_ctrl | DLD1_c2_ctrl | 13 | 0 | 13 | 0 |
-| S04_DLD1_c3_dox | DLD1_c3_dox | 17 | 0 | 17 | 0 |
-| S05_DLD1_c4_dox | DLD1_c4_dox | 12 | 1 | 10 | 1 |
-| S06_GM12878_pop | GM12878_pop | 22 | 2 | 19 | 1 |
-| S07_GM12878_c5 | GM12878_c5 | 24 | 0 | 24 | 0 |
-| S08_GM12878_c6 | GM12878_c6 | 13 | 0 | 13 | 0 |
-| S09_GM12878_c7 | GM12878_c7 | 26 | 0 | 26 | 0 |
-| S10_GM12878_c8 | GM12878_c8 | 18 | 0 | 18 | 0 |
-| **总计** | — | **179** | **4** | **173** | **2** |
+| 样本             |   客户标签   |    候选数    | Multi-fragment | Single-fragment | Not reconstructed |
+| :--------------- | :----------: | :-----------: | :------------: | :-------------: | :---------------: |
+| S01_DLD1_pop     |   DLD1_pop   |      20      |       1       |       19       |         0         |
+| S02_DLD1_c1_ctrl | DLD1_c1_ctrl |      14      |       0       |       14       |         0         |
+| S03_DLD1_c2_ctrl | DLD1_c2_ctrl |      13      |       0       |       13       |         0         |
+| S04_DLD1_c3_dox  | DLD1_c3_dox |      17      |       0       |       17       |         0         |
+| S05_DLD1_c4_dox  | DLD1_c4_dox |      12      |       1       |       10       |         1         |
+| S06_GM12878_pop  | GM12878_pop |      22      |       2       |       19       |         1         |
+| S07_GM12878_c5   |  GM12878_c5  |      24      |       0       |       24       |         0         |
+| S08_GM12878_c6   |  GM12878_c6  |      13      |       0       |       13       |         0         |
+| S09_GM12878_c7   |  GM12878_c7  |      26      |       0       |       26       |         0         |
+| S10_GM12878_c8   |  GM12878_c8  |      18      |       0       |       18       |         0         |
+| **总计**   |      —      | **179** |  **4**  |  **173**  |    **2**    |
 
 所有样本的 `ambiguous_reconstruction` 和 `not_evaluable` 候选数均为 0。S02、S03、S10 在建立候选表阶段有显式 presence assertion，因此它们不会因早期八样本范围而被静默遗漏。
 
@@ -97,12 +97,12 @@ P41 target-evidence tables
 
 候选类型的构成如下；类型来自 P41 原始表，并非 P42 新调用：
 
-| P41 junction type | 候选数 | 占 179 个候选的比例 |
-| :--- | :---: | :---: |
-| BND（breakend） | 155 | 86.59% |
-| INV（inversion） | 20 | 11.17% |
-| DEL（deletion） | 2 | 1.12% |
-| DUP（duplication） | 2 | 1.12% |
+| P41 junction type  | 候选数 | 占 179 个候选的比例 |
+| :----------------- | :----: | :-----------------: |
+| BND（breakend）    |  155  |       86.59%       |
+| INV（inversion）   |   20   |       11.17%       |
+| DEL（deletion）    |   2   |        1.12%        |
+| DUP（duplication） |   2   |        1.12%        |
 
 ### 4.3 原始 sequence 的回收
 
@@ -111,9 +111,34 @@ P41 target-evidence tables
 具体处理为：
 
 1. 只保留 read name 位于 P41 `source_reads` 清单的 alignment record；
-2. 排除 secondary alignment；若同一 read end 同时存在 primary 与 supplementary record，则优先用 primary record，因为二者保留的是同一完整 query sequence；
-3. 要求存在 query sequence；
+2. 排除 secondary alignment；在查询窗口内若同一 read end 同时遇到 primary 与 supplementary record，则优先保留 primary record，以避免同一 read end 被重复写入 FASTQ；
+3. 要求存在 query sequence； # 解释如下段
 4. 将 sequence 与 quality 写为 per-sample FASTQ，并建立 `rescue_read_manifest.tsv` 将 FASTQ identifier 映射回 candidate、原 read name 和 mate。
+
+#### “要求存在 query sequence”具体指什么
+
+这里的 query sequence 是 BAM/SAM record 的 `SEQ` 字段：即该 read end 实际测得且随该 record 保存的碱基串；它不是参考基因组序列、不是该 read 的 CIGAR string，也不是“此 record 是否已经比对到某处”的判断。SAM/BAM 规范允许 `SEQ` 写为 `*`，其准确含义是**sequence 未被存储**；BAM 中对应的 `l_seq=0`。在 `pysam` 中，这表现为 `read.query_sequence` 为空或 `None`。P42 的下一步要把这个碱基串写成 FASTQ，再交给 `bwa-mem2` 从头搜索其可能的 reference placement；没有 `SEQ` 的 record 没有可供重新比对的输入，不能用参考碱基、CIGAR、同名的另一条 alignment 或人为补齐的 sequence 来替代。
+
+常见情形与不应混淆的情形如下：
+
+| 情形 | `SEQ` 是否可能为空 | 对本流程的含义 |
+| :--- | :---: | :--- |
+| 在 BAM 生成、转换、脱敏或节省存储空间时，有意丢弃 bases，仅保留 alignment metadata | 是 | 这是最直接的情形；必须回到保留原始 bases 的 FASTQ/BAM/CRAM 才可能重新比对 |
+| 某些 alignment-only export、下游处理或不完整数据传输产生 record | 是 | record 仍可能有 QNAME、位置、CIGAR、FLAG 等信息，但不能成为 read-rescue 输入 |
+| Unmapped record | 可以，但并非必然 | unmapped read 通常也可以保存原始 bases；`unmapped` 不等于 `SEQ` 缺失 |
+| Secondary 或 supplementary alignment | 可以，但并非必然 | 这些是 alignment relationship 的 FLAG，不是 sequence-storage 标志；本流程因计数策略排除 secondary，但窗口内 supplementary record 可在没有对应 primary record 时提供 sequence |
+| Low `MAPQ`、duplicate flag 或 vendor/QC flag | 否，二者没有必然关系 | 它们不是 `SEQ` 是否存在的判据；`MAPQ` 只在后续 unique reconstruction 判定时使用 |
+| QUAL 缺失 | 否 | `QUAL='*'` 可以与非空 `SEQ` 共存；脚本会写入 quality placeholder，但不会补造 sequence |
+
+另一个需要区分的情况是 **hard clipping（CIGAR 中的 `H`）**。hard-clipped record 的 `SEQ` 不是空的，但被 hard clip 的那部分 bases 不在该 record 的 `SEQ` 中；它与 `SEQ='*'` 的“完全未存储”不同。相反，soft clipping（`S`）的 clipped bases 仍在 `SEQ` 中。P42 的提取条件只要求 `SEQ` 非空，并未对每个 selected record 再作“是否含完整原始 read length”断言；因此流程优先选择查询窗口内的 primary record、仅在 primary 不在该窗口时采用可用 supplementary record，以尽量避免把 clipped representation 当作首选输入。该实现足以回答本轮已定义的 read-rescue 问题，但若某个候选需要 base-pair-level 结构判断，应进一步审阅对应 record 的 CIGAR、clipping 和原始 FASTQ，而不能仅以“`SEQ` 非空”作为完整 read 已恢复的证明。
+
+这个筛选对应脚本中的条件 `if read.query_name not in wanted or read.is_secondary or not read.query_sequence: continue`。它依次排除三类 record：并非 P41 支持 read name 的 record、secondary alignment record、以及缺少实际 query bases 的 record。第三类的排除是一个**输入可用性条件**，不是对 read 质量、`MAPQ`、base quality 或 SV 真实性的过滤：
+
+- `MAPQ` 在后续 endpoint reconstruction 阶段才用于判定 alignment 是否达到 `>=20`；本步骤不会因 `MAPQ` 低而删除 sequence。
+- base quality 不会决定一个 `SEQ` 是否存在。若 BAM record 有 sequence 但没有可写出的 quality string，脚本会以长度相同的 `I` 作为 FASTQ quality placeholder；这只让 FASTQ 格式完整，不会补造或改变碱基序列。
+- 对同一个 `(read name, mate)`，脚本在查询窗口内遇到 sequence 已存在的 primary 与 supplementary record 时优先保存 primary record。这一选择的作用是每个 read end 只写一次 FASTQ，避免同一 read end 由多个 alignment record 重复计数。脚本不会拼接多个 alignment record 的 sequence，也不会从 primary / supplementary record 之一推断另一条 record 缺失的碱基；实际写入的是被选中 record 的 `SEQ` 字段。若 primary record 本身不落在查询窗口内，窗口内的 supplementary record 仍可作为该 read end 的可用 sequence 来源。
+
+若一个候选的所有预期 source fragment 都因缺少 `SEQ` 而无法写出 FASTQ，该候选最终会是 `not_evaluable`，而不是 `not_reconstructed`：前者表示没有可以测试的原始序列，后者表示序列已被测试但不能同时重建两个端点。实际运行中，179 个候选均至少回收到一个 source fragment，185 个按原始 read name 计的 source fragment 均进入了 re-extraction 计数，因此没有 candidate-level `not_evaluable` 结果。脚本没有单独输出被跳过的单条 BAM record 清单，故这个结果只能说明没有候选因缺少可用 sequence 而失去可评估性；不应额外表述为“每一条落在查询窗口内的 BAM record 都含 sequence”。
 
 179 个候选的 `source_fragments` 总数为 185，且 185/185 均在 BAM 中重新提取到，因此没有 `not_evaluable` 候选。因为 paired-end fragment 可能贡献两个 read end，FASTQ manifest 有 298 行；候选层面的 fragment 数始终按去重后的原始 read name 计数，避免把同一 fragment 的两个 end 误作两个独立分子。
 
@@ -121,12 +146,12 @@ P41 target-evidence tables
 
 每个样本的 FASTQ 以 `bwa-mem2 2.2.1 mem -a -Y -t 8` 比对到 P41 所用的 GATK GRCh38 analysis-set reference。
 
-| 参数 | 实际作用 | 本项目中的必要性 |
-| :--- | :---: | :--- |
-| `mem` | 执行 short-read sequence alignment | 与 P41 的短读长参考比对框架保持可比 |
-| `-a` | 输出所有找到的 alignment，包括 alternative alignment | repeat-affected region 中不能因只保留一个 best alignment 而掩盖多重比对 |
-| `-Y` | supplementary alignment 使用 soft clipping 表示 | 保留 split/supplementary alignment 的 query-sequence 表达，便于 endpoint 检查 |
-| `-t 8` | 使用 8 个计算线程 | 仅影响运行资源与速度，不改变判定阈值 |
+| 参数     |                       实际作用                       | 本项目中的必要性                                                              |
+| :------- | :--------------------------------------------------: | :---------------------------------------------------------------------------- |
+| `mem`  |          执行 short-read sequence alignment          | 与 P41 的短读长参考比对框架保持可比                                           |
+| `-a`   | 输出所有找到的 alignment，包括 alternative alignment | repeat-affected region 中不能因只保留一个 best alignment 而掩盖多重比对       |
+| `-Y`   |   supplementary alignment 使用 soft clipping 表示   | 保留 split/supplementary alignment 的 query-sequence 表达，便于 endpoint 检查 |
+| `-t 8` |                  使用 8 个计算线程                  | 仅影响运行资源与速度，不改变判定阈值                                          |
 
 各样本 SAM 在保留第一个 header 后合并为 `analysis/20261022/remap/all_samples.sam`，供统一的逐候选分类脚本读取；分类仍由 manifest 中的 sample/candidate identifier 限定，样本之间不会混合计数。
 
@@ -145,13 +170,13 @@ P41 target-evidence tables
 
 最终 candidate-level status 的优先级和定义如下：
 
-| Candidate status | 规则 | 对证据强度的含义 |
-| :--- | :---: | :--- |
-| `multi_fragment_supported` | 至少 2 个不同原始 read name 为 unique reconstruction | 同一 candidate 有多于一个独立测序 fragment 的 read-level 支持 |
-| `single_fragment_supported` | 恰好 1 个不同原始 read name 为 unique reconstruction | 同一 candidate 只由一个 fragment 重建；不能视作 confirmed SV |
-| `ambiguous_reconstruction` | 无 unique reconstruction，但至少一个 fragment 可重建且不满足 MAPQ criterion | 端点模式可见，但 mapping ambiguity 未被阈值排除 |
-| `not_reconstructed` | 已提取 sequence，但没有任何可同时匹配两个端点的 alignment pair | 本轮 read rescue 不支持该候选；不自动等价于 biological absence |
-| `not_evaluable` | 没有从 BAM 回收到该候选的 source fragment | 输入 sequence 缺失，无法进行 read-rescue 判定 |
+| Candidate status              |                                    规则                                    | 对证据强度的含义                                               |
+| :---------------------------- | :-------------------------------------------------------------------------: | :------------------------------------------------------------- |
+| `multi_fragment_supported`  |            至少 2 个不同原始 read name 为 unique reconstruction            | 同一 candidate 有多于一个独立测序 fragment 的 read-level 支持  |
+| `single_fragment_supported` |            恰好 1 个不同原始 read name 为 unique reconstruction            | 同一 candidate 只由一个 fragment 重建；不能视作 confirmed SV   |
+| `ambiguous_reconstruction`  | 无 unique reconstruction，但至少一个 fragment 可重建且不满足 MAPQ criterion | 端点模式可见，但 mapping ambiguity 未被阈值排除                |
+| `not_reconstructed`         |       已提取 sequence，但没有任何可同时匹配两个端点的 alignment pair       | 本轮 read rescue 不支持该候选；不自动等价于 biological absence |
+| `not_evaluable`             |                  没有从 BAM 回收到该候选的 source fragment                  | 输入 sequence 缺失，无法进行 read-rescue 判定                  |
 
 一个 candidate 若同时含 unique 与 ambiguous fragment，candidate-level 结果以 unique reconstruction 为准；ambiguous fragment 数仍被完整保留在结果表。这一优先级解释了本轮“0 个 ambiguous candidate”与“5 个 ambiguous reconstructed fragment”可以同时成立：5 个 ambiguity fragment 都属于另有至少一个 unique fragment 的 candidate，没有候选仅停留在 ambiguous 层级。
 
@@ -159,14 +184,14 @@ P41 target-evidence tables
 
 ### 5.1 总体 read-rescue 结果
 
-| Candidate-level 结果 | 候选数 | 比例 | 解释 |
-| :--- | :---: | :---: | :--- |
-| `multi_fragment_supported` | 4 | 2.23% | 至少 2 个不同 fragment 独立重建两端 |
-| `single_fragment_supported` | 173 | 96.65% | 仅 1 个 fragment 独立重建两端 |
-| `ambiguous_reconstruction` | 0 | 0.00% | 无仅具 ambiguous mapping 的候选 |
-| `not_reconstructed` | 2 | 1.12% | 提取到原 sequence，但未成对重建两个端点 |
-| `not_evaluable` | 0 | 0.00% | 所有候选均有可评估的 source fragment |
-| **至少一个 unique reconstruction** | **177** | **98.88%** | read-rescue 在本预设阈值下重建两个端点 |
+| Candidate-level 结果                     |    候选数    |       比例       | 解释                                    |
+| :--------------------------------------- | :-----------: | :--------------: | :-------------------------------------- |
+| `multi_fragment_supported`             |       4       |      2.23%      | 至少 2 个不同 fragment 独立重建两端     |
+| `single_fragment_supported`            |      173      |      96.65%      | 仅 1 个 fragment 独立重建两端           |
+| `ambiguous_reconstruction`             |       0       |      0.00%      | 无仅具 ambiguous mapping 的候选         |
+| `not_reconstructed`                    |       2       |      1.12%      | 提取到原 sequence，但未成对重建两个端点 |
+| `not_evaluable`                        |       0       |      0.00%      | 所有候选均有可评估的 source fragment    |
+| **至少一个 unique reconstruction** | **177** | **98.88%** | read-rescue 在本预设阈值下重建两个端点  |
 
 在 fragment 层面，185 个重新提取 fragment 中有 182 个产生 unique reconstruction；另有 5 个 fragment 出现了不满足 `MAPQ >=20` 的 endpoint reconstruction。后者不是 5 个额外 candidate，因为这些 fragment 分别属于已有 unique reconstruction 的 candidate；所有 fragment-level 数目应以逐候选表的字段定义为准，不能将不同字段跨层级相加。
 
@@ -174,19 +199,19 @@ P41 target-evidence tables
 
 下表列出证据更强的 4 个候选。它们是“较强的 read-level 支持”，不是自动获得 SV confirmation 的事件。
 
-| Candidate | Type | 已记录 breakpoint | Source / re-extracted / unique fragments | 解释 |
-| :--- | :---: | :--- | :---: | :--- |
-| S01_DLD1_pop_J001 | BND | `chr2:69,105,893 (-)` ↔ `chr11:114,609,953 (+)` | 2 / 2 / 2 | 两个原始 fragment 均按阈值重建 |
-| S05_DLD1_c4_dox_J001 | BND | `chr11:114,607,192 (+)` ↔ `chr21:20,648,241 (-)` | 3 / 3 / 3 | 三个原始 fragment 均按阈值重建 |
-| S06_GM12878_pop_J001 | BND | `chr2:42,949,036 (+)` ↔ `chr11:114,606,321 (-)` | 2 / 2 / 2 | 两个原始 fragment 均按阈值重建 |
-| S06_GM12878_pop_J002 | BND | `chr3:104,481,114 (-)` ↔ `chr11:114,617,659 (-)` | 2 / 2 / 2 | 两个原始 fragment 均按阈值重建 |
+| Candidate            | Type | 已记录 breakpoint                                     | Source / re-extracted / unique fragments | 解释                           |
+| :------------------- | :--: | :---------------------------------------------------- | :--------------------------------------: | :----------------------------- |
+| S01_DLD1_pop_J001    | BND | `chr2:69,105,893 (-)` ↔ `chr11:114,609,953 (+)`  |                2 / 2 / 2                | 两个原始 fragment 均按阈值重建 |
+| S05_DLD1_c4_dox_J001 | BND | `chr11:114,607,192 (+)` ↔ `chr21:20,648,241 (-)` |                3 / 3 / 3                | 三个原始 fragment 均按阈值重建 |
+| S06_GM12878_pop_J001 | BND | `chr2:42,949,036 (+)` ↔ `chr11:114,606,321 (-)`  |                2 / 2 / 2                | 两个原始 fragment 均按阈值重建 |
+| S06_GM12878_pop_J002 | BND | `chr3:104,481,114 (-)` ↔ `chr11:114,617,659 (-)` |                2 / 2 / 2                | 两个原始 fragment 均按阈值重建 |
 
 ### 5.3 未重建候选
 
-| Candidate | Type | 已记录 breakpoint | Source / re-extracted / unique fragments | 本轮判定 |
-| :--- | :---: | :--- | :---: | :--- |
-| S05_DLD1_c4_dox_J010 | DEL | `chr11:114,614,044 (+)` ↔ `chr11:114,622,342 (-)` | 1 / 1 / 0 | `not_reconstructed` |
-| S06_GM12878_pop_J018 | BND | `chr2:123,920,435 (+)` ↔ `chr11:114,611,172 (+)` | 1 / 1 / 0 | `not_reconstructed` |
+| Candidate            | Type | 已记录 breakpoint                                      | Source / re-extracted / unique fragments | 本轮判定              |
+| :------------------- | :--: | :----------------------------------------------------- | :--------------------------------------: | :-------------------- |
+| S05_DLD1_c4_dox_J010 | DEL | `chr11:114,614,044 (+)` ↔ `chr11:114,622,342 (-)` |                1 / 1 / 0                | `not_reconstructed` |
+| S06_GM12878_pop_J018 | BND | `chr2:123,920,435 (+)` ↔ `chr11:114,611,172 (+)`  |                1 / 1 / 0                | `not_reconstructed` |
 
 两个候选的 source sequence 均成功从 BAM 回收，因此它们不是数据缺失；在本轮 reference、全 alternative alignment 输出、端点方向与 ±20 bp tolerance 下，均没有形成一个可同时命中两端的 alignment pair。这个结果只应表述为“本轮未重建”，不应升级为“候选一定不存在”或“P41 一定错误”。
 
@@ -206,16 +231,16 @@ P41 target-evidence tables
 
 本轮执行的验证包括：
 
-| 验证项 | 实际检查 | 结果 |
-| :--- | :--- | :--- |
-| BAM 完整性 | 对十个 in-scope BAM 执行 `samtools quickcheck` | 10/10 通过 |
-| Scope 完整性 | 脚本断言 S02、S03、S10 必须在候选表中出现 | 通过 |
-| 候选数 | 脚本断言最终候选行数为 179 | 通过 |
-| Source fragment 回收 | 每个候选至少回收到一个 source fragment | 179/179 通过；185/185 source fragments 已回收 |
-| 分类全覆盖 | 逐候选 status 汇总必须覆盖全部 179 行 | 4 + 173 + 0 + 2 + 0 = 179 |
-| 脚本完整性 | Python scripts 执行 `py_compile`；shell scripts 执行 `bash -n` | 通过 |
-| 正式交付一致性 | analysis result 与 supplementary delivery 中复制的 candidate table 逐行比较 | 179 行完全一致 |
-| 文件格式 | 正式输出检查为 LF line ending，无 CRLF | 通过 |
+| 验证项               | 实际检查                                                                    | 结果                                          |
+| :------------------- | :-------------------------------------------------------------------------- | :-------------------------------------------- |
+| BAM 完整性           | 对十个 in-scope BAM 执行 `samtools quickcheck`                            | 10/10 通过                                    |
+| Scope 完整性         | 脚本断言 S02、S03、S10 必须在候选表中出现                                   | 通过                                          |
+| 候选数               | 脚本断言最终候选行数为 179                                                  | 通过                                          |
+| Source fragment 回收 | 每个候选至少回收到一个 source fragment                                      | 179/179 通过；185/185 source fragments 已回收 |
+| 分类全覆盖           | 逐候选 status 汇总必须覆盖全部 179 行                                       | 4 + 173 + 0 + 2 + 0 = 179                     |
+| 脚本完整性           | Python scripts 执行 `py_compile`；shell scripts 执行 `bash -n`          | 通过                                          |
+| 正式交付一致性       | analysis result 与 supplementary delivery 中复制的 candidate table 逐行比较 | 179 行完全一致                                |
+| 文件格式             | 正式输出检查为 LF line ending，无 CRLF                                      | 通过                                          |
 
 结果文件的 SHA-256 可用于日后核对是否发生非预期变化：
 
@@ -263,17 +288,17 @@ P42 是对 P41 chr11 目标区 junction 证据的一层补充与细化：它把�
 
 ## 9. 文件索引与复现入口
 
-| 文件（相对于项目根目录） | 角色 |
-| :--- | :--- |
-| `scripts/0_sample_table.csv` | 样本范围、BAM 路径和每样本预期候选数的 SSOT |
-| `scripts/20261022/0_run_all.sh` | 完整正式 workflow 的 orchestrator；在 `tmux` 内运行 |
-| `scripts/20261022/1_prepare_candidates.py` | 从 P41 frozen target-evidence 建立 179 行候选表 |
-| `scripts/20261022/2_extract_support_reads.py` | 从十个 BAM 的扩展窗口回收 source sequence |
-| `scripts/20261022/3_classify_rescue.py` | 基于全部重比对记录执行 endpoint matching 和 candidate classification |
-| `analysis/20261022/candidates/candidate_junctions.tsv` | 候选及原始 P41 support 信息 |
-| `analysis/20261022/reads/rescue_read_manifest.tsv` | FASTQ identifier 与 candidate/read/mate 的映射 |
-| `analysis/20261022/results/rescue_candidate_results.tsv` | **机器可读的逐候选 canonical result** |
-| `analysis/20261022/results/rescue_sample_summary.tsv` | 每样本汇总 |
-| `custom_research_report_supplementary_20261022/` | 已生成、待用户过目的英文客户交付包；尚未发送 |
+| 文件（相对于项目根目录）                                   | 角色                                                                 |
+| :--------------------------------------------------------- | :------------------------------------------------------------------- |
+| `scripts/0_sample_table.csv`                             | 样本范围、BAM 路径和每样本预期候选数的 SSOT                          |
+| `scripts/20261022/0_run_all.sh`                          | 完整正式 workflow 的 orchestrator；在 `tmux` 内运行                |
+| `scripts/20261022/1_prepare_candidates.py`               | 从 P41 frozen target-evidence 建立 179 行候选表                      |
+| `scripts/20261022/2_extract_support_reads.py`            | 从十个 BAM 的扩展窗口回收 source sequence                            |
+| `scripts/20261022/3_classify_rescue.py`                  | 基于全部重比对记录执行 endpoint matching 和 candidate classification |
+| `analysis/20261022/candidates/candidate_junctions.tsv`   | 候选及原始 P41 support 信息                                          |
+| `analysis/20261022/reads/rescue_read_manifest.tsv`       | FASTQ identifier 与 candidate/read/mate 的映射                       |
+| `analysis/20261022/results/rescue_candidate_results.tsv` | **机器可读的逐候选 canonical result**                          |
+| `analysis/20261022/results/rescue_sample_summary.tsv`    | 每样本汇总                                                           |
+| `custom_research_report_supplementary_20261022/`         | 已生成、待用户过目的英文客户交付包；尚未发送                         |
 
 本说明中的汇总数字均来自 `analysis/20261022/results/rescue_candidate_results.tsv` 与 `rescue_sample_summary.tsv`。如需追踪任意一句结论，应先在这两张 canonical table 中定位 candidate ID 或 sample ID，再回到 P41 frozen evidence table 和对应 BAM 验证原始记录。
