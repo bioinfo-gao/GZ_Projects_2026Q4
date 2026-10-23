@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Build the first P42 supplementary delivery without modifying the frozen P41 delivery.
+set -euo pipefail
+source "$(dirname "$0")/0_common.sh"
+DATE="${1:-2026-10-22}"
+YMD="${DATE//-/}"; MMDD="${YMD:4:4}"
+DELIV="$PROJ/custom_research_report_supplementary_${YMD}"
+REPORT="P42_Chr11_Junction_Read_Rescue_${MMDD}.md"
+SRC="$PROJ/docs/_client_report_source.md"
+RESULTS="$RUN/results"
+[[ ! -e "$DELIV" ]] || die "delivery directory already exists: $DELIV"
+need "$SRC"; need "$RESULTS/rescue_candidate_results.tsv"; need "$RESULTS/rescue_sample_summary.tsv"; need "$RUN/candidates/candidate_counts.tsv"
+mkdir -p "$DELIV/junction_rescue"
+sed "s/@@REPORT_DATE@@/$DATE/g" "$SRC" > "$DELIV/$REPORT"
+cp "$RESULTS/rescue_candidate_results.tsv" "$RESULTS/rescue_sample_summary.tsv" "$RUN/candidates/candidate_counts.tsv" "$DELIV/junction_rescue/"
+[[ $(find "$PROJ" -maxdepth 1 -type d -name 'custom_research_report_supplementary_*' | wc -l) -eq 1 ]] || die "expected exactly one supplementary delivery directory"
+[[ $(find "$DELIV" -maxdepth 1 -name '*.md' | wc -l) -eq 1 ]] || die "expected exactly one report"
+grep -Fq "**Report Date:** $DATE" "$DELIV/$REPORT" || die "report date mismatch"
+! grep -Fq '@@REPORT_DATE@@' "$DELIV/$REPORT" || die "unsubstituted date placeholder"
+! grep -Pq '[\x{4e00}-\x{9fff}]' "$DELIV/$REPORT" || die "client report contains Chinese text"
+[[ $(($(wc -l < "$DELIV/junction_rescue/rescue_candidate_results.tsv") - 1)) -eq 179 ]] || die "candidate table row count is not 179"
+echo "DELIVERY_DONE $DELIV/$REPORT"

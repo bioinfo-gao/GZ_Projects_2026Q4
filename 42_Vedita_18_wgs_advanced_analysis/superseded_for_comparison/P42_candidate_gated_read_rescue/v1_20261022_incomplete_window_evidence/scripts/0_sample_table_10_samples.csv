@@ -1,0 +1,11 @@
+sample_id,client_label,cohort_role,bam_path,bam_gib,source_candidate_count
+S01_DLD1_pop,DLD1_pop,DLD1 population,/home/gao/Dropbox/Vedita_Bam/S01_DLD1_pop.markdup.bam,44,20
+S02_DLD1_c1_ctrl,DLD1_c1_ctrl,DLD1 control clone 1,/home/gao/Dropbox/Vedita_Bam/S02_DLD1_c1_ctrl.markdup.bam,42,14
+S03_DLD1_c2_ctrl,DLD1_c2_ctrl,DLD1 control clone 2,/home/gao/Dropbox/Vedita_Bam/S03_DLD1_c2_ctrl.markdup.bam,46,13
+S04_DLD1_c3_dox,DLD1_c3_dox,DLD1 +dox clone 3,/home/gao/Dropbox/Vedita_Bam/S04_DLD1_c3_dox.markdup.bam,46,17
+S05_DLD1_c4_dox,DLD1_c4_dox,DLD1 +dox clone 4,/home/gao/Dropbox/Vedita_Bam/S05_DLD1_c4_dox.markdup.bam,61,12
+S06_GM12878_pop,GM12878_pop,GM12878 population,/home/gao/Dropbox/Vedita_Bam/S06_GM12878_pop.markdup.bam,34,22
+S07_GM12878_c5,GM12878_c5,GM12878 clone 5,/home/gao/Dropbox/Vedita_Bam/S07_GM12878_c5.markdup.bam,46,24
+S08_GM12878_c6,GM12878_c6,GM12878 clone 6,/home/gao/Dropbox/Vedita_Bam/S08_GM12878_c6.markdup.bam,45,13
+S09_GM12878_c7,GM12878_c7,GM12878 clone 7,/home/gao/Dropbox/Vedita_Bam/S09_GM12878_c7.markdup.bam,57,26
+S10_GM12878_c8,GM12878_c8,GM12878 clone 8,/home/gao/Dropbox/Vedita_Bam/S10_GM12878_c8.markdup.bam,61,18

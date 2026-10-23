@@ -1,11 +1,19 @@
-sample_id,client_label,cohort_role,bam_path,bam_gib,source_candidate_count
-S01_DLD1_pop,DLD1_pop,DLD1 population,/home/gao/Dropbox/Vedita_Bam/S01_DLD1_pop.markdup.bam,44,20
-S02_DLD1_c1_ctrl,DLD1_c1_ctrl,DLD1 control clone 1,/home/gao/Dropbox/Vedita_Bam/S02_DLD1_c1_ctrl.markdup.bam,42,14
-S03_DLD1_c2_ctrl,DLD1_c2_ctrl,DLD1 control clone 2,/home/gao/Dropbox/Vedita_Bam/S03_DLD1_c2_ctrl.markdup.bam,46,13
-S04_DLD1_c3_dox,DLD1_c3_dox,DLD1 +dox clone 3,/home/gao/Dropbox/Vedita_Bam/S04_DLD1_c3_dox.markdup.bam,46,17
-S05_DLD1_c4_dox,DLD1_c4_dox,DLD1 +dox clone 4,/home/gao/Dropbox/Vedita_Bam/S05_DLD1_c4_dox.markdup.bam,61,12
-S06_GM12878_pop,GM12878_pop,GM12878 population,/home/gao/Dropbox/Vedita_Bam/S06_GM12878_pop.markdup.bam,34,22
-S07_GM12878_c5,GM12878_c5,GM12878 clone 5,/home/gao/Dropbox/Vedita_Bam/S07_GM12878_c5.markdup.bam,46,24
-S08_GM12878_c6,GM12878_c6,GM12878 clone 6,/home/gao/Dropbox/Vedita_Bam/S08_GM12878_c6.markdup.bam,45,13
-S09_GM12878_c7,GM12878_c7,GM12878 clone 7,/home/gao/Dropbox/Vedita_Bam/S09_GM12878_c7.markdup.bam,57,26
-S10_GM12878_c8,GM12878_c8,GM12878 clone 8,/home/gao/Dropbox/Vedita_Bam/S10_GM12878_c8.markdup.bam,61,18
+sample_id,client_label,cell_line,dox_status,cohort_role,primary_comparison_role,bam_path,bam_gib
+S01_DLD1_pop,DLD1_pop,DLD1-136,no,parental_population,DLD1_baseline,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S01_DLD1_pop.markdup.bam,44
+S02_DLD1_c1_ctrl,DLD1_c1_ctrl,DLD1-136,no,control_clone,DLD1_control,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S02_DLD1_c1_ctrl.markdup.bam,42
+S03_DLD1_c2_ctrl,DLD1_c2_ctrl,DLD1-136,no,control_clone,DLD1_control,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S03_DLD1_c2_ctrl.markdup.bam,48
+S04_DLD1_c3_dox,DLD1_c3_dox,DLD1-136,yes,dox_clone,DLD1_case,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S04_DLD1_c3_dox.markdup.bam,46
+S05_DLD1_c4_dox,DLD1_c4_dox,DLD1-136,yes,dox_clone,DLD1_case,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S05_DLD1_c4_dox.markdup.bam,61
+S06_GM12878_pop,GM12878_pop,GM12878,no,parental_population,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S06_GM12878_pop.markdup.bam,34
+S07_GM12878_c5,GM12878_c5,GM12878,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S07_GM12878_c5.markdup.bam,46
+S08_GM12878_c6,GM12878_c6,GM12878,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S08_GM12878_c6.markdup.bam,45
+S09_GM12878_c7,GM12878_c7,GM12878,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S09_GM12878_c7.markdup.bam,57
+S10_GM12878_c8,GM12878_c8,GM12878,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S10_GM12878_c8.markdup.bam,65
+S11_MutuI_pop,MutuI_pop,Mutu I,no,parental_population,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S11_MutuI_pop.markdup.bam,37
+S12_MutuI_c9,MutuI_c9,Mutu I,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S12_MutuI_c9.markdup.bam,59
+S13_MutuI_c10,MutuI_c10,Mutu I,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S13_MutuI_c10.markdup.bam,55
+S14_MutuI_c11,MutuI_c11,Mutu I,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S14_MutuI_c11.markdup.bam,46
+S15_DG75_pop,DG75_pop,DG75,no,parental_population,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S15_DG75_pop.markdup.bam,53
+S16_DG75_c12,DG75_c12,DG75,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S16_DG75_c12.markdup.bam,24
+S17_DG75_c13,DG75_c13,DG75,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S17_DG75_c13.markdup.bam,46
+S18_DG75_c14,DG75_c14,DG75,no,clone,background_only,/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S18_DG75_c14.markdup.bam,47
