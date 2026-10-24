@@ -373,3 +373,4 @@ custom_research_report_*/**/*_pathabundance.tsv
 *fasta.sa
 *metrics
 *.gridsscache
+*complete
