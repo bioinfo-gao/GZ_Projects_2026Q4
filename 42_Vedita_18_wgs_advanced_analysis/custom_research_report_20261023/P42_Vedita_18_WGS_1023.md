@@ -10,7 +10,7 @@
 
 This full-cohort whole-genome sequencing (WGS) analysis examined all 18 supplied alignment datasets (S01–S18). It assessed chromosome 11 (chr11) coverage, raw junction evidence, local assemblies, alternative genomic placements, and external structural-variant callers. The primary comparison used the analysis labels S04/S05 (`+dox`, doxycycline treatment) against S01 (parental) and S02/S03 (control clones). The remaining 13 samples were retained as cohort background rather than treated as DLD1 biological controls.
 
-The analysis was designed to determine whether the reported chr11/FISH observation could be resolved to a Dox- or clone-specific structural breakpoint. It extends the earlier supplementary read-rescue package with an all-sample, repeat-aware evidence model; the prior delivery remains an intact historical record.
+The analysis was commissioned as the follow-on investigation of Section 7.3 of the earlier P41 report, which catalogued repeat-affected chr11 junction observations but did not resolve a shared `+dox` breakpoint. P42 was designed to determine whether that reported chr11/fluorescence in situ hybridization (FISH) observation could be resolved to a Dox- or clone-specific structural breakpoint. It extends the earlier supplementary read-rescue package with an all-sample, repeat-aware evidence model; the prior delivery remains an intact historical record.
 
 ## 2. Core Conclusions
 
@@ -27,6 +27,7 @@ Section 3 presents the measured findings by theme. Section 8.2 provides the evid
 2. **Local assembly completed for all 59 selected loci.** The assemblies yielded 90 contigs; 32 contigs had more than one genomic placement. Contig mapping is therefore context for breakpoint assessment, not confirmation by itself.
 3. **External callers produced a broad candidate universe, not a final event list.** Genome Rearrangement IDentification Software Suite (GRIDSS) reported 278 normalized target-related breakend events across the 18-sample caller run. Structural Variation Analysis by Assembly (SvABA) reported four germline breakend events and no somatic breakend events in the corrected five-sample DLD1 run.
 4. **Fixed-candidate raw re-genotyping separates geometry from evidence strength.** Of 282 caller breakend events, 94 had a uniquely parsed two-endpoint geometry. Seven showed raw two-endpoint support in at least one case and control, 21 only in controls, and four only in `+dox` samples. None of the four case-only patterns passes the coverage and sequence-level assembly requirements for a high-confidence conclusion.
+5. **P42 turns the P41 Section 7.3 EV0623 observation into a focused, bounded hypothesis.** P41 reported EV0623 as a single-sample tier-B junction in S05. P42 maps the same junction geometry to C2 (a one-base representation difference at each endpoint), confirms three raw dual-endpoint QNAME fragments in S05, and shows why those records still do not establish a Dox- or clone-specific structural variant.
 
 ## 4. Sample Information
 
@@ -46,6 +47,8 @@ The chr11 discovery interval was chr11:114,604,000–114,625,500 (GRCh38, 1-base
 An independent-fragment count was defined as one unique query template name (QNAME) within one sample and fixed candidate. Multiple records or read ends from that QNAME remain in the audit ledger but are not counted as separate fragments. A raw two-endpoint fragment required either a supplementary-alignment (SA) tag or discordant paired-end mate to match both caller endpoints within 50 base pairs (bp). Soft-clipped or supplementary records matching only one endpoint were recorded as anchor context, not as complete breakpoint support.
 
 The pre-specified high-confidence gate required at least three standard-eligible independent fragments (primary, non-duplicate, non-quality-control-fail, mapping quality at least 20) and a 5% sensitivity context. At the three-fragment threshold, 5% requires at least 60× local depth. A sequence-level contig spanning the junction would also be required; a contig that only overlaps one chr11 anchor is not sufficient.
+
+P41 Section 7.3 supplied one pre-nominated DLD1 `+dox` junction for focused follow-up: EV0623, represented there as chr11:114,607,192–chr21:20,648,241 in S05. P42 treated the corresponding caller geometry (C2; chr11:114,607,191–chr21:20,648,242) as one candidate within the pre-defined all-caller universe rather than giving it preferential evidentiary status. This design permits a direct, auditable comparison between the earlier screen and the expanded analysis while retaining all other candidate geometries.
 
 ## 6. Methods
 
@@ -82,6 +85,12 @@ The all-event GRIDSS DLD1 support matrix is shown in Figure 8. This panel displa
 | C3 | chr11:114615021; chr11:114615035 | 1 / 1 | 0 / 1 | 19.3–22.1 | Case-only raw candidate; insufficient confirmation |
 | C4 | chr11:114598286; chr3:69753603 | 0 / 1 | 0 / 1 | 16.5–17.4 | Case-only raw candidate; insufficient confirmation |
 
+#### Follow-on finding from P41 Section 7.3
+
+P41 Section 7.3 described EV0623 as the only tier-B junction with an end in the target region in S05 among the DLD1 `+dox` samples (three split reads, no discordant pairs). The P41 report appropriately treated it as a single-sample candidate, not as an explanation for the chr11 coverage pattern. P42 identifies the same chr11–chr21 geometry as C2; the one-base endpoint differences arise from caller and re-genotyping coordinate representation, not from a second independent event.
+
+The expanded analysis supplies three new constraints on EV0623/C2. First, its three raw dual-endpoint QNAME fragments occur in S05, with none in S04 or S01–S03 under the fixed-geometry rule. Second, none of the three S05 fragments is standard-eligible, so the raw count cannot satisfy the pre-specified independent-fragment gate. Third, S01–S03 have only 19.1–23.1× standard local depth at this geometry, below the 60× depth needed to exclude a 5% event using the three-fragment rule; no local contig demonstrates the chr11–chr21 junction sequence. P42 therefore narrows EV0623/C2 to the first assay priority, but does not convert it into a confirmed structural variant or a confirmed explanation of the P41 coverage observation.
+
 Figure 11 quantifies the fixed-candidate filter impact: 51,508 raw evidence rows were retained across S01–S05; 19,557 rows matched at least one caller anchor geometry and 31,951 did not. Rows not linked to a fixed caller geometry remain part of the full discovery evidence and were not deleted or interpreted as irrelevant.
 
 ## 8. Conclusions, Limitations and Next Steps
@@ -112,7 +121,12 @@ The local control depth for C1–C4 is below the depth required for a three-frag
 
 ### 8.4 Suggested confirmation
 
-For a decision requiring a resolved structural event, prioritize the four listed candidates for an independent, breakpoint-spanning targeted assay. A targeted polymerase chain reaction (PCR) design should be based on the caller-defined two-endpoint geometry and assessed alongside the alternative-placement audit. If follow-up WGS is planned, higher local depth would improve the sensitivity context for comparisons against S01–S03.
+The next work should begin with the P41 Section 7.3 carry-forward candidate EV0623/P42 C2, then proceed to C1, C3 and C4 only if C2 does not resolve the question or if a broader candidate panel is required.
+
+1. **Test EV0623/C2 with an independent breakpoint-spanning targeted assay.** Design primers from unique flanks at chr11:114,607,191 and chr21:20,648,242, test independently prepared DNA from S01–S05, and sequence any amplicon. A positive result requires sequence confirmation of both expected flanks; a negative result should be reported with the assay's measured analytical sensitivity rather than as biological absence.
+2. **Raise the control sensitivity before making a negative WGS comparison.** If WGS follow-up is planned, obtain at least 60× local short-read depth at the C2 geometry in S01–S03, so that the pre-specified three-fragment / 5% sensitivity context is met. This is a sensitivity improvement, not an independent biological validation of an existing WGS call.
+3. **Use C1, C3 and C4 as a second-tier panel.** Their raw evidence is limited to one or two `+dox` fragments, so they should be tested only with the same requirements: endpoint-specific assay design, appropriate controls, amplicon sequencing and alternative-placement review.
+4. **Integrate FISH only as a separate evidence layer.** If raw FISH images or a tabulated FISH result become available, score them independently and compare the sample-level pattern with the targeted-assay results. The currently supplied qualitative FISH observation cannot be quantitatively combined with the WGS evidence.
 
 ## 9. Deliverable Files
 
