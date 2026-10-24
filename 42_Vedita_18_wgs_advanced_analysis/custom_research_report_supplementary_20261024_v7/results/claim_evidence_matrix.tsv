@@ -1,0 +1,6 @@
+claim	source_file	interpretation_boundary
+C2 read-end representation is consistent with 2-bp AT microhomology and no observed query gap	c2_read_end_junction_resolution.tsv; c2_junction_resolution_summary.tsv	Not independent confirmation or a unique repeat-context breakpoint proof
+No exact two-end Manta/DELLY match for C1-C4 in the DLD1 comparison	candidate_manta_delly_concordance.tsv	Caller comparison is algorithmic evidence from the same WGS dataset
+C1-C4 rescue counts are unchanged	read_rescue_candidate_impact.tsv	Only addresses overlap of five rescued unmapped mates with C1-C4
+No C1-C4 high-confidence clone/doxycycline-specific event	clone_specific_comparison_with_criteria.tsv	Requires all support/depth/sequence gates; zero in low-depth controls is not exclusion
+BAM/VCF/BCF sources have an availability inventory; SNV/indel VCF is not claimed	data_delivery_availability_manifest.tsv	Inventory only; no external transfer was initiated

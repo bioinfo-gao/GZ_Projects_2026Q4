@@ -146,6 +146,45 @@ GRIDSS 2.13.2 与 SvABA 1.2.0 安装在独立环境 `p42_sv_validation_20261023`
 
 对 DLD1 五样本核验同一 reference、同一过滤定义下的 SNV/indel VCF；若已有 P41 callset 的 provenance/完整性不合格，才在新目录补充 calling。全 18 样本 BAM/BAI 和 Manta/DELLY VCF 是既有交付源；本轮生成 manifest、校验和与 annotated per-event TSV，不复制 846-GiB BAM 到 P42 工作区。
 
+### 4.6 P41 §7.3 后续研究：assay design 与外部证据边界（2026-10-24）
+
+| 研究问题 | 观察／证据单位 | 保留与去重规则 | 判定指标 | 允许的结论 |
+| :--- | :---: | :---: | :---: | :--- |
+| P41 `EV0623` 与 P42 `C2` 是否为同一可检验 junction | P41 report 的 BND 行、P42 normalized GRIDSS BND record、以及 S05 supporting QNAME 的原始 alignment/sequence | 以 P42 `C2` 的 caller event ID `gridss192fb_336` 为固定锚；保留其两个 mate BND record、全部 S05 supporting QNAME 及原 FLAG/CIGAR/SA context；不以 QNAME 数量替代独立验证 | 两端坐标、BND orientation 与 read sequence 可否一致；若两端各有 1 bp 表示差异，须由 VCF breakpoint convention/原始 alignment 解释 | 可称“同一候选几何的 crosswalk”或“未能由现有 short-read 序列唯一重建”；不得称为第二个事件或已验证 junction |
+| 能否为 C2 设计独立 breakpoint-spanning PCR | 一个 virtual junction template、一个 primer pair 及其对 GRCh38 的全基因组 in-silico specificity audit | template 必须由 caller BND orientation 构建，且至少一个 supporting raw read 的跨 junction sequence 与模板一致；候选 primer 不符合完整长度唯一匹配即保留在 rejected audit，不删除 | Primer3 Tm/GC/self-complementarity；每条 primer 的全长精确 GRCh38 hit 数；pair 的预期 junction product 与 no-junction reference products | 只能称“in-silico assay-ready”或“无可接受设计”；PCR 阳性/阴性必须待独立 DNA 与实测 analytical sensitivity，不能从 in-silico 结果推断 |
+| C1/C3/C4 是否可作为第二优先级 assay panel | 每个 fixed candidate 的 VCF BND records、原始 QNAME evidence、orientation-aware template／flank design | C1–C4 都保留，即使无有效 primer；不得因 read 少或无法设计而称无事件 | 与 C2 相同的 template/read consistency、unique-primer 及 product 判据；并列列出原始/standard-eligible fragment 数 | 仅可给出 second-tier design status；不改变其“candidate”分类 |
+| 何时能够对 S01–S03 作 5% negative comparison | 每个 candidate 的 existing standard local depth 和未来测序的 measured local depth | 现有 14.7–23.1× 与新数据严格分列，不把计划深度写成已获得 | 三个 standard-eligible fragments的 5% sensitivity context 要求 local depth ≥60× | 可给出 prospective coverage requirement；没有新 BAM/FASTQ 时不得声称 control negative 或完成新 WGS |
+| FISH 如何纳入 | 原始 FISH image 或 tabular cell-level result（如提供）与已完成 WGS/assay outputs | FISH 与 WGS 分开计数、分开判读，不互相替代；未提供的原始 FISH 输入写为 missing | 可追溯原始图像／表格、sample correspondence、预定义 scoring rule | 仅在原始输入存在时报告定量对照；当前不得从 qualitative observation 外推数值 |
+
+本轮新增的可计算输出仅写入 `analysis/20261024_p41_7_3_assay_followup/`，日志写入 `logs/20261024_p41_7_3_assay_followup/`，脚本只新增在 `scripts/20261024/`。原 P41/P42 BAM、caller output、结果表、图和待审交付包全部只读。预计 primer specificity scan 可能超过数分钟，故以 `p42_assay_design_20261024` tmux session 运行；若没有可用的 wet-lab DNA、新 WGS data 或 raw FISH input，则把相应步骤标为 external-input blocked，而非失败或阴性。
+
+### 4.7 客户原始问题逐项回答补充（2026-10-24）
+
+客户在 `docs/P42/解释文档与原有技术缺陷/P41_to_41_request.md` 明确要求：不重比对现有 BAM，而是回答 read rescue、junction base-pair detail、Manta/DELLY concordance、DLD1 clone-specific comparison，以及 genome-wide data deliverable 的可用性。P42 已完成 read-rescue、local assembly、五个 DLD1 样本 fixed-candidate re-genotyping 和 Manta/DELLY input audit；但客户问题中的 caller concordance、C2 read-end junction structure 和交付文件清单必须单列为可审计答案，不能仅隐含在主报告中。
+
+| 客户问题 | 证据单位与保留规则 | 新判定指标 | 允许的客户回答 |
+| :--- | :---: | :---: | :--- |
+| P41 §7.3 / P42 C1–C4 是否被 Manta、DELLY 或二者支持 | 读取 P42 已审计的 72 份 Manta/DELLY source（18 样本 × 4 source stage）；每个 C1–C4 与每个 DLD1 样本保留所有 caller record，不以 record 缺失替代阴性 | 两个 breakend 在任意顺序均在 50 bp 且 SV type 为 BND = exact two-end；仅一个端点邻近或 type/partner 不同 = anchor-only/nonconcordant | 可称 Manta-only、DELLY-only、both-concordant、anchor-only/nonconcordant 或 no exact caller match；caller concordance 是算法一致性，不是独立验证 |
+| C2 能否给出 base-pair-level junction detail | 以 v4 assay audit 中全部 C2 sequence-bearing record 为输入；按 `(QNAME, read end)` 合并 primary/supplementary record，保留 FLAG、CIGAR、MAPQ 和 query interval | chr11/chr21 mapping blocks 的 query overlap / gap、overlap sequence、五个 read-end 与三个 QNAME 的一致性 | 可报告“该 alignment representation 与 N-bp microhomology、0-bp observed insertion 一致”；不得将 repeat-context coordinate representation 升格为已独立验证的唯一 breakpoint |
+| read rescue 是否改变重点候选支持数 | 交集 P42 unmapped-mate recovery QNAME 与 C1–C4 raw dual-endpoint QNAME；所有 recovered mate 保留 | 每 candidate 的 raw QNAME before/after rescue、交集数和 affected sample | 可报告 rescue 对该 candidate 的可测增量；无交集只能称“没有改变该 candidate 的计数”，不能称 rescue 无价值 |
+| 客户要的 BAM/VCF/SNV-indel 文件能否交付 | 只读清点 sample table 和 P41 source path，逐文件存在性、index 和 size；不复制 846-GiB 原始 BAM | 每一类的可用文件数、index completeness、字节数、SNV/indel callset provenance status | 可准备 transfer manifest；未在 source inventory 找到的 SNV/indel VCF 必须明确写为 unavailable-for-current-package，不能伪称已生成 |
+
+该补充只读已有 BAM/VCF/ledger 及 P42 v4 assay outputs，新产物写入 `analysis/20261024_customer_request_response_v1/`；当前有效的 client-review supplementary package 写入 `custom_research_report_supplementary_20261024_v8/`。它不修改 P41 source、P42 已交付包或现有 assay package。
+
+### 4.8 单一客户交付包整合（2026-10-24）
+
+用户要求把本次 P42 工作整理为一个可直接给客户的文件夹，而不是让客户区分主报告与多个 supplement。故本阶段只做**交付整合与格式转换**，不重新分析、不改变 P41/P42 已完成的科学结论；新文件夹为 `custom_research_report_20261024/`，只包含客户可读报告、14 组 PNG/PDF 图、结果表、方法说明和客户要求的 genome-wide 数据文件。原来每个 dated delivery/supplement 保持不动，用作可追溯源。
+
+| 交付问题 | 观察／交付单位 | 保留与转换规则 | 验收指标 | 对客户允许的表述 |
+| :--- | :---: | :---: | :---: | :--- |
+| P42 主分析与 P41 §7.3 后续能否在一份报告中阅读 | 一份新的英文 §§1–9 报告与 14 组图 | 综合 2026-10-23 主报告、Figure 13 assay follow-up 和 Figure 14 customer-question results；不复制旧报告、不修改任何旧交付 | §§1–9、P41→P42 crosswalk、C2 read-end、caller/rescue/clone conclusion 和文件索引均存在 | 这是 P42 的单一客户入口；旧包是内部可追溯历史而非客户需要拼接的多个入口 |
+| 18 个 BAM/index 能否随包交付 | 每个 source BAM 和对应 BAI | `rsync --archive --partial --append-verify` 复制到新的 client package；绝不移动、删除或改写 source BAM | 18 BAM + 18 BAI 存在、size/hash 或 `cmp` 核验；可恢复的 copy log 保留在项目 logs、不放客户包 | 包内提供实际 BAM/index 数据，而非内部路径或 symlink |
+| Manta/DELLY 文件能否满足 VCF 要求 | 每样本 filtered Manta SV、candidate-stage Manta SV/small indel 和 DELLY discovery/region-genotyped calls | 已是 VCF.gz 的 Manta 文件原样复制；DELLY BCF 用 `bcftools view -Oz` 转为 bgzip VCF 并建立 `.tbi`，保留 BCF provenance 说明；candidate-stage 文件不得重命名为“unfiltered” | 每类 18 个样本文件，压缩格式可读且 index 完整；转换前后 per-file record count 一致 | filtered 与 candidate-stage Manta、以及由 DELLY BCF 可读转换的 VCF 都提供；candidate-stage 的命名边界明确 |
+| Project-wide SNV/indel VCF | 一项 requested file category | 只在已审计 source inventory 内找 provenance-qualified callset；没有就写 client-safe unavailable record，不空造或用 Manta small-indel 代替 | 目录与报告都出现 0 available / reason；无伪装 SNV callset | 当前未提供该 category；这不改变现有 SV/junction 结论 |
+| 客户包是否泄露我方内部路径或 scripts/logs | 每个 client-facing text/JSON/TSV 与目录树 | 不复制含 `/mnt/`、`/home/` source path 的旧 manifest；重新生成 client-relative index/method manifest；scripts、tmux/log、failed v6/v7 一律不进包 | 全包 path scan 无 internal absolute path；顶层仅一个 entry report；无 `scripts/`、`logs/` 或 superseded files | 客户收到的是自包含、可浏览的单一交付文件夹 |
+
+copy/format-conversion 预计会运行数小时，目标 disk 已验证有 3.6 TB 可用空间，超过约 907 GB BAM + caller 文件预算。任务在 `p42_client_package_20261024` tmux 执行，配套 `p42_client_package_watch_20261024` tmux 仅监控 session/memory；`WD_MAIL=0` 禁止自动对外发信，日志和 tty alert 为本地状态用途。任一 copy 中断可用 `--append-verify` 从 partial 文件恢复，不删除任何 source、partial 或历史交付。
+
 ## 5. 图片交付（PNG、PDF、来源 TSV 与脚本齐全）
 
 至少制作下列 12 组图，且所有图片均可从保存的 TSV/脚本重建：
@@ -193,6 +232,10 @@ GRIDSS 2.13.2 与 SvABA 1.2.0 安装在独立环境 `p42_sv_validation_20261023`
 
 ## 8. 变更记录
 
+- 2026-10-24 — 按用户要求，P42 从“多个历史 supplement 供审阅”推进为一个可直接给客户的完整文件夹：计划创建 `custom_research_report_20261024/`，整合 2026-10-23 full cohort P42、P41 §7.3 assay follow-up 和 customer-question completion，并纳入 18 BAM/BAI、Manta 与转换后的 DELLY VCF。该阶段是 copy/format conversion/客户报告整合，不重算任何 scientific result；SNV/indel VCF 继续按已审计的 unavailable boundary 表述。
+- 2026-10-24 — 最终 append-only `custom_research_report_supplementary_20261024_v8/` 已生成：英文客户问题完成报告、Figure 14（PNG/PDF）、8 个本轮新增分析结果、2 个 review-oriented TSV 和 source hash manifest 均齐全。独立 self-audit 通过 **58/58** 项（0 failed），包括 §§1–9、P41 §7.3 连续性、C2 3 QNAME/5 read-end/`AT` 2-bp overlap/0-bp gap、20 个 Manta/DELLY comparison、C1–C4 rescue before/after、DLD1 criterion、18 BAM + index、SNV/indel VCF availability boundary、所有拷贝 hash 和非重复大文件检查；Figure 14 亦已逐 panel 视觉复核。没有发送给客户。
+- 2026-10-24 — 客户问题补充交付的首次 v6 构建已完整写出新报告、Figure 14 和新增结果表，但交付自审脚本的章节匹配 regex 把报告中正确的 `## 1.` 错误地要求为含反斜杠的形式，故在第一个检查即失败。v6 及其 failed audit 保留为不可交付审计记录，未被覆盖或删除；修复仅涉及自审 regex，不改变任何科学输入、数值、图或报告结论。后续 append-only rebuild 从 `custom_research_report_supplementary_20261024_v7/` 开始，其 audit outcome 见下一条记录。
+- 2026-10-24 — v7 的自审继续在“exact caller-concordance totals”文本断言停止：报告中正确的 `0/20 for Manta, 0/20 for DELLY, and 0/20 for both callers` 被错误断言为另一种词序。v7 和其 failed audit 同样保留为不可交付审计记录；修复仅将断言改为报告实际且语义正确的词序，不改变任何科学输入、数值、图或报告结论。通过全量预检后，最终 append-only client-review package 使用 `custom_research_report_supplementary_20261024_v8/`。
 - 2026-10-24 — 按用户要求，把 P42 明确定位为 P41 client report §7.3 的后续研究，而非独立的泛 SV 检索。复核 P41 `EV0623`（chr11:114,607,192–chr21:20,648,241，S05 3 split / 0 pair）与 P42 `C2`（chr11:114,607,191;chr21:20,648,242）的同一几何：两端各 1 bp 差异来自 caller/re-genotyping 表示，不能解释成第二个独立事件。P42 在预定义 282-candidate universe 中确认 C2 仅 S05 有 3 个 raw dual-endpoint QNAME，但 0 个 standard-eligible fragment；S01–S03 control depth 19.1–23.1×，无 contig junction。因此 C2 是 P41 §7.3 之后的首要、但未确认的 assay hypothesis；C1/C3/C4 为第二优先级。当前待审 client report 补入该证据 crosswalk 和按优先级的新工作（independent breakpoint-spanning assay、≥60× local short-read sensitivity、second-tier panel、FISH 独立整合）；本轮不改变任何结果表、图或“无 high-confidence breakpoint”结论。修改前 draft 的 SHA-256 相同副本及说明保存在 `superseded_for_comparison/report_drafts/v1_20261024_missing_P41_7_3_continuity/`。
 - 2026-10-23 — fixed-candidate raw re-genotyping 完成：stage-7 的全部 282 BND caller events 均进入 S01–S05 固定候选 audit；94 个有唯一解析的两端几何，188 个为 anchor-only/unparsed，原始 rows 均不删除。分类为 7 shared、21 control-only、4 case-only、62 anchor-context-without-dual、188 not-evaluable；四个 case-only candidates 的 control standard depth 为 14.7–23.1×，且无 sequence-level contig junction，故 0 个达到预注册 Dox/clone-specific high-confidence gate。
 - 2026-10-23 — full client-delivery package 已准备在 `custom_research_report_20261023/`：英文报告、12 PNG + 12 PDF figures、fixed-candidate tables、contig placement table、raw-match audit 和 methods audit 均为新文件，未修改 2026-10-22 supplementary delivery。`11_prepared_delivery_self_audit_v1/` 逐项核对 282 candidates、1,410 candidate-sample rows、90 contigs / 32 alternative-placement contigs、日期/章节/签名、图形数和所有交付拷贝 SHA-256，结果 pass。包仅供用户审阅，未发送。
