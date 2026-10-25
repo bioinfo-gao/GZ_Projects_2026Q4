@@ -7,7 +7,9 @@ claim_level (one per junction; P44 classification is kept as a separate column, 
   not_supported                    P44 class Not_supported (no fragment after competitive re-genotyping)
   mapping_observation              max after-rescue fragments in any reported sample <= 1
   repeat_ambiguous_junction        P44 class Ambiguous_repeat, except the partner-end-only case below
-  limited_junction_candidate       P44 class Limited (or Well_supported) that is not structurally coherent
+  well_supported_junction_candidate  P44 class Well_supported that is not structurally coherent (added 2026-10-25 v2:
+                                   plan section 4.2 defined no level for this class; v1 folded it into "limited")
+  limited_junction_candidate       P44 class Limited that is not structurally coherent
   structurally_coherent_limited_candidate
                                    P44 class Limited / Well_supported / Ambiguous_repeat with ambiguity_reason ==
                                    'partner_placement' (the W-side flank is unique), AND in at least one reported
@@ -86,6 +88,8 @@ for a in ann:
         lvl = "structurally_coherent_limited_candidate"
     elif cls == "Ambiguous_repeat":
         lvl = "repeat_ambiguous_junction"
+    elif cls == "Well_supported":
+        lvl = "well_supported_junction_candidate"
     else:
         lvl = "limited_junction_candidate"
     rows.append((jid, cls, a["ambiguity_reason"], maxf, lvl, ",".join(coherent_in)))

@@ -155,6 +155,7 @@ with open(f"{OUT}/junction_by_sample_long.tsv", "w") as fh:
         for s in ALL:
             d = dict(by[jid][s])
             d["junction_id"] = L.cid(d["junction_id"])                       # P45
+            d["event_group"] = L.cid(d.get("event_group", ""))
             d["panel"] = "reported" if s in REP else "background"
             if cols is None:
                 cols = list(d.keys())

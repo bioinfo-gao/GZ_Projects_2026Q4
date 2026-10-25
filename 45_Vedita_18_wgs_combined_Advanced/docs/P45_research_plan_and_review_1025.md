@@ -12,6 +12,9 @@
 
 - 2026-10-25 — 创建。
 - 2026-10-25 12:05 — **用户批准全部推荐**（Q1 = a 不设 60× gate；Q2 采用 structurally coherent 级；Q3 = b，S01–S10 genome-wide SNV/indel 联合 calling；Q4 = b，加做 G2；Q5 = a，单一完整包），并授权**全流程**。另授权：若额度用完，由定时任务在窗口后自动恢复本流程（登记在 `Agent_Assets/runtime/claude_code_active_project_autostart.json`，重试规则为重置时间 +5 min，兜底 3/4/5 h）。G1 不依赖 P44，先于 Stage 0 启动。
+- 2026-10-25 16:00 — **§4.2 补一级（判据空档，不是改判据）**：§4.2 的 claim ladder 没有为 P44 的 Well_supported 类定义层级。第 2 轮数据中出现 2 个 Well_supported 事件（J1365、J0533：W 侧翼 chr11:114.5908 Mb，GM12878 全部 5 个样本均有，8–10 fragments）。9x v1 把它们并入 limited，低估了证据强度。现新增 `well_supported_junction_candidate`（措辞为 well-supported junction candidate, not independently confirmed），其余规则不变。v1 产物原样归档于 `superseded_for_comparison/analysis/v1_20261025_claim_ladder_well_supported_folded_into_limited/`。
+
+- 2026-10-25 16:35 — **全流程完成**：交付包 `custom_research_report_20261025/`（212 个文件，2.0 G）已生成，`13_self_audit.py` 与 `check_report.py` 均通过；**待用户审阅，未发送**。运行中的发现与修正（SV 记录 END 丢失，影响 P44 Stage 8；G2a2 脚本 bug；Fig5 虚线与图例重叠）见运行记录 §3。
 
 ---
 

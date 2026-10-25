@@ -1,12 +1,23 @@
 """SV record -> breakend pair conversion and junction match classes, shared by Stage 8x and G2b.
 pairs() is copied from P44 8_caller_concordance.py (plus GRIDSS single breakends); classify() is P44's classify()
-plus the best two-end distance. TOL (bp) is a module constant set by the caller script before use.
+plus the best two-end distance. P45 fix (2026-10-25): END is parsed from the INFO text (P44's info.get("END")
+always fell back to POS because pysam does not expose END in rec.info; rec.stop is unreliable in DELLY genotyped BCFs). TOL (bp) is a module constant set by the caller script before use.
 """
 import re
 
 TOL = 100
 
 BND_RE = re.compile(r"([\[\]])([^:\[\]]+):(\d+)([\[\]])")
+
+
+_END_RE = re.compile(r"(?:^|;)END=(\d+)")
+
+
+def _info_end(rec):
+    """END from the record's INFO text. pysam hides END from rec.info, and rec.stop comes from the BCF rlen field,
+    which DELLY writes as 1 for symbolic alleles in genotyped BCFs, so neither can be trusted."""
+    m = _END_RE.search(str(rec).split("\t", 8)[7])
+    return int(m.group(1)) if m else rec.stop
 
 
 def pairs(rec):
@@ -22,7 +33,7 @@ def pairs(rec):
     info = _I()
     t = info.get("SVTYPE", "")
     c, p = rec.chrom, rec.pos
-    end = info.get("END", p)
+    end = info.get("END") or _info_end(rec)   # P45 fix: pysam never exposes END in rec.info (see _info_end)
     ct = info.get("CT")
     if t == "INS":
         return [("INS", c, p)]

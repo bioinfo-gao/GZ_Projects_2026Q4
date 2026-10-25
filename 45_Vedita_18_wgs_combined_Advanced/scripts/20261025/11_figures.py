@@ -317,7 +317,7 @@ for e in events_all:
         colr = STROKE["S04"] if k < x0 - hom - v0 else (STROKE["ci"] if k < jr - v0 else STROKE["S05"])
         axx.text(k + 0.5, 0, ch, family="monospace", fontsize=8, ha="center", va="center", color=colr)
     axx.text(-1, 0, "junction", ha="right", va="center", fontsize=9)
-    axx.plot([x0 - v0, x0 - v0], [-(n + 0.6), 0.45], color="black", lw=0.6, ls="--")   # P45: below the header text
+    axx.plot([x0 - v0, x0 - v0], [-(n + 0.6), 0.3], color="black", lw=0.6, ls="--")   # P45: below the header text
     A_, B_ = e["breakend_A"], e["breakend_B"]
     amb = e["n_alternative_representations"] != "0"
     B_lab = f"{B_} (representative placement shown)" if amb else B_
@@ -347,6 +347,7 @@ print("stage11 OK; per-event figures:", len(fig_paths))
 # ================================================================ P45 Fig0: client-summary panel (events with >= 2 fragments)
 CLAIM_TXT = {"structurally_coherent_limited_candidate": "limited, coherent with copy-number step",
              "limited_junction_candidate": "limited junction candidate",
+             "well_supported_junction_candidate": "well-supported junction candidate",
              "repeat_ambiguous_junction": "ambiguous (repeat placement)"}
 key = [e for e in events_all if int(e["max_after_frag_S01_S10"]) >= 2]
 key.sort(key=lambda e: (e["claim_level"] != "structurally_coherent_limited_candidate", e["cid"]))

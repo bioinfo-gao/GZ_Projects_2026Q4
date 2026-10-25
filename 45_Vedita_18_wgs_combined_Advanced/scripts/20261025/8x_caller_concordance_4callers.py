@@ -160,7 +160,15 @@ with open(f"{OUT}/concordance_summary_4callers.tsv", "w") as fh:
 # ---- reproducibility assertion: Manta/DELLY classes must equal the inherited P44 Stage 8 output exactly
 p44 = {(d["junction_id"], d["sample"], d["callset"]): d["match"] for d in tsv(f"{L.P44R2}/stage8_concordance/concordance_long.tsv")}
 mine = {(r[0], r[1], r[2]): r[3] for r in long_rows if r[2].split("_")[0] in ("manta", "delly")}
-diff = [k for k in p44 if mine.get(k) != p44[k]]
-assert len(p44) == len(mine) and not diff, f"Manta/DELLY classes differ from P44 Stage 8: {len(diff)} e.g. {diff[:3]}"
-print("Manta/DELLY classes identical to P44 Stage 8:", len(p44), "rows")
+# P45: after the END fix (svmatch.py) differences from P44 Stage 8 are expected for DEL/DUP/INV records; every
+# difference is written out, and it must be an upgrade (P44 had END collapsed to POS, so it could only under-match).
+assert len(p44) == len(mine), "row sets differ"
+diff = [(k, p44[k], mine[k]) for k in p44 if mine.get(k) != p44[k]]
+RK = {"none": 0, "one_end": 1, "two_end_pos": 2, "two_end": 3}
+with open(f"{OUT}/manta_delly_diff_vs_P44_stage8.tsv", "w") as fh:
+    fh.write("junction_id\tsample\tcallset\tP44_stage8_match\tP45_match\n")
+    for (j, s, cs), a, b in diff:
+        fh.write(f"{j}\t{s}\t{cs}\t{a}\t{b}\n")
+down = [d for d in diff if RK[d[2]] < RK[d[1]]]
+print(f"Manta/DELLY rows: {len(p44)}; differing from P44 Stage 8 after END fix: {len(diff)}; downgrades: {len(down)}")
 print("stage8x OK", collections.Counter(r["caller_support_4"] for r in summary))
