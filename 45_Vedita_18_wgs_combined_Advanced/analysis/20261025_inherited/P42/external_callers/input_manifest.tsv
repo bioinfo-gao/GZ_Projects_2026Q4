@@ -1,0 +1,6 @@
+sample_id	role	bam_path
+S04_DLD1_c3_dox	case	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S04_DLD1_c3_dox.markdup.bam
+S05_DLD1_c4_dox	case	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S05_DLD1_c4_dox.markdup.bam
+S01_DLD1_pop	control	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S01_DLD1_pop.markdup.bam
+S02_DLD1_c1_ctrl	control	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S02_DLD1_c1_ctrl.markdup.bam
+S03_DLD1_c2_ctrl	control	/mnt/ex_8T_SSD/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S03_DLD1_c2_ctrl.markdup.bam

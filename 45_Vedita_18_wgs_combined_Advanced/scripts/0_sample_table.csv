@@ -1,0 +1,19 @@
+sample_no,sample_id,client_sample_name,cell_line,dox,role,clone_no,parent_population_sample_no,P45_role,P41_autosomal_depth_x,bam_GiB,bam_path,email_1014_quoted_scope,notes
+1,S01_DLD1_pop,1,DLD1-136,no,population,,,DLD1 baseline,16.4,43.62,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S01_DLD1_pop.markdup.bam,yes,
+2,S02_DLD1_c1_ctrl,2,DLD1-136,no,control_clone,1,1,DLD1 baseline,14.4,41.38,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S02_DLD1_c1_ctrl.markdup.bam,yes,
+3,S03_DLD1_c2_ctrl,3,DLD1-136,no,control_clone,2,1,DLD1 baseline,15.9,47.79,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S03_DLD1_c2_ctrl.markdup.bam,no (added by user 2026-10-24),
+4,S04_DLD1_c3_dox,4,DLD1-136,yes,dox_clone,3,1,DLD1 case,16.4,45.10,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S04_DLD1_c3_dox.markdup.bam,yes,P41: distal chr11q depth 0.50x of no-dox; boundary 114.604-114.606 Mb
+5,S05_DLD1_c4_dox,5,DLD1-136,yes,dox_clone,4,1,DLD1 case,18.8,60.98,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S05_DLD1_c4_dox.markdup.bam,yes,P41: distal chr11q depth 0.51x of no-dox; boundary 114.604-114.609 Mb; EV0623 tier B
+6,S06_GM12878_pop,6,GM12878,no,population,,,GM12878 baseline,12.9,33.24,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S06_GM12878_pop.markdup.bam,yes,
+7,S07_GM12878_c5,7,GM12878,no,clone,5,6,GM12878 clone,15.9,45.04,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S07_GM12878_c5.markdup.bam,yes,
+8,S08_GM12878_c6,8,GM12878,no,clone,6,6,GM12878 clone,15.2,44.17,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S08_GM12878_c6.markdup.bam,yes,
+9,S09_GM12878_c7,9,GM12878,no,clone,7,6,GM12878 clone,18.8,56.49,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S09_GM12878_c7.markdup.bam,yes,
+10,S10_GM12878_c8,10,GM12878,no,clone,8,6,GM12878 clone,18.5,64.18,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S10_GM12878_c8.markdup.bam,no (added by user 2026-10-24),
+11,S11_MutuI_pop,11,Mutu I,no,population,,,background panel (artefact screen only; not reported per sample),12.2,36.41,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S11_MutuI_pop.markdup.bam,no (background panel; user Q2 2026-10-24),
+12,S12_MutuI_c9,12,Mutu I,no,clone,9,11,background panel (artefact screen only; not reported per sample),20.7,58.82,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S12_MutuI_c9.markdup.bam,no (background panel; user Q2 2026-10-24),
+13,S13_MutuI_c10,13,Mutu I,no,clone,10,11,background panel (artefact screen only; not reported per sample),17.8,54.13,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S13_MutuI_c10.markdup.bam,no (background panel; user Q2 2026-10-24),
+14,S14_MutuI_c11,14,Mutu I,no,clone,11,11,background panel (artefact screen only; not reported per sample),16.4,45.60,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S14_MutuI_c11.markdup.bam,no (background panel; user Q2 2026-10-24),
+15,S15_DG75_pop,15,DG75,no,population,,,background panel (artefact screen only; not reported per sample),17.8,52.39,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S15_DG75_pop.markdup.bam,no (background panel; user Q2 2026-10-24),
+16,S16_DG75_c12,16,DG75,no,clone,12,15,background panel (artefact screen only; not reported per sample),8.8,23.67,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S16_DG75_c12.markdup.bam,no (background panel; user Q2 2026-10-24),
+17,S17_DG75_c13,17,DG75,no,clone,13,15,background panel (artefact screen only; not reported per sample),17.8,45.13,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S17_DG75_c13.markdup.bam,no (background panel; user Q2 2026-10-24),
+18,S18_DG75_c14,18,DG75,no,clone,14,15,background panel (artefact screen only; not reported per sample),15.7,46.98,/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S18_DG75_c14.markdup.bam,no (background panel; user Q2 2026-10-24),

@@ -1,0 +1,4 @@
+f2c47b15d84bece8e2eb5461537aa2ca  download_done_20261024.txt
+c04291127b3c7e0bdb88a82193c0f404  genomicSuperDups.txt.gz
+b2e108b535550ba9e3cf83c77417380f  rmsk.txt.gz
+a03bb6d8293e3b090c53951d64665806  simpleRepeat.txt.gz

@@ -1,0 +1,10 @@
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S01_DLD1_pop.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S02_DLD1_c1_ctrl.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S03_DLD1_c2_ctrl.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S04_DLD1_c3_dox.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S05_DLD1_c4_dox.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S06_GM12878_pop.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S07_GM12878_c5.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S08_GM12878_c6.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S09_GM12878_c7.markdup.bam
+/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/bam/S10_GM12878_c8.markdup.bam

@@ -380,4 +380,5 @@ custom_research_report_*/**/*_pathabundance.tsv
 *stage*
 *.genes.results.summary
 *off 
-
+*.csi
+*.bcf

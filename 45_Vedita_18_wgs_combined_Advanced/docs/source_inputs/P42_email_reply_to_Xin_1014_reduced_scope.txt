@@ -1,0 +1,82 @@
+To: Lin, Xin <Xin.Lin@childrens.harvard.edu>
+Cc: Singh, Vedita <Vedita.Singh@childrens.harvard.edu>, Jing Shi <j.shi@athenomics.com>, Jianjun Sun <jianjun@athenomics.com>, Li, Julia <Julia.Li@childrens.harvard.edu>
+Subject: Re: Additional analysis at chr11:114,604,000-114,625,500 - feasibility, time estimate and budget
+
+Dear Xin,
+
+Thank you for narrowing the scope. I answer your three points in order.
+
+1. Quote for Analysis 1 on the 8 samples
+I read your list as S01 (DLD1_pop), S02 (DLD1_c1_ctrl), S04 (DLD1_c3_dox), S05 (DLD1_c4_dox), S06 (GM12878_pop), S07 (GM12878_c5), S08 (GM12878_c6) and S09 (GM12878_c7). This leaves out S03 (DLD1_c2_ctrl), S10 (GM12878_c8) and all Mutu I and DG75 samples; please tell me if that is not what you intended.
+
+The earlier range of 12 to 22 hours for Analysis 1 was given before the number of samples and junctions was fixed; the figures below are for the defined scope. The work has two parts, because the first scales with the number of samples and the second with the number of junctions.
+
+Read rescue for all candidate junctions (scales with the number of samples)
+  - Shared by all samples (setting up the rescue and classification workflow for the locus, the repeat-content assessment, and write-up): 6 to 7 hours.
+  - Per sample (re-extraction of all reads at the locus, junction-spanning read counts before and after rescue, a per-sample junction table): 0.5 to 1 hour each.
+  | Sample | Candidate junctions in the target region (current analysis) | Incremental time |
+  | S01 DLD1_pop | 21 | 0.5-1 h |
+  | S02 DLD1_c1_ctrl | 14 | 0.5-1 h |
+  | S04 DLD1_c3_dox | 18 | 0.5-1 h |
+  | S05 DLD1_c4_dox | 12 | 0.5-1 h |
+  | S06 GM12878_pop | 22 | 0.5-1 h |
+  | S07 GM12878_c5 | 24 | 0.5-1 h |
+  | S08 GM12878_c6 | 13 | 0.5-1 h |
+  | S09 GM12878_c7 | 26 | 0.5-1 h |
+  Candidate junctions are events with a junction end inside the target region that have at least one supporting read in that sample (150 in total).
+Read rescue total for the 8 samples: 10 to 15 hours, $1,200 to $1,800.
+
+Manual breakpoint curation (scales with the number of junctions)
+Local assembly, microhomology or inserted sequence, and the call of "well supported" versus "ambiguous because of repeat content": 0.5 to 1 hour per junction. It applies only to junctions that keep their support after rescue, and that number is not known until the rescue has been run. In the current analysis most of the 150 candidate junctions rest on a single read, so many may not keep their support. I suggest that I do the read rescue first and then tell you how many junctions kept their support; you then choose how many to curate within your budget. For example, curating 10 junctions adds 5 to 10 hours ($600 to $1,200); read rescue plus manual curation of 10 junctions is 15 to 25 hours ($1,800 to $3,000).
+
+2. Where to trim further
+  - Each sample removed from the read rescue saves 0.5 to 1 hour ($60 to $120); the shared 6 to 7 hours do not change.
+  - Each junction that is not curated saves 0.5 to 1 hour.
+  - For example, Read rescue for the two +Dox clones and their no-dox comparators only (S04, S05, S01, S02) is 8 to 11 hours ($960 to $1,320).
+
+3. Turnaround
+Read rescue: about 2 weeks after approval; manual curation of 10 junctions adds about 1 week. If you tell me your deadline, I will say what fits before it.
+
+4. BAM files now
+Yes. The BAM files with indexes for all 18 samples (about 850 GB) will be shared in a Dropbox folder. A transfer of this size takes time to synchronise, so I will tell you when every file is in the folder, together with a checksum file (MD5) so that you can confirm that the files arrived intact.
+
+I will not start the analysis until you confirm the scope and the approved amount.
+
+Best regards,
+
+Zhen Gao, PhD
+Principal Bioinformatics Scientist
+Athenomics
+
+============
+
+Hi Dr. Li and Xin,
+
+To be fully transparent, this revised project will take a minimum of 16-20 hours to complete properly. 
+
+That said, I know your funding is very tight right now. Because I really want to help you get this done, I’ve decided to go ahead and complete the analysis to my usual high standard. We can lock in your current budget cap of $840. If you find any extra room in your budget later to help cover the remaining hours, I would greatly appreciate it, but I leave that completely up to you.
+
+Let me know if this is acceptable.
+
+Best,
+
+Zhen
+
+
+=================
+Hi Zhen,
+
+Thank you so much for your understanding and flexibility with our budget. We truly appreciate your willingness to accommodate our funding constraints while maintaining the quality of the analysis.
+To make sure we're on the same page, could you confirm that the $840 budget cap would cover the full scope of the revised analysis (approximately 16–20 hours of work), rather than limiting the analysis to the hours covered by that amount?
+Once the analysis is complete, we'd also love to schedule a meeting with you to review the results, discuss the findings, and address any questions together.
+Thank you again for your generosity and support. We really appreciate your efforts and look forward to seeing the results!
+Best,
+Xin
+=================
+Hi Xin,
+
+Yes, the $840 budget cap will cover the full scope of the revised project (approximately 16–20 hours of work). This includes the complete Analysis 1 pipeline: the junction-level analysis and read rescue for the 8 samples.
+
+Best,
+
+Zhen

@@ -6,7 +6,7 @@
 **Analysis Platform:** Linux HPC server
 **Species:** Homo sapiens (reference genome hg38 / GRCh38, the same alignments as the 2026-10-09 report)
 **Tissue / Cell type:** DLD1-136 and GM12878 cell lines (populations and clones), as named by the client; no further tissue annotation was supplied
-**Target region:** chr11:114,604,000–114,625,500 (GRCh38)
+**Target region:** chr11:114,604,000–114,625,500 (GRCh38), analysed within the window chr11:114,554,000–114,675,500 (target ± 50 kb, as in the earlier report)
 **Samples reported:** S01–S10 (DLD1-136 n = 5, GM12878 n = 5); S11–S18 were used only as a background panel (Section 5)
 **Relation to earlier work:** this report extends Section 7.3 of the report dated 2026-10-09 (`Chr11_Repeat_Region_WGS_SV_Report_1009.md`); that report is unchanged and its findings stand.
 
@@ -21,7 +21,7 @@ Your request of 2026-10-13 asked for a junction-level analysis of the target reg
 3. which junctions are well supported and which are ambiguous because of repeat content;
 4. which events are called by both structural-variant callers (Manta and DELLY) and which by only one.
 
-All ten samples S01–S10 are included. To make the junction results interpretable, three parts of your second analysis (clone-specific event calling) that bear directly on the locus were added: the +doxycycline (+Dox) clone versus parental/control comparison for every locus junction with its criteria stated; the B-allele fraction (BAF) along chromosome 11; and a finer localisation of the depth step. No re-alignment of the sequencing run was performed; only the reads rescued for the locus were re-aligned (Section 6).
+All ten samples S01–S10 are included. To make the junction results interpretable, three parts of your second analysis (clone-specific event calling) that bear directly on the locus were added: the +doxycycline (+Dox) clone versus parental/control comparison for every locus junction with its criteria stated; the B-allele fraction (BAF) along chromosome 11; and a finer localisation of the depth step. No re-alignment of the sequencing run was performed; only the reads rescued for the locus were re-aligned (Section 6). `tables/client_request_coverage.tsv` lists every question and deliverable in your request with the section and file that answers it.
 
 ---
 
@@ -91,7 +91,7 @@ S11–S18 (Mutu I and DG75) were processed identically and used only to flag jun
 
 ## 5. Analysis Rationale and Decision Criteria
 
-**What is examined.** All alignment records stored within the extraction window chr11:114,599,000–114,630,500 (target ± 5 kb, wider than the longest DNA fragment), plus every read pair that belongs to the locus but is stored elsewhere. A read pair enters the rescue set when (a) any of its records lies in the window, (b) its mate is placed in the window, (c) a supplementary alignment (the SA tag: another segment of the same read aligned elsewhere) lies in the window, (d) an alternative alignment listed by the aligner (the XA tag: an equally or nearly equally good placement) lies in the window, or (e) both mates are unmapped and one aligns to the window sequence. For every rescued pair, all of its records anywhere in the genome are retrieved. Nothing is selected from the earlier candidate list; earlier events are only compared afterwards.
+**What is examined.** All alignment records stored within the analysis window chr11:114,554,000–114,675,500 (target ± 50 kb, the window of the earlier report), plus every read pair that belongs to the locus but is stored elsewhere. A read pair enters the rescue set when (a) any of its records lies in the window, (b) its mate is placed in the window, (c) a supplementary alignment (the SA tag: another segment of the same read aligned elsewhere) lies in the window, (d) an alternative alignment listed by the aligner (the XA tag: an equally or nearly equally good placement) lies in the window, or (e) both mates are unmapped and one aligns to the window sequence. For every rescued pair, all of its records anywhere in the genome are retrieved. Nothing is selected from the earlier candidate list; earlier events are only compared afterwards.
 
 **Counting units.** A *read end* is one sequenced read; a *fragment* is one read pair (one DNA molecule). Alternative alignments of the same read are kept as positional evidence but never counted as additional support. Reads marked as PCR or optical duplicates are kept in the files and excluded from counts. All thresholds below use fragments.
 
@@ -126,6 +126,10 @@ S11–S18 (Mutu I and DG75) were processed identically and used only to flag jun
 **Genotyping.** For each junction a 400 + 400 bp junction template and two 801 bp reference templates were built; all rescued reads of all samples were aligned to them (bwa-mem2 `mem -a -Y`) and scored as in Section 5. Junctions whose support comes from the same reads and differ only in the placement of the partner end were merged into one event, listing the alternative placements.
 
 **Breakpoint annotation.** Microhomology and breakpoint uncertainty were computed from the reference by sliding the junction while the junction sequence stays identical; inserted sequence comes from the reads or contigs. Each 100 bp flank was aligned to GRCh38 with `mem -a` to count equally good placements. Repeat annotation: UCSC hg38 RepeatMasker, simpleRepeat and genomicSuperDups tables.
+
+**Primer design.** For every junction with at least two supporting fragments, junction-spanning primer pairs (product 150–350 bp, melting temperature 57–63 °C) were designed with Primer3 (primer3-py 2.4.0) on the junction template, first with both primers outside the junction and then with one primer required to cross it. Each primer and its 3′-terminal 15 bases were counted as exact matches on both strands of the whole reference. A pair is reported as *strict* when every primer and every 3′ 15-mer occurs at most once, and as *junction-specific* when one primer cannot prime the reference at all (no full-length match, at most one 3′ 15-mer match) and the other has exactly one full-length reference match; all counts are listed.
+
+**Delivered file headers.** Local directory paths were removed from the headers of all delivered BAM and VCF files; record counts and a checksum of the records were compared before and after (`methods/header_sanitization_audit.tsv`).
 
 **Caller concordance.** Manta 1.6.0 (per sample genome-wide `diploidSV` and `candidateSV`; joint target-window run) and DELLY v2.3.0 (per sample discovery; window re-genotyping) outputs of the 2026-10-09 run were compared with every junction: both ends within 100 bp (as in the earlier report) and the same orientation.
 
@@ -267,7 +271,7 @@ DLD1: 39 target-region junctions are present in S04 or S05 and in none of S01–
 * **Support level.** The three +Dox junctions rest on 2–4 independent fragments each in one sample (about 10–15 fragments cover each position). They were not seen at the "Well supported" level, and re-aligning the same sequencing data, however carefully, is not an independent biological test; PCR across each junction is the direct confirmation (Section 8.4).
 * **Detection limit.** With 10–28 fragments spanning a position, a junction carried by a fraction 0.25 of the spanning DNA fragments yields ≥ 3 supporting fragments with probability about 0.5–0.97, and one at 0.10 with probability about 0.1–0.5 (per-sample values: `tables/junction_by_sample_long.tsv`). Junctions in a minority of cells may be missed; "absent" means "not found above roughly this level".
 * **Repeat array.** Within the 42 bp-unit array, a rearrangement that joins two near-identical copies (an expansion or contraction of the array) produces a sequence identical to the reference and cannot be seen at the junction level; such events would show only as a depth change.
-* **Window.** Junctions are examined when at least one end lies within the target ± 5 kb; events farther away are outside this analysis.
+* **Window.** Junctions are examined when at least one end lies within the target ± 50 kb; events with both ends farther away are outside this analysis.
 * **Clone comparison.** The +Dox clones are n = 2, and there is no doxycycline-only control without induction of Epstein–Barr virus nuclear antigen 1 (EBNA1) (as stated in the earlier report).
 * **Genome-wide data.** This report covers the locus. The genome-wide Manta and DELLY files are delivered as produced on 2026-10-09; genome-wide single-nucleotide variant and small insertion/deletion calls were made for chr11 only, for the BAF analysis.
 
@@ -276,7 +280,7 @@ DLD1: 39 target-region junctions are present in S04 or S05 and in none of S01–
 | Open question | Suggested experiment |
 | :--- | :--- |
 | Is the S04 junction real, and is it a telomere added at the break? | PCR with a chr11 primer proximal of 114,605,216 and a telomere-repeat primer (single-telomere-length-type assay) on S04, S01–S03 and S05 DNA; fluorescence in situ hybridisation (FISH) with a probe proximal of 114.6 Mb and a telomere probe |
-| Are the S05 fold-back inversion and chr21 junction real? | Junction-spanning PCR on S05 and S01–S04 DNA; primers can be designed from `sequences/junction_and_reference_templates.fa` |
+| Are the S05 fold-back inversion and chr21 junction real? | Junction-spanning PCR on S05 and S01–S04 DNA, with the primers in `tables/primer_design.tsv` where a specific pair exists; otherwise from `sequences/junction_and_reference_templates.fa` |
 | Does S05 show further fold-back or rejoining products along proximal 11q? | Copy-number analysis of 11q at higher resolution (for example droplet digital PCR at several proximal positions); deeper short-read sequencing of S05 would raise junction detection along the proximal gain |
 | Is the same chr11q homolog targeted in further +Dox clones? | BAF and loss-of-heterozygosity analysis of additional independent +Dox clones (existing pipeline; no new method needed) |
 
@@ -295,6 +299,12 @@ All paths are relative to this delivery folder. This report is the entry point.
 | `tables/caller_concordance_by_sample.tsv` | Every junction × sample × Manta/DELLY call set: match class and record IDs |
 | `tables/rescue_source_summary.tsv` | Rescued read pairs per sample by source; completeness |
 | `tables/evidence_filter_impact.tsv` | Count of every evidence item removed and the reason |
+| `tables/client_request_coverage.tsv` | Every question and deliverable in your request: status, report section, delivered file(s), limits |
+| `tables/key_junction_read_evidence.tsv` | For every junction with ≥ 2 fragments: every supporting read and all of its original alignment records (flag, position, CIGAR string — the per-base alignment description, MAPQ, SA/XA tags, duplicate flag, alignment scores) |
+| `tables/primer_design.tsv`, `tables/primer_candidates.tsv` | Selected junction-spanning primer pair per junction with ≥ 2 fragments (or the reason none is specific), and every candidate pair with its reference match counts |
+| `tables/external_input_status.tsv` | Inputs not available to this analysis and their effect on interpretation |
+| `tables/data_inventory.tsv` | Every delivered file with its size |
+| `methods/header_sanitization_audit.tsv` | Removal of local paths from BAM/VCF headers, with record counts and checksums before and after |
 | `figures/` | Figures 1–4 (`P44_Fig1_locus_overview`, `P44_Fig2_chr11_BAF`, `P44_Fig3_rescue_sources`, `P44_Fig4_before_after_and_classes`; PNG and PDF) |
 | `figures/junction_views/` | Figure 5: one base-level view per junction with ≥ 2 fragments (4 junctions; PNG and PDF) |
 | `locus_BAM/` | For S01–S10: every alignment record of every rescued read pair (`<sample>.locus_rescue.bam` and index), viewable in the Integrative Genomics Viewer (IGV); tag `ZR` gives the rescue source |
@@ -305,6 +315,7 @@ All paths are relative to this delivery folder. This report is the entry point.
 | `supporting_analyses/chr11_SNV/` | `chr11_S01_S10.QUAL30.vcf.gz` (joint chr11 calls, S01–S10) and index |
 | `genome_wide_SV_VCF/` | Per sample S01–S10: Manta `diploidSV` unfiltered and PASS, Manta `candidateSV`, DELLY unfiltered and PASS (Variant Call Format, VCF, with index); `vcf_inventory.tsv`, `md5sums.txt` |
 | `md5sums_delivery.txt` | Checksums of every file in this folder |
+| Whole-genome BAM files | Delivered earlier; not repeated in this package |
 
 ---
 
