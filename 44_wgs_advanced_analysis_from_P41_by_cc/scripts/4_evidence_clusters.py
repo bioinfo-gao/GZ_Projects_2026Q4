@@ -32,6 +32,7 @@ OUT = f"{BASE}/stage4_clusters{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 TOL = 15          # bp, split-cluster breakend tolerance (same as P41)
 CLIP_TOL = 5      # bp, one-sided clip cluster tolerance
+SEC_MARGIN = 10   # AS points; secondary placement must score within this of the primary to count
 impact = collections.Counter()
 
 
@@ -58,7 +59,15 @@ def chain_items(sample, recs, view, dupq, zr):
         qseq = orig_seq(prim[0]) if prim and prim[0].query_sequence else None
         segs = sorted(((L.seg_from_read(r), r) for r in chain), key=lambda x: x[0].qs)
         covered = [(s.qs, s.qe) for s, _ in segs]
+        iend = L.insert_end(qseq, e) if qseq else 10 ** 6
         for (s1, r1), (s2, r2) in zip(segs, segs[1:]):
+            # adapter read-through: the 3' segment starts at/after the adapter -> not a genomic junction
+            if s2.qs >= iend - 5:
+                impact[f"{view}_split_adapter_readthrough"] += 1
+                continue
+            if qseq and min(L.entropy(qseq[s1.qs:s1.qe]), L.entropy(qseq[s2.qs:min(s2.qe, iend)])) < L.LOW_COMPLEXITY_BITS:
+                impact[f"{view}_split_low_complexity_segment"] += 1
+                continue
             j = L.junction_from_segments(s1, s2, qseq)
             a, b = j["a"], j["b"]
             if not (L.in_w(*a[:2]) or L.in_w(*b[:2])):
@@ -76,8 +85,24 @@ def chain_items(sample, recs, view, dupq, zr):
         for r in rs:                                     # clips (chain records and realn secondaries)
             if not L.overlaps_w(r.reference_name, r.reference_start + 1, r.reference_end):
                 continue
+            # bwa writes secondary records with SEQ='*': take the read-end's primary sequence, re-oriented
+            if r.is_secondary:
+                # a secondary placement is evidence only if it COMPETES with the primary (AS within MARGIN);
+                # partial hits far below the primary score are counted here and not used (plan section 3)
+                pAS = prim[0].get_tag("AS") if prim and prim[0].has_tag("AS") else None
+                if pAS is None or r.get_tag("AS") < pAS - SEC_MARGIN:
+                    impact[f"{view}_secondary_not_competitive"] += 1
+                    continue
+                impact[f"{view}_secondary_competitive"] += 1
+            rseq = r.query_sequence or (None if qseq is None else (L.revcomp(qseq) if r.is_reverse else qseq))
+            if rseq is None:
+                impact[f"{view}_clip_record_without_sequence"] += 1
+                continue
             ops = r.cigartuples
             seg = L.seg_from_read(r)
+            if seg.qs >= iend - 5:                       # aligned part lies after the adapter: not genomic
+                impact[f"{view}_segment_after_adapter"] += 1
+                continue
             for side in ("left", "right"):
                 op, n = (ops[0] if side == "left" else ops[-1])
                 if op != 4:
@@ -85,27 +110,44 @@ def chain_items(sample, recs, view, dupq, zr):
                 if n < L.MIN_CLIP:
                     impact[f"{view}_clip_lt{L.MIN_CLIP}"] += 1
                     continue
-                if L.clip_is_adapter(r, side):
+                if L.clip_is_adapter(r, side, rseq):
                     impact[f"{view}_clip_adapter"] += 1
                     continue
                 # clipped query interval in original orientation
                 left_in_read = (side == "left") != r.is_reverse
-                tot = len(r.query_sequence)
+                tot = len(rseq)
                 ci = (0, n) if left_in_read else (tot - n, tot)
+                if not left_in_read and iend < tot:          # 3' clip and the read carries adapter
+                    if iend <= tot - n + 10:                 # adapter starts within first 10 clip bases
+                        impact[f"{view}_clip_adapter_inside"] += 1
+                        continue
+                    k = iend - (tot - n)                     # genuine insert bases before the adapter
+                    if k < L.MIN_CLIP:
+                        impact[f"{view}_clip_insert_part_lt{L.MIN_CLIP}"] += 1
+                        continue
+                    impact[f"{view}_clip_trimmed_to_insert"] += 1
+                    n_keep = k
+                else:
+                    n_keep = n
                 if not r.is_secondary:
                     cov = sum(max(0, min(ci[1], qe) - max(ci[0], qs)) for qs, qe in covered)
                     if cov >= 0.8 * n:
                         impact[f"{view}_clip_explained_by_split"] += 1
                         continue
+                # clip bases in reference orientation, adjacent to the breakend, trimmed to the insert part
+                cseq = rseq[n - n_keep:n] if side == "left" else rseq[len(rseq) - n:len(rseq) - n + n_keep]
+                if L.entropy(cseq) < L.LOW_COMPLEXITY_BITS:
+                    impact[f"{view}_clip_low_complexity"] += 1
+                    continue
                 bk = (r.reference_name, seg.start, "-") if side == "left" else (r.reference_name, seg.end, "+")
                 if not L.in_w(*bk[:2]):
                     impact[f"{view}_clip_breakend_outside_W"] += 1
                     continue
-                cs = r.query_sequence[:n] if side == "left" else r.query_sequence[-n:]
+                cs = cseq
                 items.append(dict(sample=sample, qname=r.query_name, read_end=read_end(r), view=view, type="clip",
                                   src="secondary" if r.is_secondary else ("supplementary" if r.is_supplementary
                                                                           else "primary"),
-                                  A=bk, B=None, hom=0, ins=cs, ins_len=n, mapqA=r.mapping_quality, mapqB=-1,
+                                  A=bk, B=None, hom=0, ins=cs, ins_len=len(cs), mapqA=r.mapping_quality, mapqB=-1,
                                   dup=int(r.query_name in dupq), zr=zr.get(r.query_name, "")))
                 impact[f"{view}_clip_kept_{'secondary' if r.is_secondary else 'chain'}"] += 1
     return items
@@ -123,6 +165,9 @@ def disc_items(sample, recs, maxins, dupq, zr):
             impact["disc_pair_incomplete_or_mate_unmapped"] += 1
             continue
         r1, r2 = d[1], d[2]
+        if min(L.entropy(r1.query_sequence or ""), L.entropy(r2.query_sequence or "")) < L.LOW_COMPLEXITY_BITS:
+            impact["disc_low_complexity_mate"] += 1
+            continue
         s1, s2 = L.seg_from_read(r1), L.seg_from_read(r2)
         if s1.chrom == s2.chrom and s1.strand != s2.strand:
             plus, minus = (s1, s2) if s1.strand == "+" else (s2, s1)

@@ -51,7 +51,15 @@ BND_RE = re.compile(r"([\[\]])([^:\[\]]+):(\d+)([\[\]])")
 
 def pairs(rec):
     """breakend pairs [(A,B)] or ('INS', chrom, pos)"""
-    info = rec.info
+    hdr = rec.header.info
+
+    class _I:                                   # header-safe INFO access (pysam raises on undeclared keys)
+        def get(self, k, d=None):
+            return rec.info[k] if (k in hdr and k in rec.info) else d
+
+        def __contains__(self, k):
+            return k in hdr and k in rec.info
+    info = _I()
     t = info.get("SVTYPE", "")
     c, p = rec.chrom, rec.pos
     end = info.get("END", p)

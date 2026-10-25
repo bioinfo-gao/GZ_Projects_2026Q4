@@ -9,6 +9,14 @@
 
 - 2026-10-24 — 创建。
 - 2026-10-24 — 用户批复 §7：Q1 独立重做（P42 只在最后作对照）；Q2 S11–S18 作 artefact background panel；Q3 只整理已有 Manta/DELLY VCF，SNV 只做 chr11；Q4 §4 阈值照表。授权全流程 + 自动安装软件。新建 conda env `p44_assembly_20261024`（SPAdes）。
+- 2026-10-25 — 6 样本试跑（`*_test` 目录，独立于正式输出）发现的证据模型补充，均为**数据驱动的 artefact 判定**，§4 阈值未改：
+  1. **Adapter read-through split**：insert 中位 161 bp < read 150 bp，大量 read 读入 TruSeq adapter + index + poly-G 尾；poly-G 尾被比对为 supplementary 到 chr2:32,916,3xx（纯 poly-G 区）。⇒ 3′ segment 起点 ≥ adapter 起点的 split 不是基因组 junction（6 样本里删 1,677 条）。**这就是 P41 "chr2:32.916 Mb 吸附区" 的序列层面成因**（P41 已标为 mapping artefact，P44 给出机制，属细化）。
+  2. **Low-complexity**：segment / discordant mate / clip 的 Shannon entropy < 1.2 bits 判为 poly-G 类 artefact。
+  3. **3′ clip 内含 adapter**：adapter 起点在 clip 前 10 bp 内 ⇒ adapter；更深 ⇒ 只保留 insert 部分（≥ 20 bp）。adapter 之后的比对 segment 一律不作证据。
+  4. **Secondary 必须是"竞争性"placement**：AS ≥ primary AS − 10 才计（与 §4 MARGIN 相同）；否则计入 audit `secondary_not_competitive`。
+  5. **Event grouping**：同一批 read-end 同时支持多个只差 partner 位置的 junction（例：S04 chr11:114,605,218 → TTAGGG 端粒重复，partner 可放 chrX/chr4/chr2/chr10 末端）⇒ 合并为一个 event，per-sample 计数取并集，列出 alternative placements；有 alternative placement 即属 §4 的 Ambiguous（partner 定位歧义）。
+  6. **§4 增补 "Limited" 一级**：≥ 2 fragments、flank 唯一、不确定区间 ≤ 10 bp，但 < 3 fragments 或仅一类证据——原 §4 表在 Well 与 Ambiguous 之间留了空档，按此填补（不放宽 Well）。
+  7. SPAdes 对微小局部 read 集合的 k-mer coverage model 报错（exit 64）⇒ 改 `--sc --cov-cutoff off`，且 read 先在 adapter 处截断（≥ 30 bp）。
 
 ---
 

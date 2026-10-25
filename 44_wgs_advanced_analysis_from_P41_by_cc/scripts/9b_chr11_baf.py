@@ -64,3 +64,14 @@ with gzip.open(f"{OUT}/baf_sites.tsv.gz", "wt") as fh, open(f"{OUT}/baf_segments
                          f"{np.mean((v < 0.1) | (v > 0.9)) if len(v) else float('nan'):.3f}\n")
 print(open(f"{OUT}/baf_segments.tsv").read())
 print("stage9b-2 OK")
+
+# ---- which homolog was retained distal to the step: S04 vs S05 retained-allele concordance (added 2026-10-25)
+a = np.array(data["DLD1-136"], dtype=float)
+m = (a[:, 0] >= 114_700_000) & (a[:, 0] < 135_000_000)
+b4, b5 = a[m, 4], a[m, 5]                        # columns: pos, S01, S02, S03, S04, S05
+ok = ~np.isnan(b4) & ~np.isnan(b5) & ((b4 < 0.1) | (b4 > 0.9)) & ((b5 < 0.1) | (b5 > 0.9))
+same = ((b4[ok] > 0.9) == (b5[ok] > 0.9)).sum()
+with open(f"{OUT}/retained_homolog_S04_vs_S05.tsv", "w") as fh:
+    fh.write("segment\tsites_LOH_in_both\tsame_allele_retained\tfraction_same\n")
+    fh.write(f"distal_114.7-135.0Mb\t{ok.sum()}\t{same}\t{same / max(ok.sum(), 1):.4f}\n")
+print(open(f"{OUT}/retained_homolog_S04_vs_S05.tsv").read())

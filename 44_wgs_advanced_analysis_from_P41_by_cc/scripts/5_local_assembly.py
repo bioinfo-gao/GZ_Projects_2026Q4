@@ -2,7 +2,7 @@
 
 (1) Local assembly: for every cluster with >= 2 non-duplicate fragments cohort-wide, reads = all member QNAMEs
     (both mates, full sequences) + reads whose original primary alignment carries a non-adapter clip >= 5 bp
-    within TOL of a cluster breakend. Assembled with SPAdes (--only-assembler, k 21,33,55) per cell-line pool
+    within TOL of a cluster breakend. Assembled with SPAdes (--sc --only-assembler --cov-cutoff off, k 21,33,55; reads trimmed at the adapter, >= 30 bp kept) per cell-line pool
     and per sample (when the sample has >= 2 fragments). Single-fragment clusters are not assembled (a contig
     built from one fragment adds no independent evidence; they are reported as Weak in Stage 7).
 (2) Contigs (>= 100 bp) and clip consensus sequences (>= 25 non-N bases) are aligned with `bwa-mem2 mem -a -Y`
@@ -97,7 +97,10 @@ def write_fq(path, keys):
     with open(path, "w") as fh:
         for k in keys:
             for e, (seq, qual) in sorted(reads.get(k, {}).items()):
-                fh.write(f"@{k[0]}|{k[1]}/{e}\n{seq}\n+\n{qual}\n")
+                t = L.insert_end(seq, e)                 # assemble genomic insert only (adapter trimmed)
+                if t < 30:
+                    continue
+                fh.write(f"@{k[0]}|{k[1]}/{e}\n{seq[:t]}\n+\n{qual[:t]}\n")
                 n += 1
     return n
 
@@ -110,7 +113,7 @@ def assemble(job):
     n = write_fq(fq, keys)
     if n < 4:
         return (c, pool, len(keys), n, 0, "too_few_reads")
-    p = subprocess.run(f"{SPADES} --only-assembler -k 21,33,55 -s {fq} -o {d}/spades -t 2 -m 8 > {d}/spades.log 2>&1",
+    p = subprocess.run(f"{SPADES} --sc --only-assembler -k 21,33,55 --cov-cutoff off -s {fq} -o {d}/spades -t 2 -m 8 > {d}/spades.log 2>&1",
                        shell=True, executable="/bin/bash")
     cf = f"{d}/spades/contigs.fasta"
     if p.returncode != 0 or not os.path.exists(cf):

@@ -181,7 +181,7 @@ def _prefix_match(s, adapter, max_offset=3, max_mm=1, k=13):
     return False
 
 
-def clip_is_adapter(r, side):
+def clip_is_adapter(r, side, seq=None):
     """side = 'left'/'right' clip in reference orientation. A 3'-end clip (right on + strand, left on -)
     is adapter read-through if its sequence starts like the TruSeq adapter, or its length equals
     READ_LEN - |TLEN| (+-3) for a short-insert proper pair."""
@@ -190,7 +190,7 @@ def clip_is_adapter(r, side):
         return False
     ops = r.cigartuples
     n = ops[-1][1] if side == "right" else ops[0][1]
-    q = r.query_sequence
+    q = seq if seq is not None else r.query_sequence
     if q is None:
         return False
     if side == "right":
@@ -204,3 +204,31 @@ def clip_is_adapter(r, side):
     if r.is_proper_pair and 0 < tl < READ_LEN and abs(n - (READ_LEN - tl)) <= 3:
         return True
     return False
+
+
+def entropy(seq):
+    """Shannon entropy (bits) of base composition; poly-G tails ~0, random DNA ~2."""
+    import math
+    seq = seq.upper()
+    n = len(seq)
+    if not n:
+        return 0.0
+    c = {b: seq.count(b) for b in set(seq)}
+    return -sum(v / n * math.log2(v / n) for v in c.values())
+
+
+LOW_COMPLEXITY_BITS = 1.2
+
+
+def insert_end(qseq, read_end):
+    """0-based start of adapter read-through in a read (ORIGINAL orientation), or len(qseq) if none.
+    Scans for the first 13 adapter bases with <= 1 mismatch (also allows the adapter to start 1-3 bases
+    in, matching the clipped-adapter rule)."""
+    if not qseq:
+        return 0
+    ad = ADAPTERS["R1" if read_end == 1 else "R2"][:13]
+    for i in range(0, len(qseq) - 8):
+        t = qseq[i:i + 13]
+        if sum(1 for x, y in zip(t, ad) if x != y) + (13 - len(t)) <= 1:
+            return i
+    return len(qseq)

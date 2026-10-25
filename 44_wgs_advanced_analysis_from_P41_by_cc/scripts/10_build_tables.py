@@ -62,6 +62,10 @@ def state(d):
 
 
 def compare(jid, cases, bases):
+    cases = [s for s in cases if s in by[jid]]          # test mode may run on a sample subset
+    bases = [s for s in bases if s in by[jid]]
+    if not cases or not bases:
+        return "not_evaluated", ""
     st = {s: state(by[jid][s]) for s in cases + bases}
     cp = [s for s in cases if st[s] == "present"]
     bp = [s for s in bases if st[s] == "present"]
@@ -86,10 +90,14 @@ for jid, a in ann.items():
         lab, _ = compare(jid, [s], ["S06_GM12878_pop"])
         if lab.startswith("case_specific"):
             gm.append(f"{SHORT[s]}:{lab}")
-    both_dox = all(int(by[jid][s]["after_frag"]) >= 1 for s in ["S04_DLD1_c3_dox", "S05_DLD1_c4_dox"])
+    both_dox = all(int(by[jid][s]["after_frag"]) >= 1 for s in ["S04_DLD1_c3_dox", "S05_DLD1_c4_dox"] if s in by[jid])
     row = collections.OrderedDict(
         junction_id=jid, type=a["type"], breakend_A=a["breakend_A"], breakend_B=a["breakend_B"],
-        size_bp=a["size_bp"], classification=a["classification"], caller_support=c.get("caller_support", "NA"),
+        size_bp=a["size_bp"], classification=a["classification"], ambiguity_reason=a["ambiguity_reason"],
+        n_alternative_representations=a["n_alternative_representations"],
+        alternative_representations=a["alternative_representations"],
+        seqclass_flank_A=a["seqclass_flank_A"], seqclass_flank_B=a["seqclass_flank_B"],
+        caller_support=c.get("caller_support", "NA"),
         manta_samples=c.get("manta_unfiltered_or_joint_samples", ""), manta_PASS_samples=c.get("manta_pass_samples", ""),
         delly_samples=c.get("delly_unfiltered_or_regeno_samples", ""), delly_PASS_samples=c.get("delly_pass_samples", ""),
         caller_one_end_anchor_samples=c.get("any_one_end_anchor", ""),
@@ -108,6 +116,8 @@ for jid, a in ann.items():
         breakpoint_source=a["rep_source"], n_assembled_contigs=a["n_contigs"],
         P41_event=a["P41_event"], P41_max_tier=a["P41_max_tier"])
     for s in REP:
+        if s not in by[jid]:
+            continue
         d = by[jid][s]
         row[f"{SHORT[s]}_before"] = d["before_frag"]
         row[f"{SHORT[s]}_after"] = d["after_frag"]

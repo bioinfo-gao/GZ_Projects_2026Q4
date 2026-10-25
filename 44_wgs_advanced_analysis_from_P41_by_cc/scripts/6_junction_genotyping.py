@@ -193,8 +193,11 @@ with gzip.open(fq, "wt") as out:
                     h = f.readline()
                     if not h:
                         break
-                    seq, plus, qual = f.readline(), f.readline(), f.readline()
-                    out.write(f"@{s}|{h[1:].split()[0]}|{e}\n{seq}+\n{qual}")
+                    seq, plus, qual = f.readline().rstrip("\n"), f.readline(), f.readline().rstrip("\n")
+                    t = L.insert_end(seq, e)             # genotype the genomic insert only (adapter trimmed)
+                    if t < 30:
+                        continue
+                    out.write(f"@{s}|{h[1:].split()[0]}|{e}\n{seq[:t]}\n+\n{qual[:t]}\n")
 sam = f"{OUT}/reads_vs_templates.bam"
 subprocess.run(f"{ENV}/bwa-mem2 mem -a -Y -t 24 {OUT}/templates.fa {fq} 2> {OUT}/templates.bwa.log "
                f"| {ENV}/samtools view -b -F 4 -o {sam} -", shell=True, check=True, executable="/bin/bash")
@@ -272,15 +275,81 @@ def p_detect(depth, af, k=3):
     return 1 - sum(math.exp(-lam) * lam ** i / math.factorial(i) for i in range(k))
 
 
+# ------------------------------------------------------------------ event groups (alternative representations)
+# The same read-ends can support several junctions that differ only in where the partner end is placed (e.g. a
+# partner made of a repeat present at many loci). Junctions sharing >= 50% of the smaller alt read-end set are
+# one EVENT with alternative partner placements; per-sample counts of the event = union over its members.
+alt_ends = collections.defaultdict(set)
+alt_as = collections.defaultdict(int)
+for jid, s, q, e, cls, AS, gAS, comp in rows:
+    if cls == "alt":
+        alt_ends[jid].add((s, q, e))
+        alt_as[jid] += AS
+parent = {j["id"]: j["id"] for j in junctions}
+
+
+def find(x):
+    while parent[x] != x:
+        parent[x] = parent[parent[x]]
+        x = parent[x]
+    return x
+
+
+by_end = collections.defaultdict(set)
+for jid, ends in alt_ends.items():
+    for k in ends:
+        by_end[k].add(jid)
+pairs_seen = set()
+for k, js in by_end.items():
+    js = sorted(js)
+    for a_ in js:
+        for b_ in js:
+            if a_ < b_ and (a_, b_) not in pairs_seen:
+                pairs_seen.add((a_, b_))
+                inter = len(alt_ends[a_] & alt_ends[b_])
+                if inter >= 0.5 * min(len(alt_ends[a_]), len(alt_ends[b_])):
+                    parent[find(a_)] = find(b_)
+groups = collections.defaultdict(list)
+for j in junctions:
+    groups[find(j["id"])].append(j["id"])
+rep_of, members_of = {}, {}
+for g, ms in groups.items():
+    rep = max(ms, key=lambda x: (len(alt_ends[x]), alt_as[x], x))
+    members_of[rep] = sorted(ms)
+    for m in ms:
+        rep_of[m] = rep
+for j in junctions:
+    j["event_group"] = rep_of[j["id"]]
+    j["is_representative"] = int(rep_of[j["id"]] == j["id"])
+    j["n_alternative_representations"] = len(members_of[rep_of[j["id"]]]) - 1
+
+
+def merged(jid, s, key):
+    """event-level support for representatives (union over members); own support otherwise."""
+    if rep_of[jid] != jid:
+        return set(support[jid][s][key])
+    out = set()
+    for m in members_of[jid]:
+        out |= support[m][s][key]
+    return out
+
+
 with open(f"{OUT}/junction_by_sample.tsv", "w") as fh:
     cols = ["junction_id", "sample", "before_frag", "after_frag", "after_split_frag", "after_disc_frag",
             "after_readend", "refA_frag", "refB_frag", "refB_method", "refB_mapq20", "af_W_side", "af_lo95",
-            "af_hi95", "local_frag_depth", "p_detect3_af0.10", "p_detect3_af0.25", "p_detect3_af0.50", "status"]
+            "af_hi95", "local_frag_depth", "p_detect3_af0.10", "p_detect3_af0.25", "p_detect3_af0.50", "status",
+            "event_group", "is_representative"]
     fh.write("\t".join(cols) + "\n")
     for j in junctions:
         jid = j["id"]
         for s in SAMPLES:
-            sp = support[jid][s]
+            sp = collections.defaultdict(set, support[jid][s])
+            for key in ("alt", "alt_disc", "alt_readend"):
+                sp[key] = merged(jid, s, key)
+            bef = set()
+            for m in (members_of[jid] if rep_of[jid] == jid else [jid]):
+                bef |= before[m][s]
+            before[jid][s] = bef
             nd = lambda x: {q for q in x if q not in dupq[s]}
             alt_split, alt_disc = nd(sp["alt"]), nd(sp["alt_disc"])
             alt = alt_split | alt_disc
@@ -304,15 +373,20 @@ with open(f"{OUT}/junction_by_sample.tsv", "w") as fh:
             fh.write("\t".join(map(str, [
                 jid, s, len(nd(before[jid][s])), len(alt), len(alt_split), len(alt_disc), len(sp["alt_readend"]),
                 len(rA), rB, meth, rB20, f"{af:.3f}", f"{lo:.3f}", f"{hi:.3f}", n,
-                f"{p_detect(n, 0.10):.2f}", f"{p_detect(n, 0.25):.2f}", f"{p_detect(n, 0.50):.2f}", status])) + "\n")
+                f"{p_detect(n, 0.10):.2f}", f"{p_detect(n, 0.25):.2f}", f"{p_detect(n, 0.50):.2f}", status,
+                j["event_group"], j["is_representative"]])) + "\n")
 
 with open(f"{OUT}/junctions.tsv", "w") as fh:
     fh.write("junction_id\tA\tB\thom\tins_len\tins\trep_source\tn_sources\tn_contigs\tclipcons\tclusters\t"
-             "template_junction_left\ttemplate_junction_right\n")
+             "template_junction_left\ttemplate_junction_right\tevent_group\tis_representative\t"
+             "n_alternative_representations\talternative_representations\n")
     for j in junctions:
+        alts = [f"{fmt(J[m]['A'])}~{fmt(J[m]['B'])}" for m in members_of[j["event_group"]] if m != j["id"]]
         fh.write("\t".join(map(str, [j["id"], fmt(j["A"]), fmt(j["B"]), j["hom"], len(j["ins"]), j["ins"],
                                      j["rep_source"], len(j["sources"]), j["n_contigs"], j["clipcons"],
-                                     ",".join(j["clusters"]), j["jl"], j["jr"]])) + "\n")
+                                     ",".join(j["clusters"]), j["jl"], j["jr"], j["event_group"],
+                                     j["is_representative"], j["n_alternative_representations"],
+                                     ";".join(alts)])) + "\n")
 with gzip.open(f"{OUT}/read_support.tsv.gz", "wt") as fh:
     fh.write("junction_id\tsample\tqname\tread_end\tclass\tAS_template\tAS_genome\tAS_competitor\n")
     for r in rows:

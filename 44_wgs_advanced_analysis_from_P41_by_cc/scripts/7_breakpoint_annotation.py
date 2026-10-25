@@ -12,7 +12,8 @@ Per junction:
 Classification (pre-registered thresholds; plan section 4):
   Well supported   max after-rescue fragments in one sample >= 3; >= 2 evidence types (template split read-ends,
                    discordant pairs, assembled contig); both flanks n_equiv == 1; uncertainty <= 10 bp
-  Ambiguous_repeat max fragments >= 2 and (a flank n_equiv > 1 or uncertainty > 10 bp)
+  Ambiguous_repeat max fragments >= 2 and (a flank n_equiv > 1, or the same reads support alternative partner
+                   placements [Stage 6 event group], or uncertainty > 10 bp)
   Limited          max fragments >= 2, flanks unique, uncertainty <= 10 bp, but < 3 fragments or 1 evidence type
                    (gap between the plan's Well and Ambiguous levels; added 2026-10-25, see plan change log)
   Weak             max fragments == 1
@@ -74,12 +75,26 @@ def b_preceding(B, h, n):
     return L.revcomp(fa.fetch(c, p - h, p - h + n))            # B part = revcomp backward from p-h
 
 
-junctions = list(tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/junctions.tsv"))
+all_junctions = list(tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/junctions.tsv"))
+# one row per EVENT: alternative partner representations are listed on the representative (Stage 6 grouping)
+junctions = [j for j in all_junctions if j["is_representative"] == "1"]
 alt = {}
 for line in open(f"{BASE}/stage6_genotype{L.SUFFIX}/templates.fa").read().split(">")[1:]:
     name, seq = line.split("\n", 1)
     if name.endswith("|alt"):
         alt[name.split("|")[0]] = seq.replace("\n", "")
+
+def seq_class(x):
+    """coarse sequence class of a 100 bp junction flank (annotation only; does not change the classification)."""
+    if not x:
+        return "NA"
+    tel = (x.count("TTAGGG") + x.count("CCCTAA")) * 6 / len(x)
+    if tel >= 0.5:
+        return f"telomeric_repeat_(TTAGGG)n_{tel:.2f}"
+    if L.entropy(x) < 1.5:
+        return f"low_complexity_entropy_{L.entropy(x):.2f}"
+    return "other"
+
 
 # ---- uncertainty (slide) and flank sequences
 flank_fa = f"{OUT}/flanks.fa"
@@ -107,7 +122,9 @@ with open(flank_fa, "w") as fh:
         left_end = x0
         ann[jid] = dict(slide_left=sl, slide_right=sr, uncertainty_bp=sl + sr, microhomology_seq=homseq)
         # flanks exclude the slidable block so that each flank is purely one side of the junction
-        fh.write(f">{jid}|A\n{T[max(0, x0 - sl - FL):x0 - sl]}\n>{jid}|B\n{T[jr + sr:jr + sr + FL]}\n")
+        fA, fB = T[max(0, x0 - sl - FL):x0 - sl], T[jr + sr:jr + sr + FL]
+        ann[jid]["seqclass_A"], ann[jid]["seqclass_B"] = seq_class(fA), seq_class(fB)
+        fh.write(f">{jid}|A\n{fA}\n>{jid}|B\n{fB}\n")
 
 subprocess.run(f"{ENV}/bwa-mem2 mem -a -t 16 {BWA_IDX} {flank_fa} > {OUT}/flanks_vs_genome.sam 2> {OUT}/flanks_bwa.log",
                shell=True, check=True, executable="/bin/bash")
@@ -207,7 +224,10 @@ for j in junctions:
         types.add("contig")
     bg_n = sum(int(by[jid][s]["after_frag"]) >= 1 for s in BACKGROUND)
     lines = {LINE[s] for s in by[jid] if int(by[jid][s]["after_frag"]) >= 1}
-    uniq = a["flankA_n_equiv"] == 1 and a["flankB_n_equiv"] == 1
+    n_alt_rep = int(j["n_alternative_representations"])
+    uniq = a["flankA_n_equiv"] == 1 and a["flankB_n_equiv"] == 1 and n_alt_rep == 0
+    amb_side = ",".join([x for x, k in (("A", "flankA_n_equiv"), ("B", "flankB_n_equiv")) if a[k] != 1] +
+                        (["partner_placement"] if n_alt_rep else []))
     if maxf == 0:
         cls = "Not_supported"
     elif maxf == 1:
@@ -240,6 +260,9 @@ for j in junctions:
         repeat_A=overlap(rmsk, A[0], A[1]), repeat_B=overlap(rmsk, B[0], B[1]),
         segdup_A=overlap(segdup, A[0], A[1]), segdup_B=overlap(segdup, B[0], B[1]),
         simple_A=overlap(simple, A[0], A[1]), simple_B=overlap(simple, B[0], B[1]),
+        ambiguity_reason=amb_side, n_alternative_representations=n_alt_rep,
+        alternative_representations=j["alternative_representations"],
+        seqclass_flank_A=a["seqclass_A"], seqclass_flank_B=a["seqclass_B"],
         rep_source=j["rep_source"], n_contigs=j["n_contigs"], clusters=j["clusters"],
         P41_event=ev, P41_max_tier=tier,
         **{f"{s.split('_')[0]}_before": rep[s]["before_frag"] for s in REPORTED},
