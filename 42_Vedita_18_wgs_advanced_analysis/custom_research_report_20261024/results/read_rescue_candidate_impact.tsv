@@ -1,0 +1,5 @@
+candidate_label	raw_dual_endpoint_qname_count_before_rescue	rescued_unmapped_mate_qname_overlap	raw_dual_endpoint_qname_count_after_rescue	rescued_qnames	interpretation
+C1	1	0	1	.	No rescued unmapped-mate QNAME overlaps this candidate; rescue did not change its raw dual-endpoint QNAME count.
+C2	3	0	3	.	No rescued unmapped-mate QNAME overlaps this candidate; rescue did not change its raw dual-endpoint QNAME count.
+C3	2	0	2	.	No rescued unmapped-mate QNAME overlaps this candidate; rescue did not change its raw dual-endpoint QNAME count.
+C4	1	0	1	.	No rescued unmapped-mate QNAME overlaps this candidate; rescue did not change its raw dual-endpoint QNAME count.
