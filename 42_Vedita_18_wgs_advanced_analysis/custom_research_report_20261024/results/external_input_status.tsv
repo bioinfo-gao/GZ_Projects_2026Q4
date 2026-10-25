@@ -1,4 +1,4 @@
 required_external_input	status	reason	effect_on_interpretation
 Independent breakpoint-spanning PCR result from DLD1 clone 4 ± doxycycline genomic DNA	not_provided	No new wet-lab result was available to this computational follow-up.	EV0623/C2 remains a candidate mapping event, not a confirmed clone-specific rearrangement.
-Local WGS depth at or above 60× for sensitivity testing of low-fraction C2 support	not_provided	No new sequencing data were available.	Current P42 short-read evidence cannot exclude a low-fraction C2 event at the specified sensitivity target.
+Prospectively defined sensitivity study, if a low-fraction detection claim is required	not_provided	No independent assay-recovery study or pre-specified low-fraction decision rule was available.	Current P42 WGS comparison reports comparator zeros as not observed and does not make an absence-style sensitivity claim.
 Raw FISH images and per-cell scoring table	not_provided	No raw image data or scoring table were available.	No association between the candidate locus and the observed cytogenetic subpopulation was tested.

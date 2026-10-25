@@ -1,0 +1,2 @@
+candidate_label	independent_qname_count	split_read_end_count	query_overlap_bp_distribution	unmapped_query_gap_bp_distribution	allowed_conclusion
+C2	3	5	2bp:5	0;0;0;0;0	All resolved C2 read ends are consistent with the reported microhomology representation; repeat-context placement ambiguity and lack of independent validation remain.

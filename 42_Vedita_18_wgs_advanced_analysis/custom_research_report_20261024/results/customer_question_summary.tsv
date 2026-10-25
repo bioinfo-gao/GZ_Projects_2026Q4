@@ -2,5 +2,5 @@ topic	answer	boundary
 P41-to-P42 C2 refinement	P41 EV0623 crosswalks to C2; 3 QNAMEs and 5 split-read ends carry 2-bp AT overlap with 0-bp query gap.	Repeat-context representation and same-WGS evidence are not independent biological confirmation.
 Manta/DELLY exact two-end concordance	0/20 Manta, 0/20 DELLY, and 0/20 both-caller exact two-end matches.	Five C4 rows are DELLY anchor-only/nonconcordant records, not BND support.
 Read-rescue impact	Five unmapped-mate QNAMEs were retained; C1-C4 each had zero overlap and unchanged counts.	Zero impact is candidate-specific and does not discard the rescued evidence.
-DLD1 clone comparison	No C1-C4 candidate meets the high-confidence clone/doxycycline gate.	No validated allele fraction is reported; available control depth is below 60x sensitivity context.
+DLD1 clone comparison	C1-C4 remain candidate observations; clone/doxycycline specificity is not established from the current WGS comparison.	No allele fraction is reported; comparator zero is not an absence call, and no retrospective depth gate is applied.
 Source-file availability	18/18 BAMs and indexes are present; source categories are inventoried.	No provenance-qualified project-wide SNV/indel VCF source was identified.

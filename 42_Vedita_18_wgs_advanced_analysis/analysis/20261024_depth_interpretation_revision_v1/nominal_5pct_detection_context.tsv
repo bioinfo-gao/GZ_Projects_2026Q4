@@ -1,0 +1,6 @@
+sample_id	standard_evidence_mean_depth	nominal_event_fraction	probability_at_least_one_supporting_fragment	probability_at_least_three_supporting_fragments	model_boundary
+S01_DLD1_pop	15.449764	0.05	0.536709	0.036200	Illustrative independent-binomial calibration only. It is not an allele-fraction estimate, an assay validation, a repeat-locus sensitivity claim, or a decision threshold.
+S02_DLD1_c1_ctrl	13.677017	0.05	0.512325	0.030054	Illustrative independent-binomial calibration only. It is not an allele-fraction estimate, an assay validation, a repeat-locus sensitivity claim, or a decision threshold.
+S03_DLD1_c2_ctrl	15.172271	0.05	0.536709	0.036200	Illustrative independent-binomial calibration only. It is not an allele-fraction estimate, an assay validation, a repeat-locus sensitivity claim, or a decision threshold.
+S04_DLD1_c3_dox	15.415246	0.05	0.536709	0.036200	Illustrative independent-binomial calibration only. It is not an allele-fraction estimate, an assay validation, a repeat-locus sensitivity claim, or a decision threshold.
+S05_DLD1_c4_dox	17.823929	0.05	0.602786	0.058129	Illustrative independent-binomial calibration only. It is not an allele-fraction estimate, an assay validation, a repeat-locus sensitivity claim, or a decision threshold.

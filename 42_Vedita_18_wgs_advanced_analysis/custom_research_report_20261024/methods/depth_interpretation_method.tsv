@@ -1,0 +1,4 @@
+topic	method	interpretation
+WGS data-yield context	Approximately 25-30x WGS data amount for most samples is retained as the sequencing-data context.	It is distinct from the restricted alignment denominator used below.
+Standard-evidence depth denominator	Base-weighted chr1-chr22 depth from primary, non-duplicate, non-QC-fail, non-supplementary alignments with MAPQ >=20.	Used only to contextualize a comparator zero in the candidate analysis.
+Candidate comparison	Raw and standard-eligible QNAME counts are retained separately; >=3 standard-eligible QNAMEs is a support-strength descriptor for positive-candidate review.	It is not an absence threshold; no direct allele-fraction cutoff or retrospective depth gate is applied.

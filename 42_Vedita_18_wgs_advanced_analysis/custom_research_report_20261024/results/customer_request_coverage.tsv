@@ -2,5 +2,5 @@ client_question	answer_status	new_evidence_file	boundary
 Read rescue and local reassembly	completed	read_rescue_candidate_impact.tsv	Rescue retained five unmapped mates overall; none overlaps C1-C4 dual-endpoint QNAMEs.
 Base-pair C2 junction detail	completed with repeat-context qualification	c2_read_end_junction_resolution.tsv	Reports split-read alignment representation; not independent validation or a unique breakpoint proof.
 Manta/DELLY concordance	completed	candidate_manta_delly_concordance.tsv	Exact two-end and anchor-only calls are separated; same-data algorithmic concordance is not biological replication.
-DLD1 +Dox versus parental/control clones	completed	clone_specific_comparison_with_criteria.tsv	Raw candidate status is not a confirmed clone-specific structural variant at available depth.
+DLD1 +Dox versus parental/control clones	completed	clone_specific_comparison_with_criteria.tsv; standard_evidence_depth_summary.tsv	Candidate observations are reported with standard-evidence depth context. A comparator zero is not an absence call, and clone/doxycycline specificity is not established from the current WGS comparison.
 Genome-wide file delivery	availability inventoried	data_delivery_availability_manifest.tsv	SNV/indel VCF availability is not asserted when no provenance-qualified project-wide source was identified.
