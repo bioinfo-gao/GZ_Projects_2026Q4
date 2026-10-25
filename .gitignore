@@ -374,3 +374,10 @@ custom_research_report_*/**/*_pathabundance.tsv
 *metrics
 *.gridsscache
 *complete
+*yaml
+*info
+*gfa 
+*stage*
+*.genes.results.summary
+*off 
+
