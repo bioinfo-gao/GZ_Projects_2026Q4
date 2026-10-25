@@ -162,3 +162,4 @@ $E/bcftools view -h $D/supporting_analyses/chr11_SNV/chr11_S01_S10.QUAL30.vcf.gz
 ## 更新记录
 
 - 2026-10-25 — 创建。
+- 2026-10-25 — 用户批复：P1–P7 全部采纳；D2 已结案（整基因组 BAM 早已交付并经客户确认）；D3 执行（W = ±50 kb）。执行结果见 `../P44_key_operations_and_parameters_log_1025.md` §5；交付包已就地重建并通过 `13_self_audit.py`（含 P1–P5 断言）。

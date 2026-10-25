@@ -34,8 +34,8 @@ This section states, for each sample group, what the result means for you. Secti
 | **DLD1 +Dox clone 3** | S04 | The broken end is now resolved at base-pair level: chr11 sequence ends at 114,605,216–114,605,218 and continues directly into the telomeric repeat (TTAGGG)n. The position coincides with the depth step. The distal chr11q copy that is lost is one complete homolog. | A terminal deletion of 11q whose broken end carries telomeric repeat — the pattern of a broken chromosome end capped by telomere sequence. |
 | **DLD1 +Dox clone 4** | S05 | Two junctions at the step, both absent from S01–S03: a 376 bp fold-back inversion (chr11:114,605,973 joined head-to-head to 114,606,349) and a junction from chr11:114,607,192 to chr21:20,648,241. The same distal homolog is lost as in S04; the proximal side shows a graded allelic imbalance. | A more complex end than in S04; the combination is consistent with repeated breakage and rejoining at this site. |
 | **DLD1 no-Dox population and controls** | S01–S03 | None of the three S04/S05 junctions is present (each with at least 11 reference fragments examined); S03 carries one 2-fragment local event of its own. | They remain a valid baseline: the S04/S05 junctions are specific to the +Dox clones. |
-| **GM12878 population and clones** | S06–S10 | No junction at the locus has more than one supporting fragment in any sample. | No clone-specific rearrangement at the locus above the detection limit (Section 8.3). |
-| **All 530 target-region junction candidates** | S01–S10 | After read rescue, 4 have two or more independent fragments; 254 rest on a single fragment; 272 are explained at least as well by an unrearranged copy of the repeat. | The locus is a 22 kb tandem repeat; most single-read junctions cannot be distinguished from repeat-copy misplacement. |
+| **GM12878 population and clones** | S06–S10 | No junction in the target region has more than one supporting fragment in any sample. Two well-supported junctions 13 kb proximal of the target (to chr18 and chr14) are present in all five GM12878 samples. | No clone-specific rearrangement at the locus above the detection limit (Section 8.3); the two nearby junctions belong to the GM12878 cell line itself. |
+| **All 527 target-region junction candidates** | S01–S10 | After read rescue, 4 have two or more independent fragments; 254 rest on a single fragment; 269 are explained at least as well by an unrearranged copy of the repeat. | The locus is a 22 kb tandem repeat; most single-read junctions cannot be distinguished from repeat-copy misplacement. |
 
 **Notes on the table**
 
@@ -52,9 +52,9 @@ This section states, for each sample group, what the result means for you. Secti
 | **1** | **The target region lies inside a 22 kb tandem repeat array.** | |
 | 1a | chr11:114,603,768–114,625,660 is an array of a 42 bp unit (`GGTAACCACTGTTACCTGGTGGATAATAAGTATTGCCTCGTG`, about 522 copies), with an internal segmental duplication of 90.2% identity. | Section 7.1; Figure 1 |
 | **2** | **Read rescue changed the junction evidence in both directions.** | |
-| 2a | Per sample, 6,328–13,872 read pairs were rescued for the locus; 3,920–7,946 of them were placed elsewhere in the original alignments and list the locus only as an alternative hit. | Section 7.2; Figure 3 |
+| 2a | Per sample, 18,225–39,040 read pairs were rescued for the window; 9,440–20,554 of them were placed elsewhere in the original alignments and list the locus only as an alternative hit. | Section 7.2; Figure 3 |
 | 2b | The S04 telomere junction had 0 supporting fragments by the standard count and 4 after rescue. | Section 7.4 |
-| 2c | 272 of 530 target-region candidates are better or equally explained by an unrearranged repeat copy once each read competes for its best placement. | Sections 7.3, 7.5 |
+| 2c | 269 of 527 target-region candidates are better or equally explained by an unrearranged repeat copy once each read competes for its best placement. | Sections 7.3, 7.5 |
 | **3** | **Three junctions are specific to the +Dox clones and coincide with the depth step.** | |
 | 3a | S04: chr11:114,605,216–218 joined to (TTAGGG)n; 4 fragments (7 read ends); allele fraction 0.29 (95% confidence interval, CI, 0.12–0.55). | Section 7.4; Figure 5 |
 | 3b | S05: fold-back inversion chr11:114,605,973 / 114,606,349, 2 fragments; chr11:114,607,192–chr21:20,648,241, 3 fragments. | Section 7.4; Figure 5 |
@@ -62,9 +62,11 @@ This section states, for each sample group, what the result means for you. Secti
 | **4** | **Both +Dox clones lost the same chr11q homolog.** | |
 | 4a | Distal chr11q (114.7–135.0 Mb): 97.8% (S04) and 98.0% (S05) of sites heterozygous in S01–S03 have become homozygous; at 99.78% of the 8,004 sites homozygous in both clones the same allele is retained. | Section 7.7; Figure 2 |
 | **5** | **The two callers rarely agree with the read evidence at this locus.** | |
-| 5a | Of 530 target-region junctions, 1 is called by DELLY only (the S05 chr21 junction, unfiltered output), 1 by Manta only (a single-fragment event), none by both. | Section 7.5 |
+| 5a | Of 527 target-region junctions, 1 is called by DELLY only (the S05 chr21 junction, unfiltered output), 1 by Manta only (a single-fragment event), none by both. | Section 7.5 |
 | **6** | **A widespread sequencing artefact explains a large class of earlier candidates.** | |
 | 6a | Reads from short DNA fragments run into the adapter and a poly-G tail; the tail aligns to a poly-G tract at chr2:32,916,3xx. This accounts for the 693 earlier target-region candidates with a partner end there. | Section 7.3 |
+| **7** | **Outside the target region, the ± 50 kb window contains two well-supported junctions in every GM12878 sample.** | |
+| 7a | chr11:114,590,721–chr18:64,754,327 (10 fragments) and chr11:114,590,799–chr14:83,887,907 (8 fragments; the earlier report's tier A event EV0527), in S06–S10 and in no other cell line. | Section 7.9 |
 
 ---
 
@@ -74,16 +76,16 @@ Sample names, cell lines, doxycycline status and clone numbers are as supplied b
 
 | Sample | Cell line | Treatment | Role in this report | Autosomal depth (×, 2026-10-09 report) | Read pairs in the rescue set |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| S01 DLD1_pop | DLD1-136 | no Dox | DLD1 baseline (population) | 16.4 | 8,745 |
-| S02 DLD1_c1_ctrl | DLD1-136 | no Dox | DLD1 baseline (control clone 1) | 14.4 | 8,697 |
-| S03 DLD1_c2_ctrl | DLD1-136 | no Dox | DLD1 baseline (control clone 2) | 15.9 | 10,267 |
-| S04 DLD1_c3_dox | DLD1-136 | +Dox | case (clone 3) | 16.4 | 8,031 |
-| S05 DLD1_c4_dox | DLD1-136 | +Dox | case (clone 4) | 18.8 | 10,736 |
-| S06 GM12878_pop | GM12878 | no Dox | GM12878 baseline (population) | 12.9 | 6,328 |
-| S07 GM12878_c5 | GM12878 | no Dox | clone 5 | 15.9 | 9,387 |
-| S08 GM12878_c6 | GM12878 | no Dox | clone 6 | 15.2 | 9,335 |
-| S09 GM12878_c7 | GM12878 | no Dox | clone 7 | 18.8 | 12,230 |
-| S10 GM12878_c8 | GM12878 | no Dox | clone 8 | 18.5 | 13,872 |
+| S01 DLD1_pop | DLD1-136 | no Dox | DLD1 baseline (population) | 16.4 | 25,154 |
+| S02 DLD1_c1_ctrl | DLD1-136 | no Dox | DLD1 baseline (control clone 1) | 14.4 | 24,336 |
+| S03 DLD1_c2_ctrl | DLD1-136 | no Dox | DLD1 baseline (control clone 2) | 15.9 | 28,550 |
+| S04 DLD1_c3_dox | DLD1-136 | +Dox | case (clone 3) | 16.4 | 24,236 |
+| S05 DLD1_c4_dox | DLD1-136 | +Dox | case (clone 4) | 18.8 | 33,654 |
+| S06 GM12878_pop | GM12878 | no Dox | GM12878 baseline (population) | 12.9 | 18,225 |
+| S07 GM12878_c5 | GM12878 | no Dox | clone 5 | 15.9 | 26,505 |
+| S08 GM12878_c6 | GM12878 | no Dox | clone 6 | 15.2 | 26,499 |
+| S09 GM12878_c7 | GM12878 | no Dox | clone 7 | 18.8 | 34,400 |
+| S10 GM12878_c8 | GM12878 | no Dox | clone 8 | 18.5 | 39,040 |
 
 S11–S18 (Mutu I and DG75) were processed identically and used only to flag junctions that also occur in unrelated cell lines; they are not reported sample by sample.
 
@@ -151,18 +153,18 @@ The simpleRepeat annotation places a 42 bp unit repeated about 522 times across 
 
 | Sample | Records stored in the window | Read pairs rescued | Of which listed only through an alternative (XA) hit |
 | :--- | :---: | :---: | :---: |
-| S01 | 7,468 | 8,745 | 4,994 |
-| S02 | 7,650 | 8,697 | 4,857 |
-| S03 | 9,302 | 10,267 | 5,607 |
-| S04 | 5,111 | 8,031 | 5,458 |
-| S05 | 7,113 | 10,736 | 7,164 |
-| S06 | 4,776 | 6,328 | 3,920 |
-| S07 | 7,857 | 9,387 | 5,435 |
-| S08 | 7,577 | 9,335 | 5,528 |
-| S09 | 10,390 | 12,230 | 7,020 |
-| S10 | 11,816 | 13,872 | 7,946 |
+| S01 | 26,105 | 25,154 | 12,061 |
+| S02 | 24,871 | 24,336 | 11,845 |
+| S03 | 29,241 | 28,550 | 13,891 |
+| S04 | 22,006 | 24,236 | 13,184 |
+| S05 | 30,108 | 33,654 | 18,551 |
+| S06 | 17,463 | 18,225 | 9,440 |
+| S07 | 26,916 | 26,505 | 12,999 |
+| S08 | 26,231 | 26,499 | 13,317 |
+| S09 | 34,350 | 34,400 | 17,165 |
+| S10 | 36,811 | 39,040 | 20,554 |
 
-More than half of each rescue set consists of reads placed elsewhere whose alternative placement lies in the repeat array — the multi-mapping reads you asked us to include. None of the 0.25–3.3 million both-unmapped reads per sample aligned to the window sequence. No record in the window of any of the 18 samples is hard-clipped or an explicit secondary alignment, so every record carries its full read sequence (Figure 3).
+About half of each rescue set consists of reads placed elsewhere whose alternative placement lies in the window, mostly in the repeat array — the multi-mapping reads you asked us to include. None of the 0.25–3.3 million both-unmapped reads per sample aligned to the window sequence. No record in the window of any of the 18 samples is hard-clipped or an explicit secondary alignment, so every record carries its full read sequence (Figure 3).
 
 ![Figure 3 — rescue sources](figures/P44_Fig3_rescue_sources.png)
 
@@ -170,51 +172,53 @@ More than half of each rescue set consists of reads placed elsewhere whose alter
 
 ### 7.3 An adapter and poly-G artefact
 
-The libraries have a median fragment length of about 160 bp, so many 150 bp reads run through the end of the DNA fragment into the sequencing adapter (`AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC…`) and then into a run of G bases, the signal produced by this chemistry when no template is left. Aligners place that poly-G tail on a 150 bp poly-G tract at chr2:32,916,330–32,916,480 and report the read as split. Across the 18 samples, 4,768 such split alignments, 55,485 adapter soft clips and 149 poly-G discordant pairs were removed (`tables/evidence_filter_impact.tsv`). Of the 1,181 target-region events listed in the earlier report, 693 have a partner end in this tract; the earlier report had already treated it as a mapping artefact, and this analysis identifies the sequence that produces it.
+The libraries have a median fragment length of about 160 bp, so many 150 bp reads run through the end of the DNA fragment into the sequencing adapter (`AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC…`) and then into a run of G bases, the signal produced by this chemistry when no template is left. Aligners place that poly-G tail on a 150 bp poly-G tract at chr2:32,916,330–32,916,480 and report the read as split. Across the 18 samples, 16,768 such split alignments, 163,007 adapter soft clips and 668 poly-G discordant pairs were removed (`tables/evidence_filter_impact.tsv`). Of the 1,181 target-region events listed in the earlier report, 693 have a partner end in this tract; the earlier report had already treated it as a mapping artefact, and this analysis identifies the sequence that produces it.
 
 ### 7.4 Junctions with two or more fragments
 
 | Event | Junction (GRCh38) | Microhomology / inserted | Class | Present in | Fragments before → after rescue | Allele fraction (95% CI) | S01–S03 | Callers |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| P44J0332 | chr11:114,605,216–218 (+) → (TTAGGG)n | `GT` / none | Ambiguous (partner end) | S04 | 0 → 4 | 0.29 (0.12–0.55) | absent (13, 12, 24 reference fragments) | neither |
-| P44J0115 | chr11:114,605,971–973 (+) ↔ chr11:114,606,347–349 (+), 376 bp fold-back inversion | `TA` / none | Limited | S05 | 1 → 2 | 0.17 (0.05–0.45) | absent (15, 11, 28) | neither |
-| P44J0289 | chr11:114,607,190–192 (+) → chr21:20,648,241 (−) | `AT` / none | Limited | S05 | 3 → 3 | 0.27 (0.10–0.57) | absent (18, 14, 18) | DELLY (unfiltered only) |
-| P44J0389 | chr11:114,609,273–279 (−) ↔ 114,609,283 (−), 10 bp inversion | `GTTACC` / none | Limited | S03 | 1 → 2 | 0.09 (0.02–0.27) | S03 only | neither |
+| P44J0922 | chr11:114,605,216–218 (+) → (TTAGGG)n | `GT` / none | Ambiguous (partner end) | S04 | 0 → 4 | 0.29 (0.12–0.55) | absent (13, 12, 24 reference fragments) | neither |
+| P44J0359 | chr11:114,605,971–973 (+) ↔ chr11:114,606,347–349 (+), 376 bp fold-back inversion | `TA` / none | Limited | S05 | 1 → 2 | 0.17 (0.05–0.45) | absent (15, 11, 28) | neither |
+| P44J0786 | chr11:114,607,190–192 (+) → chr21:20,648,241 (−) | `AT` / none | Limited | S05 | 3 → 3 | 0.27 (0.10–0.57) | absent (18, 14, 18) | DELLY (unfiltered only) |
+| P44J1036 | chr11:114,609,273–279 (−) ↔ 114,609,283 (−), 10 bp inversion | `GTTACC` / none | Limited | S03 | 1 → 2 | 0.09 (0.02–0.27) | S03 only | neither |
 
 Positions are given as the range within which the junction can slide over identical sequence (the microhomology). "(+)" means the chr11 sequence to the left of the position is retained; "(−)" the sequence to the right.
 
-**S04 (P44J0332).** Seven read ends from four DNA fragments read chr11 sequence up to 114,605,216–218 and then only TTAGGG repeats, up to the end of the read or of the DNA fragment (Figure 5, `figures/junction_views/P44_Fig5_P44J0332.png`). The repeat matches telomeric-repeat tracts at the ends of chrX, chr2 and chr4 and an interstitial tract on chr10 equally well, so the partner end has no unique genomic position; the chr11 end is unique (one placement for its 100 bp flank). None of the four fragments was counted by the standard method, because the telomeric part of the reads was soft-clipped or aligned elsewhere with MAPQ 0; the junction was found only through the rescued alignments. The junction lies inside the 95% CI of the S04 depth step (Section 7.6). Its allele fraction is compatible with one of two chr11 copies.
+**S04 (P44J0922).** Seven read ends from four DNA fragments read chr11 sequence up to 114,605,216–218 and then only TTAGGG repeats, up to the end of the read or of the DNA fragment (Figure 5, `figures/junction_views/P44_Fig5_P44J0922.png`). The repeat matches telomeric-repeat tracts at the ends of chrX, chr2 and chr4 and an interstitial tract on chr10 equally well, so the partner end has no unique genomic position; the chr11 end is unique (one placement for its 100 bp flank). None of the four fragments was counted by the standard method, because the telomeric part of the reads was soft-clipped or aligned elsewhere with MAPQ 0; the junction was found only through the rescued alignments. The junction lies inside the 95% CI of the S04 depth step (Section 7.6). Its allele fraction is compatible with one of two chr11 copies.
 
-**S05 (P44J0115, P44J0289).** The fold-back inversion joins the plus strand at 114,605,973 to the minus strand at 114,606,349 (both "+" ends), i.e. the sequence folds back on itself 376 bp further along; it lies inside the 95% CI of the S05 depth step. The chr21 junction (the earlier report's EV0623, refined to the same coordinates and `AT` microhomology) lies 1.2 kb distal of it; its chr21 end is uniquely placeable. The chr21 junction is underpowered in S04 (7 reference fragments) because S04 has lost that segment of one copy.
+**S05 (P44J0359, P44J0786).** The fold-back inversion joins the plus strand at 114,605,973 to the minus strand at 114,606,349 (both "+" ends), i.e. the sequence folds back on itself 376 bp further along; it lies inside the 95% CI of the S05 depth step. The chr21 junction (the earlier report's EV0623, refined to the same coordinates and `AT` microhomology) lies 1.2 kb distal of it; its chr21 end is uniquely placeable. The chr21 junction is underpowered in S04 (7 reference fragments) because S04 has lost that segment of one copy.
 
-**S03 (P44J0389).** A 10 bp inversion inside the repeat array with 2 fragments in the no-Dox control clone S03 only; it is not related to the +Dox phenotype.
+**S03 (P44J1036).** A 10 bp inversion inside the repeat array with 2 fragments in the no-Dox control clone S03 only; it is not related to the +Dox phenotype.
 
-![Figure 5 — S04 junction at base resolution](figures/junction_views/P44_Fig5_P44J0332.png)
+**Primers.** A junction-specific primer pair exists for two of the three +Dox junctions (`tables/primer_design.tsv`). For the S05 chr21 junction (P44J0786), one primer crosses the junction and has no match in the reference (`TGCATCGTGGGTGACAATACTAA`) and the other lies on chr21 at a single reference site (`GCTGCATTGCCAATGAACAGTA`; 165 bp product). For the S04 telomere junction (P44J0922), a chr11 primer (`GCCTCACAGGTAACCACTGTAA`) pairs with a primer that crosses the junction from the telomeric side (`ACCCTAACCCTAACCCTAACGA`; 234 bp product); that primer will also anneal at telomeres, although only its chr11 3′ end allows extension, so background products are expected. For the S05 fold-back inversion, every candidate primer has its 3′ end at more than one site of the repeat array, so no specific pair exists.
 
-*Figure 5 (one of four; all in `figures/junction_views/`). Junction sequence (wine: chr11 side, dark teal: microhomology, blue: partner side) and every read end that supports it; "." marks a base identical to the junction sequence.*
+![Figure 5 — S04 junction at base resolution](figures/junction_views/P44_Fig5_P44J0922.png)
+
+*Figure 5 (one of 17; all in `figures/junction_views/`). Junction sequence (wine: chr11 side, dark teal: microhomology, blue: partner side) and every read end that supports it; "." marks a base identical to the junction sequence.*
 
 ### 7.5 All target-region junctions, before and after rescue, and caller concordance
 
-530 distinct junctions have at least one end in the target region (250 more lie only in the ± 5 kb flanks; `tables/junction_table_window_context.tsv`). Their classes: Well supported 0, Limited 3, Ambiguous (repeat) 1, Weak 254, Not supported 272. Of the 272 not supported, 6 had at least one fragment by the standard count; the others arose from single reads, contigs or soft-clip consensus sequences that, once each read competes for its best placement, are explained at least as well by an unrearranged repeat copy.
+527 distinct junctions have at least one end in the target region (1,847 more have ends only elsewhere in the ± 50 kb window; Section 7.9). Their classes: Well supported 0, Limited 3, Ambiguous (repeat) 1, Weak 254, Not supported 269. Of the 269 not supported, 6 had at least one fragment by the standard count; the others arose from single reads, contigs or soft-clip consensus sequences that, once each read competes for its best placement, are explained at least as well by an unrearranged repeat copy.
 
 | Sample | Events with ≥ 1 fragment before rescue | after rescue | after rescue, ≥ 2 fragments |
 | :--- | :---: | :---: | :---: |
 | S01 | 24 | 27 | 0 |
-| S02 | 20 | 21 | 0 |
+| S02 | 18 | 21 | 0 |
 | S03 | 22 | 26 | 1 |
 | S04 | 17 | 22 | 1 |
 | S05 | 21 | 17 | 2 |
 | S06 | 24 | 29 | 0 |
-| S07 | 29 | 36 | 0 |
+| S07 | 30 | 36 | 0 |
 | S08 | 16 | 20 | 0 |
 | S09 | 32 | 40 | 0 |
-| S10 | 25 | 29 | 0 |
+| S10 | 24 | 29 | 0 |
 
-The earlier report's candidates with at least one MAPQ ≥ 20 split read in S01–S10 (179 events; the basis of the per-sample numbers in our 2026-10-14 message) resolve as follows: 175 Weak, 1 Limited (EV0623 = P44J0289), 2 Not supported, 1 without a counterpart in the rescued evidence. Caller concordance for all 530 target-region junctions: 1 called by DELLY only (P44J0289, per-sample unfiltered discovery output of S05), 1 by Manta only (P44J0506, a single-fragment event), 0 by both. 12 of the 258 events with at least one fragment in S01–S10 also have a fragment in a Mutu I or DG75 sample; none of the four events in Section 7.4 does.
+The earlier report's candidates with at least one MAPQ ≥ 20 split read in S01–S10 (179 events; the basis of the per-sample numbers in our 2026-10-14 message) resolve as follows: 175 Weak, 1 Limited (EV0623 = P44J0786), 2 Not supported, 1 without a counterpart in the rescued evidence. Caller concordance for all 527 target-region junctions: 1 called by DELLY only (P44J0786, per-sample unfiltered discovery output of S05), 1 by Manta only (P44J1288, a single-fragment event), 0 by both. 11 of the 258 events with at least one fragment in S01–S10 also have a fragment in a Mutu I or DG75 sample; none of the four events in Section 7.4 does.
 
 ![Figure 4 — before vs after rescue](figures/P44_Fig4_before_after_and_classes.png)
 
-*Figure 4. Left: target-region junctions with support in each sample before and after rescue. Right: classes of the 530 target-region junctions.*
+*Figure 4. Left: target-region junctions with support in each sample before and after rescue. Right: classes of the 527 target-region junctions.*
 
 ### 7.6 The depth step at base-pair scale
 
@@ -243,6 +247,26 @@ The ratios are relative to the S01–S03 mean after normalisation to each sample
 
 DLD1: 39 target-region junctions are present in S04 or S05 and in none of S01–S03 (22 in S04, 17 in S05); 3 of them have ≥ 2 fragments (the three in Section 7.4) and 36 have 1 fragment; 10 of the 39 have at least one underpowered baseline sample. No junction is present in both +Dox clones. GM12878: 122 junctions are present in one clone and absent from S06 (S07 36, S08 20, S09 40, S10 29); each has a single fragment. Per-sample labels are in `tables/junction_table_target.tsv` (columns `DLD1_dox_comparison`, `GM12878_clone_specific`, `S0n_state`).
 
+### 7.9 Junctions elsewhere in the ± 50 kb window
+
+1,847 junctions have ends in the window but not in the target region (`tables/junction_table_window_context.tsv`); 13 of them have at least two fragments in a sample. All were classified with the same criteria.
+
+| Event | Junction (GRCh38) | Class | Fragments (max per sample) | Samples (S01–S10) | Mutu I / DG75 samples | Callers | Comment |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| P44J1365 | chr11:114,590,721 (−) → chr18:64,754,327 (+) | Well supported | 10 | S06–S10 | 0 | DELLY | All five GM12878 samples and no other cell line (earlier EV0526) |
+| P44J0533 | chr11:114,590,799 (+) → chr14:83,887,907 (−) | Well supported | 8 | S06–S10 | 0 | Manta + DELLY | All five GM12878 samples and no other cell line (earlier EV0527, tier A) |
+| P44J0771 | chr11:114,645,158 (+) → chr20:58,530,101 (−) | Limited | 4 | S06, S08, S09, S10 | 0 | neither | GM12878 only |
+| P44J0907 | chr11:114,663,658 (+) → chrX:580,588 (+) | Limited | 4 | 9 of 10 (DLD1 and GM12878) | 0 | neither | Shared by two unrelated cell lines; partner in the X/Y pseudoautosomal region |
+| P44J0591 | chr11:114,602,528 (+) → chr16:58,642,985 (+) | Limited | 2 | S04 | 0 | neither | 2.7 kb proximal of the S04 telomere junction, in the low-complexity stretch; at least one baseline sample underpowered |
+| P44J1592 | chr11:114,555,232 (−) → chrX:1,919,999 (−) | Limited | 2 | S07 | 3 | neither | Also present in Mutu I / DG75 samples |
+| P44J1635 | chr2:47,748,634 (+) → chr11:114,598,294 (+) | Ambiguous (partner end) | 17 | S01–S05 | 8 | neither | At the 36 bp insertion of the earlier report (DLD1, Mutu I, DG75; not GM12878); the inserted sequence matches 9 genomic sites equally |
+| P44J1775 | chr2:32,916,279 (−) → chr11:114,631,548 (−) | Ambiguous (repeat) | 7 | S01–S10 | 8 | neither | Partner flank is the poly-G tract of Section 7.3; present in all four cell lines |
+| P44J2143 | chr5:83,060,167 (+) → chr11:114,630,276 (−) | Ambiguous (repeat) | 4 | 7 of 10 | 6 | neither | Present in all four cell lines |
+| P44J0715 | chr11:114,653,822 (+) → chr19:9,003,750 (+) | Ambiguous (repeat) | 2 | 5 of 10 | 8 | neither | Present in all four cell lines |
+| P44J0902 | chr11:114,629,858 (+) → chrX:125,929,171 (+) | Ambiguous (repeat) | 2 | S05 | 0 | neither | Both ends have equally good alternative placements |
+| P44J1219 | chr11:114,601,878 (−) → chr14:84,596,292 (−) | Ambiguous (repeat) | 2 | S09 | 0 | neither | Both flanks low-complexity sequence |
+| P44J1474 | chr11:114,585,595 (−) → chr21:8,405,626 (+) | Ambiguous (partner end) | 2 | 6 of 10 | 3 | neither | Partner end has 3 equally good placements (earlier EV0487) |
+
 ---
 
 ## 8. Conclusions, Limitations and Next Steps
@@ -254,15 +278,15 @@ DLD1: 39 target-region junctions are present in S04 or S05 and in none of S01–
 | S04 (+Dox clone 3) | Terminal loss of one chr11q homolog from 114,605,216–218, with telomeric repeat joined to the retained chr11 end | 4 fragments, 7 read ends crossing the junction; junction inside the depth-step CI; distal loss of heterozygosity at 97.8% of sites (Sections 7.4, 7.6, 7.7) |
 | S05 (+Dox clone 4) | Loss of the same homolog distal of 114.606 Mb; a fold-back inversion at the step and a chr21 junction 1.2 kb distal; proximal gain with graded imbalance | 2 + 3 fragments; fold-back inside the depth-step CI; distal loss of heterozygosity 98.0%; proximal BAF imbalance 0.159 (Sections 7.4, 7.6, 7.7) |
 | S01–S03 | Baseline for the +Dox clones; carries none of the three +Dox junctions | ≥ 11 reference fragments per sample at each junction, 0 supporting (Section 7.4) |
-| S06–S10 | No junction above one fragment at the locus | Section 7.5 |
-| Locus overall | Most single-read junctions in this 22 kb repeat cannot be distinguished from repeat-copy misplacement; 272 of 530 are not supported once reads compete for placement | Sections 7.1, 7.5 |
+| S06–S10 | No junction above one fragment in the target region; two well-supported junctions 13 kb proximal of it are common to all GM12878 samples (cell-line feature, not clone-specific) | Sections 7.5, 7.9 |
+| Locus overall | Most single-read junctions in this 22 kb repeat cannot be distinguished from repeat-copy misplacement; 269 of 527 are not supported once reads compete for placement | Sections 7.1, 7.5 |
 
 ### 8.2 Practical reading
 
-1. **S04: the broken end is resolved — chr11 at 114,605,216–218 joined to telomeric repeat.** Evidence: Section 7.4, `tables/junction_table_target.tsv` (row P44J0332), `figures/junction_views/P44_Fig5_P44J0332.png`, `locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`.
-2. **S05: a different and more complex end on the same homolog — a fold-back inversion at the step and a chr21 junction.** Evidence: Sections 7.4 and 7.7, rows P44J0115 and P44J0289, `figures/junction_views/P44_Fig5_P44J0115.png` and `P44_Fig5_P44J0289.png`, `supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`.
+1. **S04: the broken end is resolved — chr11 at 114,605,216–218 joined to telomeric repeat.** Evidence: Section 7.4, `tables/junction_table_target.tsv` (row P44J0922), `figures/junction_views/P44_Fig5_P44J0922.png`, `locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`.
+2. **S05: a different and more complex end on the same homolog — a fold-back inversion at the step and a chr21 junction.** Evidence: Sections 7.4 and 7.7, rows P44J0359 and P44J0786, `figures/junction_views/P44_Fig5_P44J0359.png` and `P44_Fig5_P44J0786.png`, `supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`.
 3. **S01–S03 remain a valid baseline.** Evidence: Section 7.4 table (reference fragment counts), `tables/junction_by_sample_long.tsv`.
-4. **GM12878 clones: no clone-specific rearrangement at the locus above one fragment.** Evidence: Sections 7.5 and 7.8, `tables/junction_table_target.tsv` column `GM12878_clone_specific`.
+4. **GM12878 clones: no clone-specific rearrangement at the locus above one fragment; two well-supported junctions 13 kb proximal of the target are features of the GM12878 cell line (present in the population and all four clones).** Evidence: Sections 7.5, 7.8 and 7.9, `tables/junction_table_target.tsv` column `GM12878_clone_specific`, `tables/junction_table_window_context.tsv` rows P44J1365 and P44J0533.
 5. **Most junction candidates at this locus are single reads inside a 22 kb repeat and should not be followed up individually.** Evidence: Sections 7.1 and 7.5, Figure 4, `tables/junction_table_target.tsv` column `classification`.
 
 ### 8.3 Limitations
@@ -279,8 +303,8 @@ DLD1: 39 target-region junctions are present in S04 or S05 and in none of S01–
 
 | Open question | Suggested experiment |
 | :--- | :--- |
-| Is the S04 junction real, and is it a telomere added at the break? | PCR with a chr11 primer proximal of 114,605,216 and a telomere-repeat primer (single-telomere-length-type assay) on S04, S01–S03 and S05 DNA; fluorescence in situ hybridisation (FISH) with a probe proximal of 114.6 Mb and a telomere probe |
-| Are the S05 fold-back inversion and chr21 junction real? | Junction-spanning PCR on S05 and S01–S04 DNA, with the primers in `tables/primer_design.tsv` where a specific pair exists; otherwise from `sequences/junction_and_reference_templates.fa` |
+| Is the S04 junction real, and is it a telomere added at the break? | PCR with the chr11 / telomere-repeat primer pair of `tables/primer_design.tsv` (P44J0922) on S04, S01–S03 and S05 DNA, read out by product size and sequencing of the product; fluorescence in situ hybridisation (FISH) with a probe proximal of 114.6 Mb and a telomere probe |
+| Are the S05 fold-back inversion and chr21 junction real? | chr21 junction: PCR with the P44J0786 pair of `tables/primer_design.tsv` on S05 and S01–S04 DNA. Fold-back inversion: no specific two-primer design exists inside the repeat array; an assay needs a different approach (for example a primer outside the array combined with long-range PCR), designed from `sequences/junction_and_reference_templates.fa` |
 | Does S05 show further fold-back or rejoining products along proximal 11q? | Copy-number analysis of 11q at higher resolution (for example droplet digital PCR at several proximal positions); deeper short-read sequencing of S05 would raise junction detection along the proximal gain |
 | Is the same chr11q homolog targeted in further +Dox clones? | BAF and loss-of-heterozygosity analysis of additional independent +Dox clones (existing pipeline; no new method needed) |
 
@@ -306,7 +330,7 @@ All paths are relative to this delivery folder. This report is the entry point.
 | `tables/data_inventory.tsv` | Every delivered file with its size |
 | `methods/header_sanitization_audit.tsv` | Removal of local paths from BAM/VCF headers, with record counts and checksums before and after |
 | `figures/` | Figures 1–4 (`P44_Fig1_locus_overview`, `P44_Fig2_chr11_BAF`, `P44_Fig3_rescue_sources`, `P44_Fig4_before_after_and_classes`; PNG and PDF) |
-| `figures/junction_views/` | Figure 5: one base-level view per junction with ≥ 2 fragments (4 junctions; PNG and PDF) |
+| `figures/junction_views/` | Figure 5: one base-level view per junction with ≥ 2 fragments (17 junctions; PNG and PDF) |
 | `locus_BAM/` | For S01–S10: every alignment record of every rescued read pair (`<sample>.locus_rescue.bam` and index), viewable in the Integrative Genomics Viewer (IGV); tag `ZR` gives the rescue source |
 | `sequences/junction_and_reference_templates.fa` | Junction and reference sequences (400 bp each side) for every junction; basis for primer design |
 | `sequences/local_assembly_contigs.fa` | All locally assembled contigs |

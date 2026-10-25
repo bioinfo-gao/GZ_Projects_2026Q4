@@ -29,7 +29,11 @@ def tsv(p):
 T = tsv(f"{D}/tables/junction_table_target.tsv")
 W = tsv(f"{D}/tables/junction_table_window_context.tsv")
 need(f"{len(T)} distinct junctions have at least one end in the target region", "target total")
-need(f"({len(W)} more lie only", "window context total")
+need(f"({len(W):,} more have ends only elsewhere", "window context total")
+ctx2 = [r for r in W if int(r["max_after_frag_S01_S10"]) >= 2]
+need(f"{len(ctx2)} of them have at least two fragments", "7.9 count")
+for r in ctx2:
+    need(f"| {r['junction_id']} |", f"7.9 row {r['junction_id']}")
 cc = collections.Counter(r["classification"] for r in T)
 need(f"Well supported {cc['Well_supported']}, Limited {cc['Limited']}, Ambiguous (repeat) {cc['Ambiguous_repeat']}, "
      f"Weak {cc['Weak']}, Not supported {cc['Not_supported']}", "class counts")
@@ -56,17 +60,30 @@ need(f"{calls.get('DELLY', 0)} called by DELLY only", "DELLY only")
 need(f"{calls.get('Manta', 0)} by Manta only", "Manta only")
 assert calls.get("Manta+DELLY", 0) == 0 or fails.append("report says 0 by both")
 # key events
-key = {r["junction_id"]: r for r in T}
-for jid, s, bef, aft, af in (("P44J0332", "S04", 0, 4, "0.29"), ("P44J0115", "S05", 1, 2, "0.17"),
-                             ("P44J0289", "S05", 3, 3, "0.27"), ("P44J0389", "S03", 1, 2, "0.09")):
-    r = key[jid]
+# key events located by their chr11 breakend (event IDs differ between runs)
+def by_pos(pos):
+    hits = [r for r in T if pos in (r["breakend_A"].split(":")[1], r["breakend_B"].split(":")[1])]
+    if len(hits) != 1:
+        fails.append(f"key event at chr11:{pos}: {len(hits)} rows")
+        return None
+    return hits[0]
+
+
+for pos, s, bef, aft, af in (("114605218", "S04", 0, 4, "0.29"), ("114605973", "S05", 1, 2, "0.17"),
+                             ("114607192", "S05", 3, 3, "0.27"), ("114609273", "S03", 1, 2, "0.09")):
+    r = by_pos(pos)
+    if r is None:
+        continue
+    jid = r["junction_id"]
+    if jid not in rep:
+        fails.append(f"key event {jid} (chr11:{pos}) not named in report")
     if int(r[f"{s}_before"]) != bef or int(r[f"{s}_after"]) != aft:
         fails.append(f"{jid} {s} before/after {r[f'{s}_before']}/{r[f'{s}_after']} != {bef}/{aft}")
     if f"{float(r[f'{s}_AF']):.2f}" != af:
         fails.append(f"{jid} AF {r[f'{s}_AF']} != {af}")
     need(f"{bef} → {aft}", f"{jid} before->after")
     for b in ("S01", "S02", "S03"):
-        if jid != "P44J0389" and r[f"{b}_state"] != "absent":
+        if s != "S03" and r[f"{b}_state"] != "absent":    # the S03-only event is present in its own sample
             fails.append(f"{jid} {b} state {r[f'{b}_state']} != absent")
 # rescue table
 for r in tsv(f"{D}/tables/rescue_source_summary.tsv"):
