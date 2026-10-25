@@ -1,0 +1,8 @@
+Sat Oct 24 23:33:24 EDT 2026
+total 185212
+drwxrwxr-x 2 gao gao      4096 Oct 24 23:33 .
+drwxrwxr-x 7 gao gao      4096 Oct 24 23:33 ..
+-rw-rw-r-- 1 gao gao        29 Oct 24 23:33 download_done_20261024.txt
+-rw-rw-r-- 1 gao gao   4202400 Oct 24 23:33 genomicSuperDups.txt.gz
+-rw-rw-r-- 1 gao gao 155633856 Oct 24 23:33 rmsk.txt.gz
+-rw-rw-r-- 1 gao gao  29804554 Oct 24 23:33 simpleRepeat.txt.gz
