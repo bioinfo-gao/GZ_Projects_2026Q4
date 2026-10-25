@@ -14,14 +14,16 @@ if [[ -n "$existing" && "$existing" != "$DELIV" ]]; then
   mv "$existing" "$DELIV"
   old=$(find "$DELIV" -maxdepth 1 -name "${NAME}_*.md" | head -1); [[ -n "$old" ]] && mv "$old" "$DELIV/$REPORT"
 fi
-mkdir -p "$DELIV"/{figures/junction_views,tables,supporting_analyses/{depth_boundary,chr11_BAF,chr11_SNV},genome_wide_SV_VCF,sequences,locus_BAM}
-T=$OUT/stage10_tables; F=$OUT/stage11_figures; S9=$OUT/stage9_supporting
+mkdir -p "$DELIV"/{methods,figures/junction_views,tables,supporting_analyses/{depth_boundary,chr11_BAF,chr11_SNV},genome_wide_SV_VCF,sequences,locus_BAM}
+T=$OUT/stage10_tables; F=$OUT/stage11_figures; S9=$PROJ/analysis/${SUPPORT_RUN}_read_rescue/stage9_supporting
 cp "$F"/P44_Fig[1-4]_*.{png,pdf} "$DELIV/figures/"
 cp "$F"/junctions/P44_Fig5_*.{png,pdf} "$DELIV/figures/junction_views/"
 cp "$T"/junction_table_target.tsv "$T"/junction_table_window_context.tsv "$T"/junction_by_sample_long.tsv \
    "$T"/rescue_source_summary.tsv "$DELIV/tables/"
 cp "$OUT/stage4_clusters/filter_impact.tsv" "$DELIV/tables/evidence_filter_impact.tsv"
 cp "$OUT/stage8_concordance/concordance_long.tsv" "$DELIV/tables/caller_concordance_by_sample.tsv"
+cp "$T"/key_junction_read_evidence.tsv "$DELIV/tables/"                                   # P3
+cp "$OUT"/stage14_primers/{primer_design.tsv,primer_candidates.tsv} "$DELIV/tables/"        # P4
 cp "$S9"/depth_boundary/{boundary_estimates.tsv,depth_bins_200bp.tsv} "$DELIV/supporting_analyses/depth_boundary/"
 cp "$S9"/chr11_baf/{baf_segments.tsv,retained_homolog_S04_vs_S05.tsv,baf_sites.tsv.gz} "$DELIV/supporting_analyses/chr11_BAF/"
 cp "$S9"/chr11_snv/chr11_S01_S10.QUAL30.vcf.gz* "$DELIV/supporting_analyses/chr11_SNV/"
@@ -33,6 +35,8 @@ for s in $(awk -F, 'NR>1 && $1<=10{print $2}' "$SAMPLE_TABLE"); do
   cp "$OUT/stage3_rescue/$s/rescue.bam.bai" "$DELIV/locus_BAM/$s.locus_rescue.bam.bai"
 done
 sed "s/@@REPORT_DATE@@/$DATE/g" "$PROJ/docs/_client_report_source.md" > "$DELIV/$REPORT"
+$PY "$PROJ/scripts/12a_sanitize_headers.py" "$DELIV" || { echo "header sanitisation failed"; exit 1; }   # P1
+$PY "$PROJ/scripts/12b_delivery_tables.py" "$DELIV" || { echo "delivery tables failed"; exit 1; }        # P2, P5
 ( cd "$DELIV" && find . -type f ! -name md5sums_delivery.txt -print0 | sort -z | xargs -0 md5sum > md5sums_delivery.txt )
 
 # ---- hard checks

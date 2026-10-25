@@ -90,9 +90,41 @@ for f in ("P44_Fig1_locus_overview", "P44_Fig2_chr11_BAF", "P44_Fig3_rescue_sour
         if not os.path.exists(f"{D}/figures/{f}.{ext}"):
             fails.append(f"missing figure {f}.{ext}")
 jv = sorted(glob.glob(f"{D}/figures/junction_views/*.png"))
-if len(jv) != len(ge2):
-    fails.append(f"junction views {len(jv)} != events with >=2 fragments {len(ge2)}")
-need(f"({len(ge2)} junctions; PNG and PDF)", "junction view count in section 9")
+ge2_all = [r for r in T + W if int(r["max_after_frag_S01_S10"]) >= 2]
+if len(jv) != len(ge2_all):
+    fails.append(f"junction views {len(jv)} != events with >=2 fragments {len(ge2_all)}")
+need(f"({len(ge2_all)} junctions; PNG and PDF)", "junction view count in section 9")
+# ---- round-2 additions (P1-P5)
+import subprocess
+ENV = "/Work_bio/gao/configs/.conda/envs/regular_bioinfo/bin"
+paths = 0
+for b in glob.glob(f"{D}/**/*.bam", recursive=True):
+    paths += subprocess.run(f"{ENV}/samtools view --no-PG -H {b} | grep -c '/home/\\|/mnt/\\|/Work_bio'", shell=True,
+                            capture_output=True, text=True).stdout.strip() not in ("0", "")
+for v in glob.glob(f"{D}/**/*.vcf.gz", recursive=True):
+    paths += subprocess.run(f"{ENV}/bcftools view --no-version -h {v} 2>/dev/null | grep -c '/home/\\|/mnt/\\|/Work_bio'",
+                            shell=True, capture_output=True, text=True).stdout.strip() not in ("0", "")
+if paths:
+    fails.append(f"P1: {paths} BAM/VCF headers still contain local paths")
+aud = tsv(f"{D}/methods/header_sanitization_audit.tsv")
+if any(r["status"] != "ok" for r in aud):
+    fails.append("P1: header_sanitization_audit has non-ok rows")
+cov = tsv(f"{D}/tables/client_request_coverage.tsv")
+for r in cov:
+    for p in r["delivered_files"].split(";"):
+        if p and not os.path.exists(f"{D}/{p}"):
+            fails.append(f"P2: coverage names missing {p}")
+led = tsv(f"{D}/tables/key_junction_read_evidence.tsv")
+if {r["event_id"] for r in led} != {r["junction_id"] for r in T + W if int(r["max_after_frag_S01_S10"]) >= 2}:
+    fails.append("P3: ledger events != events with >= 2 fragments")
+pr = tsv(f"{D}/tables/primer_design.tsv")
+if {r["event_id"] for r in pr} != {r["junction_id"] for r in T + W if int(r["max_after_frag_S01_S10"]) >= 2}:
+    fails.append("P4: primer table events != events with >= 2 fragments")
+inv = tsv(f"{D}/tables/data_inventory.tsv")
+nfiles = sum(1 for f in glob.glob(f"{D}/**/*", recursive=True) if os.path.isfile(f) and not f.endswith("md5sums_delivery.txt"))
+if len(inv) != nfiles:
+    fails.append(f"P5: inventory rows {len(inv)} != files {nfiles}")
+
 # banned recommendation (long-read platforms) and repudiation wording
 for bad in ("long-read", "long read", "Nanopore", "PacBio", "incorrect", "mistake", "wrong", "erroneous"):
     if bad.lower() in rep.lower():

@@ -7,6 +7,7 @@ Coordinate conventions (used in every stage):
   * query coordinates are 0-based half-open in the ORIGINAL read orientation (as sequenced).
 """
 import csv
+import os
 import re
 from dataclasses import dataclass
 
@@ -15,7 +16,8 @@ SAMPLE_TABLE = f"{PROJ}/scripts/0_sample_table.csv"
 REF = "/Work_bio/references/Homo_sapiens/GRCh38/GATK.GRCh38/Homo_sapiens_assembly38.fasta"
 CHR = "chr11"
 TARGET = (114604000, 114625500)
-W = (114599000, 114630500)
+W_PAD = int(os.environ.get("P44_W_PAD", "5000"))     # round 1: 5 kb; round 2: 50 kb (user D3, 2026-10-25)
+W = (TARGET[0] - W_PAD, TARGET[1] + W_PAD)
 READ_LEN = 150
 MIN_CLIP = 20             # soft clip length to count as breakpoint evidence (plan section 3)
 ADAPTERS = {               # Illumina TruSeq read-through adapters (identified from data, Stage 1 note)

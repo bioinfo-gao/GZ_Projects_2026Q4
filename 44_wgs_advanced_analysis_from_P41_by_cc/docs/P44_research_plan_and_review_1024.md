@@ -17,6 +17,7 @@
   5. **Event grouping**：同一批 read-end 同时支持多个只差 partner 位置的 junction（例：S04 chr11:114,605,218 → TTAGGG 端粒重复，partner 可放 chrX/chr4/chr2/chr10 末端）⇒ 合并为一个 event，per-sample 计数取并集，列出 alternative placements；有 alternative placement 即属 §4 的 Ambiguous（partner 定位歧义）。
   6. **§4 增补 "Limited" 一级**：≥ 2 fragments、flank 唯一、不确定区间 ≤ 10 bp，但 < 3 fragments 或仅一类证据——原 §4 表在 Well 与 Ambiguous 之间留了空档，按此填补（不放宽 Well）。
   7. SPAdes 对微小局部 read 集合的 k-mer coverage model 报错（exit 64）⇒ 改 `--sc --cov-cutoff off`，且 read 先在 adapter 处截断（≥ 30 bp）。
+- 2026-10-25 — **第 2 轮（用户决定）**：采纳 `docs/P44-learned-from-P42/P44_learned_from_P42_1025.md` §6 全部 7 项（P1–P7）。**D3：抽取窗口 W 由 target ±5 kb 扩为 ±50 kb**（chr11:114,554,000–114,675,500，与 P41 窗口一致）——改变 data universe，用户已于开跑前确认。Stage 1–8 以 `P44_W_PAD=50000` 重跑到新目录 `analysis/20261025_read_rescue/`；第 1 轮 `analysis/20261024_read_rescue/` 原样保留；与 W 无关的 Stage 9（深度断崖、BAF、chr11 SNV、VCF 整理）沿用 20261024 结果（`P44_SUPPORT_RUN=20261024`）。§3 的 W 定义与 §4 判据其余不变；目标区 junction 定义（一端在 target ±50 bp）不变。D2：整基因组 BAM 已交付且客户确认收到。
 
 ---
 

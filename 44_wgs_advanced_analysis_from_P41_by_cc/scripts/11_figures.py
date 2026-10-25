@@ -27,7 +27,7 @@ RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
 OUT = f"{BASE}/stage11_figures{L.SUFFIX}"
 os.makedirs(f"{OUT}/junctions", exist_ok=True)
-SUP = f"{BASE}/stage9_supporting"
+SUP = f"{L.PROJ}/analysis/{os.environ.get('P44_SUPPORT_RUN', RUN)}_read_rescue/stage9_supporting"   # W-independent
 REP = [r["sample_id"] for r in L.samples(reported_only=True)]
 SH = {s: s.split("_")[0] for s in REP}
 
@@ -227,7 +227,8 @@ for d in tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/read_support.tsv.gz"):
         support[d["junction_id"]].append(d)
 tpl_bam = f"{BASE}/stage6_genotype{L.SUFFIX}/reads_vs_templates.bam"
 aln = collections.defaultdict(list)
-want = {e["junction_id"] for e in events if int(e["max_after_frag_S01_S10"]) >= 2}
+events_all = events + list(tsv(f"{BASE}/stage10_tables{L.SUFFIX}/junction_table_window_context.tsv"))
+want = {e["junction_id"] for e in events_all if int(e["max_after_frag_S01_S10"]) >= 2}
 members = collections.defaultdict(set)
 for jid in want:
     for m in [jid] + [x for x in jinfo if jinfo[x]["event_group"] == jid and x != jid]:
@@ -258,7 +259,7 @@ for r in pysam.AlignmentFile(tpl_bam, check_sq=False):
                           r.cigartuples, L.revcomp(sq) if r.is_reverse else sq))
 VIEW = 70
 fig_paths = []
-for e in events:
+for e in events_all:
     jid = e["junction_id"]
     if jid not in want:
         continue

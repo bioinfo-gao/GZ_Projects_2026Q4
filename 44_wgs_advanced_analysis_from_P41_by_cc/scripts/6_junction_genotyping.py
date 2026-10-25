@@ -247,6 +247,7 @@ for j in junctions:
             A, B = bk(m["A"]), bk(m["B"])
             if m["type"] == "disc" and disc_consistent(A, B, j, maxins.get(s, MAXINS)):
                 support[j["id"]][s]["alt_disc"].add(q)
+                rows.append((j["id"], s, q, 0, "alt_disc", "", "", ""))      # pair-level support, logged for audit
                 if int(m["mapqA"]) >= 20 and int(m["mapqB"]) >= 20 and m["dup"] == "0":
                     before[j["id"]][s].add(q)
             elif m["type"] == "split" and m["view"] == "orig" and m["dup"] == "0" and \

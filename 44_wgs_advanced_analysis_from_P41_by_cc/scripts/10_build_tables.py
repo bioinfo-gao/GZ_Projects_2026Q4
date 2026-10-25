@@ -178,3 +178,56 @@ with open(f"{OUT}/summary_counts.tsv", "w") as fh:
         fh.write(f"{k}\t{v}\n")
 print("\n".join(f"{k}\t{v}" for k, v in summ))
 print("stage10 OK")
+
+# ------------------------------------------------------------------ P3: read-level evidence ledger for key events
+# Every event with >= 2 fragments in a reported sample: every supporting read end / pair (Stage 6 support, incl.
+# alternative partner placements of the event) with EVERY original alignment record of that read name.
+import pysam
+SUFFIX_STAGE6 = f"{BASE}/stage6_genotype{L.SUFFIX}"
+members_of = collections.defaultdict(list)
+for d in tsv(f"{SUFFIX_STAGE6}/junctions.tsv"):
+    members_of[d["event_group"]].append(d["junction_id"])
+key_events = [r for r in rows_t + rows_w if int(r["max_after_frag_S01_S10"]) >= 2]
+want = collections.defaultdict(list)          # (sample, qname) -> [(event, read_end, class, AS_t, AS_g)]
+for d in tsv(f"{SUFFIX_STAGE6}/read_support.tsv.gz"):
+    if d["class"] not in ("alt", "alt_disc"):
+        continue
+    for ev in key_events:
+        if d["junction_id"] in members_of[ev["junction_id"]]:
+            want[(d["sample"], d["qname"])].append((ev["junction_id"], d["read_end"], d["class"], d["AS_template"],
+                                                   d["AS_genome"], d["junction_id"]))
+# one entry per (event, read end, class): the representation on which that read end scored best
+for k, v in want.items():
+    best = {}
+    for e in v:
+        kk = (e[0], e[1], e[2])
+        sc = int(e[3]) if e[3] not in ("", None) else -1
+        if kk not in best or sc > best[kk][0]:
+            best[kk] = (sc, e)
+    want[k] = [b[1] for b in best.values()]
+ledger = []
+for s in sorted({k[0] for k in want}):
+    qs = {k[1] for k in want if k[0] == s}
+    for r in pysam.AlignmentFile(f"{BASE}/stage3_rescue/{s}/rescue.bam").fetch(until_eof=True):
+        if r.query_name not in qs:
+            continue
+        for ev, re_, cls, ast, asg, via in want[(s, r.query_name)]:
+            ledger.append((ev, via, s, r.query_name, cls, re_, 1 if r.is_read1 else 2, r.flag,
+                           "secondary" if r.is_secondary else "supplementary" if r.is_supplementary else
+                           ("unmapped" if r.is_unmapped else "primary"),
+                           r.reference_name if not r.is_unmapped else "*", r.reference_start + 1, r.cigarstring or "*",
+                           r.mapping_quality, int(r.is_duplicate), r.get_tag("SA") if r.has_tag("SA") else "",
+                           r.get_tag("XA") if r.has_tag("XA") else "", ast, asg,
+                           r.get_tag("ZR") if r.has_tag("ZR") else ""))
+ledger.sort(key=lambda x: (x[0], x[2], x[3], x[6], x[10]))
+seen = set()
+with open(f"{OUT}/key_junction_read_evidence.tsv", "w") as fh:
+    fh.write("event_id\tsupporting_junction_representation\tsample\tread_name\tsupport_class\tsupporting_read_end\t"
+             "record_read_end\tflag\trecord_class\tchrom\tpos\tcigar\tmapq\tduplicate\tSA\tXA\t"
+             "AS_on_junction_template\tAS_best_genome\trescue_sources\n")
+    for x in ledger:
+        if x in seen:
+            continue
+        seen.add(x)
+        fh.write("\t".join(map(str, x)) + "\n")
+print("key-event ledger:", len(seen), "rows,", len(key_events), "events")

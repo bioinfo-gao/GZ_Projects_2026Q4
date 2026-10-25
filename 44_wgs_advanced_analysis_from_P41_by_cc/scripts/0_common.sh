@@ -15,9 +15,12 @@ SV_ENV=/Work_bio/gao/configs/.conda/envs/p42_sv_validation_20261023/bin   # read
 SAMTOOLS=$ENV/samtools
 PY=$ENV/python
 
-# Target locus (client) and extraction window W = target +/- 5 kb (plan section 3)
+# Target locus (client) and extraction window W = target +/- P44_W_PAD (round 1: 5 kb, plan section 3;
+# round 2: 50 kb, user decision D3 2026-10-25)
 TARGET_CHR=chr11; TARGET_START=114604000; TARGET_END=114625500
-W_START=114599000; W_END=114630500
+W_PAD=${P44_W_PAD:-5000}
+W_START=$((TARGET_START - W_PAD)); W_END=$((TARGET_END + W_PAD))
+SUPPORT_RUN=${P44_SUPPORT_RUN:-${P44_RUN_DATE:-20261024}}   # run whose stage9_supporting is used (W-independent)
 W_REGION=${TARGET_CHR}:${W_START}-${W_END}
 
 # Run-dated output roots (never overwrite: each stage writes under its own dated dir)
