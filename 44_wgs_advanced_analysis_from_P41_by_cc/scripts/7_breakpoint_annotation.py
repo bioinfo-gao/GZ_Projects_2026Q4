@@ -17,7 +17,7 @@ Classification (pre-registered thresholds; plan section 4):
                    (gap between the plan's Well and Ambiguous levels; added 2026-10-25, see plan change log)
   Weak             max fragments == 1
   Not_supported    0 fragments after competitive re-genotyping in every sample
-Output: analysis/<RUN>/stage7_annotation/{junction_annotated.tsv, flank_alignments.tsv, p41_comparison.tsv}
+Output: analysis/<RUN>/stage7_annotation{L.SUFFIX}/{junction_annotated.tsv, flank_alignments.tsv, p41_comparison.tsv}
 """
 import collections
 import gzip
@@ -30,7 +30,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage7_annotation"
+OUT = f"{BASE}/stage7_annotation{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 ENV = "/Work_bio/gao/configs/.conda/envs/regular_bioinfo/bin"
 BWA_IDX = "/Work_bio/references/Homo_sapiens/GRCh38/GATK.GRCh38/BWAmem2Index/Homo_sapiens_assembly38.fasta"
@@ -74,9 +74,9 @@ def b_preceding(B, h, n):
     return L.revcomp(fa.fetch(c, p - h, p - h + n))            # B part = revcomp backward from p-h
 
 
-junctions = list(tsv(f"{BASE}/stage6_genotype/junctions.tsv"))
+junctions = list(tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/junctions.tsv"))
 alt = {}
-for line in open(f"{BASE}/stage6_genotype/templates.fa").read().split(">")[1:]:
+for line in open(f"{BASE}/stage6_genotype{L.SUFFIX}/templates.fa").read().split(">")[1:]:
     name, seq = line.split("\n", 1)
     if name.endswith("|alt"):
         alt[name.split("|")[0]] = seq.replace("\n", "")
@@ -175,7 +175,7 @@ def overlap(db, c, p, pad=0):
 
 # ---- support summary
 by = collections.defaultdict(dict)
-for d in tsv(f"{BASE}/stage6_genotype/junction_by_sample.tsv"):
+for d in tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/junction_by_sample.tsv"):
     by[d["junction_id"]][d["sample"]] = d
 p41 = list(tsv(P41_EVENTS))
 

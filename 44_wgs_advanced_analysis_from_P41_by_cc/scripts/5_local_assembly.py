@@ -8,7 +8,7 @@
 (2) Contigs (>= 100 bp) and clip consensus sequences (>= 25 non-N bases) are aligned with `bwa-mem2 mem -a -Y`
     to GRCh38; every alignment (primary, supplementary, secondary) is written to contig_alignments.tsv so that
     competing placements stay visible (plan section 3, repeat-aware localisation).
-Outputs: analysis/<RUN>/stage5_assembly/{asm/<cluster>/<pool>/contigs.fasta, all_contigs.fa, clip_consensus.fa,
+Outputs: analysis/<RUN>/stage5_assembly{L.SUFFIX}/{asm/<cluster>/<pool>/contigs.fasta, all_contigs.fa, clip_consensus.fa,
          contig_alignments.tsv, contig_junctions.tsv, assembly_log.tsv}
 """
 import collections
@@ -23,7 +23,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage5_assembly"
+OUT = f"{BASE}/stage5_assembly{L.SUFFIX}"
 os.makedirs(f"{OUT}/asm", exist_ok=True)
 ENV = "/Work_bio/gao/configs/.conda/envs/regular_bioinfo/bin"
 SPADES = "/Work_bio/gao/configs/.conda/envs/p44_assembly_20261024/bin/spades.py"
@@ -33,13 +33,13 @@ SAMPLES = L.samples()
 LINE = {r["sample_id"]: r["cell_line"].replace(" ", "") for r in SAMPLES}
 
 clusters = {}
-with open(f"{BASE}/stage4_clusters/clusters.tsv") as fh:
+with open(f"{BASE}/stage4_clusters{L.SUFFIX}/clusters.tsv") as fh:
     hdr = fh.readline().rstrip("\n").split("\t")
     for line in fh:
         d = dict(zip(hdr, line.rstrip("\n").split("\t")))
         clusters[d["cluster_id"]] = d
 members = collections.defaultdict(list)
-with gzip.open(f"{BASE}/stage4_clusters/cluster_members.tsv.gz", "rt") as fh:
+with gzip.open(f"{BASE}/stage4_clusters{L.SUFFIX}/cluster_members.tsv.gz", "rt") as fh:
     hdr = fh.readline().rstrip("\n").split("\t")
     for line in fh:
         d = dict(zip(hdr, line.rstrip("\n").split("\t")))

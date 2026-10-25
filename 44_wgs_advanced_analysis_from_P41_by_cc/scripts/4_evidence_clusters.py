@@ -13,7 +13,7 @@ fragments are kept and labelled; counts exclude them.
 Clustering (cohort-wide): split items by orientation class and both breakends within TOL bp; discordant pairs attach
 to a split cluster when geometrically consistent, otherwise form discordant-only clusters; unexplained clips form
 one-sided clusters (partner resolved in Stage 5).
-Outputs: analysis/<RUN>/stage4_clusters/{evidence_items.tsv.gz, clusters.tsv, cluster_members.tsv.gz,
+Outputs: analysis/<RUN>/stage4_clusters{L.SUFFIX}/{evidence_items.tsv.gz, clusters.tsv, cluster_members.tsv.gz,
          filter_impact.tsv, maxins.tsv}
 """
 import collections
@@ -28,7 +28,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage4_clusters"
+OUT = f"{BASE}/stage4_clusters{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 TOL = 15          # bp, split-cluster breakend tolerance (same as P41)
 CLIP_TOL = 5      # bp, one-sided clip cluster tolerance

@@ -16,7 +16,7 @@ Stage 3 filter_audit.tsv, P42 fixed-candidate coordinates (comparison annotation
     baseline_only            present only in baseline sample(s)
     not_present              present in no sample of the cell line
   No allele-fraction minimum is applied; allele fraction and its 95% CI are reported per sample.
-Outputs: analysis/<RUN>/stage10_tables/
+Outputs: analysis/<RUN>/stage10_tables{L.SUFFIX}/
   junction_table_target.tsv        one row per junction with an end in the target region (main table)
   junction_table_window_context.tsv junctions with ends only in the W flanks (outside target)
   junction_by_sample_long.tsv      per junction x sample counts (S01-S10 + background S11-S18)
@@ -32,7 +32,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage10_tables"
+OUT = f"{BASE}/stage10_tables{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 ALL = [r["sample_id"] for r in L.samples()]
 REP = [r["sample_id"] for r in L.samples(reported_only=True)]
@@ -47,10 +47,10 @@ def tsv(path):
             yield dict(zip(h, line.rstrip("\n").split("\t")))
 
 
-ann = {d["junction_id"]: d for d in tsv(f"{BASE}/stage7_annotation/junction_annotated.tsv")}
-conc = {d["junction_id"]: d for d in tsv(f"{BASE}/stage8_concordance/concordance_summary.tsv")}
+ann = {d["junction_id"]: d for d in tsv(f"{BASE}/stage7_annotation{L.SUFFIX}/junction_annotated.tsv")}
+conc = {d["junction_id"]: d for d in tsv(f"{BASE}/stage8_concordance{L.SUFFIX}/concordance_summary.tsv")}
 by = collections.defaultdict(dict)
-for d in tsv(f"{BASE}/stage6_genotype/junction_by_sample.tsv"):
+for d in tsv(f"{BASE}/stage6_genotype{L.SUFFIX}/junction_by_sample.tsv"):
     by[d["junction_id"]][d["sample"]] = d
 
 

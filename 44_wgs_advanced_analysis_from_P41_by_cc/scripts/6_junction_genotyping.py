@@ -19,7 +19,7 @@ on the correct sides within MAXINS of both final breakends. Duplicate-flagged fr
 Breakends outside W: ref-spanning read-ends counted directly in the original BAM (rescue reads do not sample them).
 'before' = P41-style standard count: original records, non-duplicate split reads with both segments MAPQ >= 20,
 plus discordant pairs with both mates MAPQ >= 20, from linked clusters.
-Outputs: analysis/<RUN>/stage6_genotype/{junctions.tsv, templates.fa, junction_by_sample.tsv,
+Outputs: analysis/<RUN>/stage6_genotype{L.SUFFIX}/{junctions.tsv, templates.fa, junction_by_sample.tsv,
          read_support.tsv.gz, imprecise_disc_clusters.tsv}
 """
 import collections
@@ -34,7 +34,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage6_genotype"
+OUT = f"{BASE}/stage6_genotype{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 ENV = "/Work_bio/gao/configs/.conda/envs/regular_bioinfo/bin"
 FLANK, OVH, MARGIN, TOL = 400, 20, 10, 15
@@ -62,11 +62,11 @@ def tsv(path):
             yield dict(zip(h, line.rstrip("\n").split("\t")))
 
 
-clusters = {d["cluster_id"]: d for d in tsv(f"{BASE}/stage4_clusters/clusters.tsv")}
+clusters = {d["cluster_id"]: d for d in tsv(f"{BASE}/stage4_clusters{L.SUFFIX}/clusters.tsv")}
 members = collections.defaultdict(list)
-for d in tsv(f"{BASE}/stage4_clusters/cluster_members.tsv.gz"):
+for d in tsv(f"{BASE}/stage4_clusters{L.SUFFIX}/cluster_members.tsv.gz"):
     members[d["cluster_id"]].append(d)
-maxins = {d["sample"]: int(d["maxins_used"]) for d in tsv(f"{BASE}/stage4_clusters/maxins.tsv")}
+maxins = {d["sample"]: int(d["maxins_used"]) for d in tsv(f"{BASE}/stage4_clusters{L.SUFFIX}/maxins.tsv")}
 MAXINS = max(maxins.values())
 
 # ------------------------------------------------------------------ candidate junctions from all sources
@@ -76,7 +76,7 @@ for cid, d in clusters.items():
         cands.append(dict(A=bk(d["A"]), B=bk(d["B"]), hom=int(d["hom_mode"] or 0),
                           ins=d["ins_mode"] if d["ins_mode"] not in ("", "None") else "", source="split", ref=cid))
 contig_support = collections.defaultdict(set)
-cj = f"{BASE}/stage5_assembly/contig_junctions.tsv"
+cj = f"{BASE}/stage5_assembly{L.SUFFIX}/contig_junctions.tsv"
 if os.path.exists(cj):
     for d in tsv(cj):
         A, B = bk(d["A"]), bk(d["B"])

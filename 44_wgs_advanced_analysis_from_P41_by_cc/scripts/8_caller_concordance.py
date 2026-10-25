@@ -13,7 +13,7 @@ Each record is converted to a breakend pair (VCF BND bracket notation; Manta SVT
   one_end    one breakend within TOL (anchor-only; not concordance)
   none
 Point insertions (SVTYPE=INS) match only junctions with both breakends within TOL of the insertion position.
-Output: analysis/<RUN>/stage8_concordance/{concordance_long.tsv, concordance_summary.tsv}
+Output: analysis/<RUN>/stage8_concordance{L.SUFFIX}/{concordance_long.tsv, concordance_summary.tsv}
 """
 import collections
 import gzip
@@ -26,7 +26,7 @@ import p44lib as L
 
 RUN = os.environ.get("P44_RUN_DATE", "20261024")
 BASE = f"{L.PROJ}/analysis/{RUN}_read_rescue"
-OUT = f"{BASE}/stage8_concordance"
+OUT = f"{BASE}/stage8_concordance{L.SUFFIX}"
 os.makedirs(OUT, exist_ok=True)
 P41 = "/home/gao/projects_2026M7/41_Vedict_18_wgs/analysis/sv"
 TOL = 100
@@ -149,7 +149,7 @@ def vfile(path):
     return handles[path]
 
 
-junctions = list(tsv(f"{BASE}/stage7_annotation/junction_annotated.tsv"))
+junctions = list(tsv(f"{BASE}/stage7_annotation{L.SUFFIX}/junction_annotated.tsv"))
 long_rows = []
 summary = []
 for j in junctions:

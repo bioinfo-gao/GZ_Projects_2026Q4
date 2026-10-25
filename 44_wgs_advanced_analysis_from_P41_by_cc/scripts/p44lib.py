@@ -30,9 +30,18 @@ def revcomp(s):
     return s.translate(COMP)[::-1]
 
 
+import os
+# Test mode only (defaults = canonical run): P44_SAMPLES=comma list restricts samples; P44_STAGE_SUFFIX
+# (e.g. "_test") redirects stage4-10 directories so test output never mixes with canonical output.
+SUFFIX = os.environ.get("P44_STAGE_SUFFIX", "")
+_ONLY = [x for x in os.environ.get("P44_SAMPLES", "").split(",") if x]
+
+
 def samples(reported_only=False):
     with open(SAMPLE_TABLE) as fh:
         rows = list(csv.DictReader(fh))
+    if _ONLY:
+        rows = [r for r in rows if r["sample_id"] in _ONLY]
     if reported_only:
         rows = [r for r in rows if int(r["sample_no"]) <= 10]
     return rows
