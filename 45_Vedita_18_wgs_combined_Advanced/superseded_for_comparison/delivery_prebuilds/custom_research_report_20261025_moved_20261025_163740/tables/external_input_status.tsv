@@ -1,0 +1,5 @@
+input	status	effect_on_interpretation
+Junction-spanning PCR results	not available	The +Dox junctions rest on sequencing data only; candidate primers are in tables/primer_design.tsv
+Fluorescence in situ hybridisation images or scores	not available	The telomere-capped end in S04 and the fold-back in S05 are not cytogenetically confirmed
+Additional independent +Dox clones	not available	Recurrence of the homolog-specific loss rests on n = 2
+Independent assay for any junction	not available	No junction can reach the claim level 'confirmed'; the highest level reached is a limited candidate coherent with the copy-number step

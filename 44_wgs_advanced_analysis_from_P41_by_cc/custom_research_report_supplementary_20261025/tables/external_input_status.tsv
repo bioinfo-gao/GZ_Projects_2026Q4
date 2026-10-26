@@ -1,0 +1,5 @@
+input	status	effect_on_interpretation
+Junction-spanning PCR results	not available	The three +Dox junctions rest on sequencing data only; candidate primers are in tables/primer_design.tsv
+Fluorescence in situ hybridisation images or scores	not available	The telomere-capped end in S04 and the fold-back in S05 are not cytogenetically confirmed
+Additional independent +Dox clones	not available	Recurrence of the homolog-specific loss rests on n = 2
+Genome-wide SNV/indel calls	not produced in this round	B-allele fraction was analysed on chr11 only

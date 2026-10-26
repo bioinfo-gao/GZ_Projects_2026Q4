@@ -1,0 +1,14 @@
+metric	value
+events_total	12953
+comparison_dox_specific	13
+comparison_dox_specific_underpowered	9
+comparison_shared_with_baseline	12323
+comparison_baseline_only	436
+comparison_not_present	172
+dox_specific_both_dox	0
+dox_specific_svtype_DEL	7
+dox_specific_svtype_INV	5
+dox_specific_svtype_DUP	1
+dox_specific_PASS_somatic_filter	5
+dox_specific_with_Manta	6
+delly_somatic_PASS_total	7

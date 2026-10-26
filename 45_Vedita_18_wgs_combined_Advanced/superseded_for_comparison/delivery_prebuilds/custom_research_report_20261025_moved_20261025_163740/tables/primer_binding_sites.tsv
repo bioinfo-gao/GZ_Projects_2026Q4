@@ -1,0 +1,5 @@
+pair	event_id	primer_side	primer	chrom	pos_1based	strand	within_1kb_of_event_breakend
+selected	J0786	right	GCTGCATTGCCAATGAACAGTA	chr21	20648368	-	1
+selected	J0922	left	GCCTCACAGGTAACCACTGTAA	chr11	114605003	+	1
+alternative_both_primers_in_flanks	J0786	left	GTAATCACGGTTACCCAGTGGAT	chr11	114607017	+	1
+alternative_both_primers_in_flanks	J0786	right	AGCAATAGTTCTCAACAGTGGGT	chr21	20648318	-	1

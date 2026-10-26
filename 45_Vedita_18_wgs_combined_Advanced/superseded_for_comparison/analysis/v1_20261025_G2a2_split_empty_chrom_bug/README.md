@@ -1,0 +1,1 @@
+Failed split attempt (15:51): 'local c=$1 o=.../$c' expanded $c before assignment, all parts named '' -> no genotypes produced. Kept as the original failed run; fix in scripts/20261025/G2a2_split_genotype.sh.

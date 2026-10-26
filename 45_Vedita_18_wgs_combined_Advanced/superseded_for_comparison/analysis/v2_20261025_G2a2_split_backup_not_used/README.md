@@ -1,0 +1,1 @@
+Backup split genotyping (G2a2, fixed script) started 15:53 because S05 single-process genotyping looked stalled. Stopped at 16:10 after the single-process run completed (G2a DONE 16:09). Partial, never validated, not used. Kept for the record.
