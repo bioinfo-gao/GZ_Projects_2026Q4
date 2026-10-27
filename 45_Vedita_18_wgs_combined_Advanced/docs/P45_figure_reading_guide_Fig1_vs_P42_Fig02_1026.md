@@ -1,8 +1,8 @@
-# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）、P45 Fig5 接头碱基视图与 Fig0 汇总矩阵
+# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）、P45 Fig5 接头碱基视图、Fig0 汇总矩阵与 Fig2 BAF
 
 > 内部文档，2026-10-26。对象：需要解读或向客户解释这两张图的我方人员。
 > 本文只解释"图怎么读"，不修改任何交付产物；文末列出已发现的呈现问题与待决定的修改方案。
-> 每条数值主张后给出来源文件与可复跑的核对命令（§11）。
+> 每条数值主张后给出来源文件与可复跑的核对命令（§12）。
 
 ## 0. 两张图在哪、看什么
 
@@ -107,7 +107,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ## 4. P45 Fig1 顶部 panel：蓝条与橙条
 
-> **2026-10-26 已改图（§10 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
+> **2026-10-26 已改图（§11 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
 
 ### 4.1 画法
 
@@ -157,7 +157,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ### 5.3 为什么没有 S01；为什么棕线不是独立对照
 
-> **2026-10-26 已改图（§10 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
+> **2026-10-26 已改图（§11 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
 
 - S01 **参与了分母**（`11_figures.py:102`），但只画 S02/S03（`11_figures.py:103-111`）。不画的原因项目文档无记录；推断：
   1. **数学冗余**：分母是三者均值 ⇒ 每个 bin 中 S01/base + S02/base + S03/base ≡ 3，S01 线 = 3 − S02 线 − S03 线，画出无新信息。
@@ -265,7 +265,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 1. **标题行**：`J0922 BND A=chr11:114605218:+ B=chrX:156030577:- (representative placement shown) class=… microhomology=GT inserted=-`
    - `:+`/`:-` 为断端方向：`chr11:114605218:+` = 沿 chr11 正链读到该位置后跳入伙伴序列。
    - `microhomology`：两侧共享的碱基，可归任一侧 ⇒ 断点只能定到区间（J0922 为 114,605,216–218）。`inserted`：两端之间不属于任一侧的插入碱基。
-2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §10 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
+2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §11 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
 3. **junction 参考行**：断点左右各 70 bp 的拼接序列。酒红 = A 侧（chr11），深青 = 微同源/插入，蓝 = B 侧（伙伴）。竖虚线 = 接头，位于微同源右边界。
 4. **read 行**：标签 "样本 细胞系 群体/克隆号  Fxx/Rn"（2026-10-26 起，如 "S07 GM12878 c5  F01/R1"；此前只有样本号）。表头第 2 行（2026-10-26 新增）按细胞系列出带支持 read 的样本；若背景样本 S11–S18 也有支持，该行加粗并注明 "class uses S01-S10 only"。同一 F 号的 R1/R2 是同一分子，**只计 1 个 fragment**（J0922：7 行 = F01–F04 = 4 fragment）。`.` = 与接头序列相同；字母 = 错配（显示 read 实际碱基）；`-` = 缺失；空白 = 未覆盖。只画**通过判定**的 read 端（两侧各连续跨 ≥ 20 bp 且接头模板 AS 比全基因组最佳高 ≥ 10），故有的 fragment 只出现 R1 或 R2。所有 read 已转到接头模板方向。
 
@@ -358,7 +358,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ## 8. Fig0 关键接头汇总矩阵（`figures/Fig0_key_events_summary`）
 
-> **2026-10-27 已改图（§10 第 11 条，用户批准 6 项）**：行按 §8.2 的 A–E 分组排列（组标题行；组内目标区在前、再按坐标）；表头两层（DLD1 / GM12878，下层 pop、c1… 与 +Dox），S05|S06 之间竖线分隔；underpowered 的空白格画斜线；新增 "S11-S18 (bg)" 列；行标签加 chr11 坐标与 T/F。分组规则只读已有字段：A = `DLD1_dox_comparison` 以 case_specific 开头，B = baseline_only，C = not_present 且 S06 有支持，D = not_present 且 S06 无支持，E = shared_with_baseline。数值、分级、结论层级均未改；图号未改。§8.1 与 §8.3 描述的是**改前**的图，§8.3 第 1–4 点在新图上已直接可见。旧版见 `superseded_for_comparison/analysis/v9_20261027_fig0_rows_not_grouped/`。
+> **2026-10-27 已改图（§11 第 11 条，用户批准 6 项）**：行按 §8.2 的 A–E 分组排列（组标题行；组内目标区在前、再按坐标）；表头两层（DLD1 / GM12878，下层 pop、c1… 与 +Dox），S05|S06 之间竖线分隔；underpowered 的空白格画斜线；新增 "S11-S18 (bg)" 列；行标签加 chr11 坐标与 T/F。分组规则只读已有字段：A = `DLD1_dox_comparison` 以 case_specific 开头，B = baseline_only，C = not_present 且 S06 有支持，D = not_present 且 S06 无支持，E = shared_with_baseline。数值、分级、结论层级均未改；图号未改。§8.1 与 §8.3 描述的是**改前**的图，§8.3 第 1–4 点在新图上已直接可见。旧版见 `superseded_for_comparison/analysis/v9_20261027_fig0_rows_not_grouped/`。
 
 **结论**：Fig0 是"接头 × 样本"的计数矩阵，相当于 Fig5 那 17 张碱基视图的总目录。17 行 = S01–S10 任一样本 rescue 后 ≥ 2 fragment 的接头（与 §7.1 同一批），10 列 = S01–S10。**要读的是每一行在各列上的分布形态，不是逐格数字**：分布形态决定它是克隆特有的、整个细胞系共有的，还是跨细胞系出现的伪像/多态。17 行中真正关系到"+Dox 克隆发生了什么"的只有 §8.2 的 A 组，核心是 J0922、J0359、J0786。
 
@@ -398,17 +398,64 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 5. **右侧是结论层级，不是证据分级**：如 J0922 证据分级为 Ambiguous_repeat，结论层级却是 "limited, coherent with copy-number step"——歧义只在伙伴端（端粒重复），chr11 端唯一且与深度断崖吻合（§6.2）。
 6. **数字未按深度校正**：各样本深度 14–19×（S05 最高 18.8×）；同行 3 与 4 的差别不可解读为丰度差异，只读 0 / 1 / ≥ 2 三档。
 
-**报告图注现状**："All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers." 未说明上述 1–4 点；已记为 §10 第 11 条，2026-10-27 已按批准方案改图并改写图注。
+**报告图注现状**："All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers." 未说明上述 1–4 点；已记为 §11 第 11 条，2026-10-27 已按批准方案改图并改写图注。
 
 ---
 
-## 9. 一句话总结
+## 9. Fig2 chr11 B-allele fraction（`figures/Fig2_chr11_BAF`）
+
+> **2026-10-27 已改图（§11 第 12 条，用户批准）**：原图 GM12878 只画了 S06（即其选位点基线，必然无 LOH，无信息量），现已画出全部 S01–S10 十个 panel；panel 标签带细胞系与群体/克隆号（+Dox）。下文按新图描述；旧版见 `superseded_for_comparison/analysis/v10_20261027_fig2_GM12878_clones_not_shown/`。
+
+**结论**：Fig2 回答"S04、S05 在断点远端丢的是不是一整条同源染色体"。答案是：从目标区起点（约 114.6 Mb）到染色体末端，S04、S05 的 BAF 从围绕 0.5 的一团塌缩为 0 和 1 两条线（LOH）；结合 Fig1 远端深度约为对照的一半 ⇒ **远端 11q 丢了一个拷贝、只剩一条同源染色体（半合子）**，不是 copy-neutral LOH。S05 另有一个现象：断点**近端**约 90–114.6 Mb 的 BAF 两带逐渐分开，越靠近断点越开。GM12878 的 S07–S10 全程没有塌缩。
+
+### 9.1 编码与位点选择
+
+| 元素 | 含义 |
+| :--- | :---: |
+| 每个点 | 一个 SNV 位点在该样本的 BAF = 非参考等位 read 数 / 总 read 数 |
+| 入选位点 | 在该细胞系无 Dox 基线中杂合：DLD1 要求 S01–S03 **三个都**杂合，GM12878 只看 S06；杂合 = AF 0.25–0.75 且深度 ≥ 10。DLD1 96,356 个、GM12878 78,765 个位点 |
+| panel | S01–S05（DLD1）、S06–S10（GM12878），共 10 个 |
+| 紫红竖线 | 目标区起点 114,604,000 |
+| 数据 | `analysis/20261025_inherited/P44_r1_stage9_supporting/chr11_baf/baf_sites.tsv.gz`（+ `baf_segments.tsv`、`retained_homolog_S04_vs_S05.tsv`） |
+
+**关键**：位点按 S01–S03（或 S06）选出 ⇒ **S01、S02、S03、S06 四个 panel 必然落在 0.25–0.75 内**，整齐是筛选造成的，不能当"基线平衡"的证据（报告图注已写明）。有信息量的是没参与选位点的 S04、S05、S07–S10。
+
+### 9.2 逐 panel 读
+
+| panel | 看到什么 | 怎么读 |
+| :--- | :---: | :---: |
+| S01–S03 | 0.25–0.75 一条带，上下沿被截平 | 由筛选决定，仅作参照 |
+| S04 | 竖线左一团、比基线略宽；**竖线右几乎全在 0 和 1** | 远端 LOH：远端段 97.8% 位点纯合（报告 §7.7 表）；左侧略宽是正常抽样噪声 |
+| S05 | 远端同 S04（98.0% 纯合）；**近端约 90 Mb 起两带分开，越近竖线越开** | 近端逐渐加重的等位不平衡（§9.3） |
+| S06 | 0.25–0.75 一条带，有若干空白段 | 同样受筛选约束；空白见 §9.4 第 4 点 |
+| S07–S10 | 围绕 0.5 一团，比 S06 略宽，全程无 0/1 塌缩 | GM12878 各克隆在 chr11 上无 LOH 段（报告：纯合比例均 ≤ 0.007）；约 48–57 Mb（着丝粒附近）有少量偏低的散点，属该区域比对噪声，未单独核查 |
+
+### 9.3 S05 近端的实测（每 5 Mb 的中位 |BAF − 0.5|）
+
+| 区段（Mb） | 85–90 | 90–95 | 95–100 | 100–105 | 105–110 | 110–114.6 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 中位 \|BAF − 0.5\| | 0.100 | 0.125 | 0.140 | 0.156 | 0.156 | 0.167 |
+
+- 0.100 是抽样噪声本底（S04、S05 在 11p 上也约 0.09–0.10）；从 90 Mb 起单调升高到断点旁的 0.167。
+- 报告称 "graded allelic imbalance"，并联系此前报告的近端深度 1.48×。**近端具体是几个拷贝、什么比例，本图读不出**：0.167 含噪声，换算成拷贝状态需要建模，未做。
+
+### 9.4 易错的 5 点
+
+1. **基线 panel 的整齐是筛选出来的**（§9.1）。
+2. **"两个克隆保留同一条同源染色体"本图证明不了**：每个克隆远端都同时有 0 和 1 两条线（非参考等位可在任一条同源染色体上）。要逐位点比 S04 与 S05 保留的等位：8,004 个两者都纯合的位点中 99.78% 一致（`retained_homolog_S04_vs_S05.tsv`，报告 §7.7）。
+3. **横向细条纹和白缝是计数离散造成的**：深度约 15× 时 BAF 只能取 1/2、1/3、2/3、2/5 等分数；S01 有 9,409 个位点（约 10%）恰为 0.500，紧邻常见值处取不到值形成白缝。不是生物学信号。
+4. **空白段 ≠ 缺失**：约 51–55 Mb 为着丝粒区，无可用位点；S06–S10 另有十几段空白，是 GM12878 在那些区段没选出杂合位点（可能为胚系纯合区段或位点稀少，未核查），不代表拷贝丢失。
+5. **远端仍有约 2% 的点散在 0.1–0.9**，与"97.8% / 98.0% 纯合"一致，来自比对/测序错误，不代表残留第二条同源染色体。
+
+---
+
+## 10. 一句话总结
 
 先用 P42 回答"有无、范围"，再用 P45 回答"降多少、断在哪、附近有无接头"。两图一致：约 50% 深度下降，起点 114.605–114.606 Mb，位于 42 bp repeat array 内部；两处深度≈0 的凹陷是 AT 富集测序盲区，与处理无关；断点附近只有 1–2 个 +Dox 特异、2–4 fragment 的接头，证据有限且受 repeat 干扰。
 
 ---
 
-## 10. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 11 条已修正，第 10 条暂缓；其余未修改）
+## 11. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 11、12 条已修正，第 10 条暂缓；其余未修改）
 
 | # | 图 | 问题 | 可选修改 |
 | :--- | :---: | :---: | :---: |
@@ -423,12 +470,13 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 | 9 | Fig5 全部 | read 标签只有样本号，看不出 S11/S15/S17 属于 Mutu I/DG75 | **✅ 已修正 2026-10-26**：17 张 Fig5 的 read 标签均带细胞系与群体/克隆号 |
 | 10 | 报告全文 | 图号按出图脚本顺序而非 Results 出现顺序：§7 中依次为 Figure 1、3、5、0、4、2（Fig0 为 P45 后加的汇总图） | **⏸ 暂缓（user 2026-10-26）**：用户审阅完毕后统一改。候选方案：按 Results 出现顺序重编为 1–6（7.1→1，7.2→2，7.4 汇总→3、碱基视图→4，7.5→5，7.7→6），同步改文件名、正文约 30 处引用、构建脚本 `Fig[0-4]_` 规则、manifest、md5 |
 | 11 | P45 Fig0 | 空白不区分"0 fragment"与 underpowered；背景细胞系 S11–S18 不在图上；表头无细胞系；目标区与侧翼混排、无位置；图注未说明这些 | **✅ 已修正 2026-10-27**：A–E 分组、两层表头、underpowered 斜线、S11–S18 列、坐标与 T/F；图注三处同步；旧版归档 v9 |
+| 12 | P45 Fig2 | GM12878 只画了 S06（即其选位点基线，必然无 LOH），S07–S10 未画；正文却写 "GM12878 (S06–S10) shows no homozygous segment"；panel 标签只有样本号 | **✅ 已修正 2026-10-27**：S01–S10 十个 panel 全画，标签带细胞系与群体/克隆号；图注三处同步；旧版归档 v10 |
 
 两图均已在交付目录中。任何修改前，须先将现有 PNG/PDF 与脚本快照归档到各自项目的 `superseded_for_comparison/`。
 
 ---
 
-## 11. 核对命令
+## 12. 核对命令
 
 ```bash
 P42=/home/gao/projects_2026Q4/42_Vedita_18_wgs_advanced_analysis
@@ -491,4 +539,17 @@ for t,tag in (("junction_table_target.tsv","target"),("junction_table_window_con
         print(r["junction_id"],tag,r["breakend_A"],r["breakend_B"],r["classification"],"bg:",r["background_S11_S18_samples_present"],
               r["DLD1_dox_comparison"],r["GM12878_clone_specific"] or "-","underpowered:",",".join(up) or "-")
 X
+# §9 Fig2：S05 近端每 5 Mb 的中位 |BAF-0.5|；S01 恰为 0.5 的位点数
+zcat /home/gao/projects_2026Q4/45_Vedita_18_wgs_combined_Advanced/analysis/20261025_inherited/P44_r1_stage9_supporting/chr11_baf/baf_sites.tsv.gz | python3 -c "
+import sys,statistics as st,collections
+H=None; d=[]
+for l in sys.stdin:
+    f=l.rstrip('\\n').split('\\t')
+    if f[0]=='#DLD1-136': H=f[2:]; continue
+    if f[0]=='DLD1-136': d.append(f[1:])
+i5=H.index('S05_DLD1_c4_dox'); i1=H.index('S01_DLD1_pop')
+for a in range(85,115,5):
+    x=[abs(float(r[1+i5])-0.5) for r in d if r[1+i5] and a*1e6<=int(r[0])<min(a+5,114.6)*1e6]
+    print(a,a+5,len(x),round(st.median(x),3))
+print('S01 BAF==0.5:',sum(1 for r in d if r[1+i1]=='0.500'),'of',len(d))"
 ```

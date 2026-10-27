@@ -282,7 +282,7 @@ The ratios are relative to the S01–S03 mean after normalisation to each sample
 
 ![Figure 2 — chr11 B-allele fraction](figures/Fig2_chr11_BAF.png)
 
-*Figure 2. BAF at sites heterozygous in the cell line's no-Dox baseline (DLD1: all of S01–S03; GM12878: S06); because sites are selected for allele fraction 0.25–0.75 in the baseline, baseline panels are bounded by that range. Vertical line: start of the target region.*
+*Figure 2. BAF at sites heterozygous in the cell line's no-Dox baseline (DLD1: all of S01–S03; GM12878: S06), shown for every reported sample S01–S10. Because sites are selected for allele fraction 0.25–0.75 in the baseline, the baseline panels (S01–S03, S06) are bounded by that range by construction; S04, S05 and the GM12878 clones S07–S10 are free to deviate from it. Vertical line: start of the target region.*
 
 ### 7.8 Clone-specific events at the locus
 

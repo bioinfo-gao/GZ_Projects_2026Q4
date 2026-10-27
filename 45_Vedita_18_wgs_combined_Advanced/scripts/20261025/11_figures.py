@@ -175,7 +175,9 @@ with gzip.open(f"{SUP}/chr11_baf/baf_sites.tsv.gz", "rt") as fh:
             continue
         rows[f[0]].append(f[1:])
 show = [("DLD1-136", "S01_DLD1_pop"), ("DLD1-136", "S02_DLD1_c1_ctrl"), ("DLD1-136", "S03_DLD1_c2_ctrl"),
-        ("DLD1-136", "S04_DLD1_c3_dox"), ("DLD1-136", "S05_DLD1_c4_dox"), ("GM12878", "S06_GM12878_pop")]
+        ("DLD1-136", "S04_DLD1_c3_dox"), ("DLD1-136", "S05_DLD1_c4_dox"), ("GM12878", "S06_GM12878_pop"),
+        ("GM12878", "S07_GM12878_c5"), ("GM12878", "S08_GM12878_c6"), ("GM12878", "S09_GM12878_c7"),
+        ("GM12878", "S10_GM12878_c8")]                    # 1027: GM12878 clones S07-S10 drawn too (were omitted)
 fig, ax = plt.subplots(len(show), 1, figsize=(14, 2.0 * len(show)), sharex=True)
 for k, (line, s) in enumerate(show):
     i = hdr[line].index(s)
@@ -185,11 +187,11 @@ for k, (line, s) in enumerate(show):
     ax[k].axvline(L.TARGET[0] / 1e6, color=STROKE["S04"], lw=1)
     ax[k].set_ylim(-0.02, 1.02)
     ax[k].set_yticks([0, 0.5, 1])
-    ax[k].set_ylabel(SH.get(s, s.split("_")[0]), rotation=0, ha="right", va="center")
+    ax[k].set_ylabel(sample_label(s).replace(" ", "\n", 1), rotation=0, ha="right", va="center", fontsize=11)
 ax[0].set_title("B-allele fraction at sites heterozygous in the cell line's no-Dox baseline "
                 "(DLD1: S01-S03; GM12878: S06); vertical line = target start", fontsize=12, loc="left")
 ax[-1].set_xlabel("chr11 position (Mb, GRCh38)")
-assert len(ax) == len(show)
+assert len(ax) == len(show) == len(REP)                   # every reported sample S01-S10 has a panel
 finalize_figure(fig, f"{OUT}/Fig2_chr11_BAF", formats=["png", "pdf"], dpi=200)
 
 # ================================================================ Fig3 rescue sources

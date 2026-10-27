@@ -285,7 +285,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 2 —— chr11 B-allele fraction](../custom_research_report_20261025/figures/Fig2_chr11_BAF.png)
 
-*图 2。在细胞系无 Dox 基线中杂合位点上的 BAF（DLD1：S01–S03 全部杂合；GM12878：S06）；由于位点按基线 allele fraction 0.25–0.75 选取，基线面板被限制在该范围内。竖线：目标区起点。*
+*图 2。在细胞系无 Dox 基线中杂合位点上的 BAF（DLD1：S01–S03 全部杂合；GM12878：S06），对全部报告样本 S01–S10 作图。由于位点按基线中 allele fraction 0.25–0.75 选取，基线 panel（S01–S03、S06）必然落在该范围内；S04、S05 与 GM12878 克隆 S07–S10 则可以自由偏离。竖线：目标区起点。*
 
 ### 7.8 位点上的克隆特异事件
 
