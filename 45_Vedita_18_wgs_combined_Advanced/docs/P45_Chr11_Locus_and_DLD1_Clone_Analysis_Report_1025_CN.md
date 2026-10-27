@@ -176,7 +176,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 1 —— 位点概览](../custom_research_report_20261025/figures/Fig1_locus_overview.png)
 
-*图 1。上：目标区与 tandem repeat array。中：S04 与 S05（以及无 Dox 克隆 S02、S03）相对于 S01–S03 均值的深度，200 bp bin，MAPQ ≥ 20；阴影带为深度断崖的 95% CI；114.6015–114.603 Mb 的空缺处任何样本都没有 MAPQ ≥ 20 的 read。下：每个至少有一个支持 fragment 的目标区 junction，画在其目标区一侧断端的位置；颜色 = 等级，标记形状 = +Dox-specific 事件。*
+*图 1。上：目标区与 simpleRepeat 注释的串联重复（重复单元 ≥ 20 bp）。橙色：42 bp 重复家族，即约 522 拷贝的 array（114,603,768–114,625,660）、紧邻其近端的 47 bp 变体，以及远端一小段残余拷贝（114,631,682–114,632,022）。灰色斜线：一段富含 AT 的低复杂度区（114,601,509–114,603,053；重复单元 GC ≤ 22%），不属于 42 bp 家族；全部 18 个样本在此深度都接近 0，是所有细胞系共有的覆盖缺口。中：S04、S05 以及无 Dox 样本 S01（群体，虚线）和 S02、S03（克隆）相对于 S01–S03 均值的深度，200 bp bin，MAPQ ≥ 20。因为 S01–S03 本身构成基线，三者的比值在每个 bin 中平均恰为 1；基线样本自身有无断崖，见其各自的断崖拟合（`supporting_analyses/depth_boundary/boundary_estimates.tsv`）。阴影带为 S04、S05 深度断崖的 95% CI；114.6015–114.603 Mb 的空缺就是这段 AT 富集区，基线在此没有 MAPQ ≥ 20 的 read，空缺两侧边缘 bin 的比值只基于极少的 read。下：每个至少有一个支持 fragment 的目标区 junction，画在其目标区一侧断端的位置；颜色 = 等级，标记形状 = +Dox-specific 事件。*
 
 ### 7.2 Read rescue
 
@@ -222,7 +222,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 5 —— S04 junction 的碱基水平视图](../custom_research_report_20261025/figures/junction_views/Fig5_J0922.png)
 
-*图 5（共 17 张之一；全部在 `figures/junction_views/`）。junction 序列（酒红：chr11 侧；深青：microhomology；蓝：partner 侧）及支持它的每个 read end，按样本、fragment 和 read（R1/R2）标注；“.”表示与 junction 序列相同的碱基。*
+*图 5（共 17 张之一；全部在 `figures/junction_views/`）。junction 序列（酒红：chr11 侧；深青：microhomology 或插入碱基；蓝：partner 侧）及支持它的每个 read end，按样本、细胞系、群体或克隆号、fragment 和 read（R1/R2）标注；“.”表示与 junction 序列相同的碱基。第二行表头按细胞系列出所有带支持 read 的样本，包括背景样本 S11–S18（Mutu I、DG75）；证据分级只基于 S01–S10 计算，因此在无关细胞系中也出现的 junction 会在这一行标出。*
 
 ![图 0 —— 全部有两个或以上 fragment 的 junction](../custom_research_report_20261025/figures/Fig0_key_events_summary.png)
 

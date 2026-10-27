@@ -38,12 +38,22 @@ os.makedirs(f"{OUT}/junctions", exist_ok=True)
 SUP = L.SUP
 REP = [r["sample_id"] for r in L.samples(reported_only=True)]
 SH = {s: s.split("_")[0] for s in REP}
+ALL18 = {r["sample_id"]: r for r in L.samples()}   # 1026: Fig5 labels name the cell line, incl. background S11-S18
+
+
+def sample_label(s):
+    """'S07 GM12878 c5', 'S04 DLD1 c3 +Dox', 'S11 Mutu I pop' (cell-line names as in the sample table)"""
+    r = ALL18[s]
+    cl = r["cell_line"].replace("DLD1-136", "DLD1")
+    unit = "pop" if r["role"] == "population" else f"c{r['clone_no']}"
+    return f"{s.split('_')[0]} {cl} {unit}{' +Dox' if r['dox'] == 'yes' else ''}"
 
 # ---- Default_A palette (SOP table): areas and strokes are separate roles
-SEG = {"target": "#80B1D3", "repeat_array": "#FDB462", "segdup": "#B3DE69"}          # annotation areas
+SEG = {"target": "#80B1D3", "repeat_array": "#FDB462", "segdup": "#B3DE69", "at_rich": "#A6A6A6"}   # annotation areas
 CLASS_FILL = {"Well_supported": "#BC80BD", "Limited": "#FB8072", "Ambiguous_repeat": "#BEBADA",
               "Weak": "#CCEBC5", "Not_supported": "#FCCDE5"}                           # classification areas
-STROKE = {"S04": "#8E0152", "S05": "#0000CD", "base": "#8B4500", "line": "#000000", "ci": "#003C30"}
+STROKE = {"S04": "#8E0152", "S05": "#0000CD", "base": "#8B4500", "line": "#000000", "ci": "#003C30",
+          "S01": "#4D4D4D", "at_hatch": "#595959"}                                       # 1026: S01 line, AT-rich hatch
 assert_no_palette_collision({"Fig1a annotation": list(SEG.values()), "Fig4 classes": list(CLASS_FILL.values())})
 assert_fill_not_near_black(list(SEG.values()) + list(CLASS_FILL.values()))
 assert_visible_on_white(list(STROKE.values()), role="line")
@@ -87,8 +97,19 @@ fig, ax = plt.subplots(3, 1, figsize=(14, 10), sharex=True, gridspec_kw={"height
 a0 = ax[0]
 a0.add_patch(plt.Rectangle((L.TARGET[0], 0.62), L.TARGET[1] - L.TARGET[0], 0.3, color=SEG["target"], ec="black", lw=0.8))
 a0.text(L.TARGET[0], 0.98, "target chr11:114,604,000-114,625,500", va="bottom", fontsize=11)
+AT_GC_MAX = 0.24   # 1026: unit GC <= 0.22 = AT-rich low-complexity block; >= 0.26 = 42 bp family (clean gap, checked)
 for s0, s1, unit, cn in rep_intervals:
-    a0.add_patch(plt.Rectangle((s0, 0.12), s1 - s0, 0.3, color=SEG["repeat_array"], lw=0))
+    gc = (unit.upper().count("G") + unit.upper().count("C")) / len(unit)
+    if gc < AT_GC_MAX:
+        a0.add_patch(plt.Rectangle((s0, 0.12), s1 - s0, 0.3, fc=SEG["at_rich"], ec=STROKE["at_hatch"], hatch="////", lw=0))
+    else:
+        a0.add_patch(plt.Rectangle((s0, 0.12), s1 - s0, 0.3, color=SEG["repeat_array"], lw=0))
+from matplotlib.patches import Patch
+legend_outside(a0, handles=[Patch(fc=SEG["target"], ec="black", lw=0.8, label="target region"),
+                            Patch(fc=SEG["repeat_array"], label="42 bp repeat family (incl. 47 bp variant, distal remnant)"),
+                            Patch(fc=SEG["at_rich"], ec=STROKE["at_hatch"], hatch="////", lw=0,
+                                  label="AT-rich low-complexity, no coverage")],
+               ncol=3, fontsize=10, bbox_to_anchor=(0.0, 1.25))
 big = max(rep_intervals, key=lambda x: x[1] - x[0]) if rep_intervals else None
 if big:
     a0.text(big[0], -0.05, f"tandem repeat array, {len(big[2])} bp unit x {big[3]:.0f} copies "
@@ -106,6 +127,8 @@ for s, col, lab in (("S04_DLD1_c3_dox", STROKE["S04"], "S04 (+Dox clone 3)"),
     a1.plot(xs, y, color=col, lw=1.6, label=lab)
     b = bounds[("20", s)]
     a1.axvspan(int(b["ci95_lo"]), int(b["ci95_hi"]) + 200, color=col, alpha=0.15, lw=0)
+y = np.array([float(d["S01_DLD1_pop"]) for d in bins]) / np.where(base > 0.05, base, np.nan)   # 1026: S01 drawn too
+a1.plot(xs, y, color=STROKE["S01"], lw=0.9, ls="--", alpha=0.8, label="S01 (no-Dox population)")
 for s in ("S02_DLD1_c1_ctrl", "S03_DLD1_c2_ctrl"):
     y = np.array([float(d[s]) for d in bins]) / np.where(base > 0.05, base, np.nan)
     a1.plot(xs, y, color=STROKE["base"], lw=0.8, alpha=0.7, label="S02, S03 (no-Dox clones)" if s.startswith("S02") else None)
@@ -113,7 +136,7 @@ a1.axhline(1, color="black", lw=0.6, ls=":")
 a1.axhline(0.5, color="black", lw=0.6, ls=":")
 a1.set_ylim(0, 2.2)
 a1.set_ylabel("depth / mean(S01-S03)\n(200 bp bins, MAPQ >= 20)")
-legend_outside(a1, ncol=3, fontsize=11)
+legend_outside(a1, ncol=2, fontsize=11)
 
 a2 = ax[2]
 mk = {"S04": "v", "S05": "^"}
@@ -306,11 +329,22 @@ for e in events_all:
                     if v0 <= rp + k < v1:
                         line[rp + k - v0] = "-"
                 rp += n
-        readrows.append((f"{SH.get(s, s.split('_')[0])} {FRAG.get((e['cid'], s, q), 'F?')}/R{en}", "".join(line)))
+        readrows.append((f"{sample_label(s)}  {FRAG.get((e['cid'], s, q), 'F?')}/R{en}", "".join(line)))
     n = len(readrows)
-    fig, axx = plt.subplots(figsize=(15, 1.6 + 0.26 * (n + 3)))
-    axx.set_xlim(-22, v1 - v0 + 1)
-    axx.set_ylim(-(n + 2.5), 2.6)
+    # 1026: which cell lines carry supporting reads; class is computed from S01-S10 only, so background presence
+    # (S11-S18, unrelated cell lines) is printed explicitly
+    by_cl = collections.defaultdict(list)
+    for s in sorted({k[0] for k in ok_ends}):
+        by_cl[ALL18[s]["cell_line"].replace("DLD1-136", "DLD1")].append(sample_label(s).split(" ", 1)[0])
+    bg = sorted({k[0] for k in ok_ends if int(ALL18[k[0]]["sample_no"]) > 10})
+    assert len(bg) == int(e["background_S11_S18_samples_present"] or 0), (e["cid"], bg)
+    presence = "supporting reads by cell line: " + "; ".join(f"{cl} {', '.join(v)}" for cl, v in by_cl.items())
+    if bg:
+        presence += (f"   NOTE: also present in {len(bg)} background sample(s) of unrelated cell lines "
+                     f"({', '.join(x.split('_')[0] for x in bg)}); class uses S01-S10 only")
+    fig, axx = plt.subplots(figsize=(15, 1.9 + 0.26 * (n + 3)))
+    axx.set_xlim(-30, v1 - v0 + 1)
+    axx.set_ylim(-(n + 2.5), 3.3)
     axx.axis("off")
     ref = T[v0:v1]
     for k, ch in enumerate(ref):
@@ -321,7 +355,8 @@ for e in events_all:
     A_, B_ = e["breakend_A"], e["breakend_B"]
     amb = e["n_alternative_representations"] != "0"
     B_lab = f"{B_} (representative placement shown)" if amb else B_
-    axx.text(0, 1.6, f"{e['cid']}  {e['type']}  A={A_}  B={B_lab}  class={e['classification'].replace('_', ' ')}  "
+    axx.text(0, 1.6, presence, fontsize=8, va="center", fontweight="bold" if bg else "normal")
+    axx.text(0, 2.3, f"{e['cid']}  {e['type']}  A={A_}  B={B_lab}  class={e['classification'].replace('_', ' ')}  "
              f"microhomology={e['microhomology_seq'] or '-'}  inserted={e['inserted_seq'] or '-'}",
              fontsize=9, va="center")
     alt_n = int(e["n_alternative_representations"])   # alternatives besides the one shown (1026 wording fix)

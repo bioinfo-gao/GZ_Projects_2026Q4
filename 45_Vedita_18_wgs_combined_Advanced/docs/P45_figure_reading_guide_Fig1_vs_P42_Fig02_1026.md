@@ -28,7 +28,7 @@
 | bin 大小 | 1 kb | 200 bp |
 | x 范围 | 114.554–114.675 Mb | 114.595–114.632 Mb |
 | samtools depth 过滤 | `-Q 20 -G 2048 -s`（排除 supplementary，抑制 mate 重叠双计） | `-Q 20`，默认 flag（含 supplementary，不抑制重叠） |
-| 画出的样本 | S01–S05 | S02、S03、S04、S05（S01 只进分母，见 §5） |
+| 画出的样本 | S01–S05 | S01–S05（2026-10-26 起；此前 S01 只进分母不画，见 §5.3） |
 
 两点直接后果：
 
@@ -107,6 +107,8 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ## 4. P45 Fig1 顶部 panel：蓝条与橙条
 
+> **2026-10-26 已改图（§9 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
+
 ### 4.1 画法
 
 - 蓝条：分析目标区（target）chr11:114,604,000–114,625,500（`p45lib.py:19`）。
@@ -154,6 +156,8 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 两阴影首尾相接、不重叠 ⇒ 两克隆的断点位置在 200 bp 分辨率下可区分。两者都位于 42 bp 主 array 起点之后约 1.2–2.4 kb，即**在 repeat 内部**。
 
 ### 5.3 为什么没有 S01；为什么棕线不是独立对照
+
+> **2026-10-26 已改图（§9 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
 
 - S01 **参与了分母**（`11_figures.py:102`），但只画 S02/S03（`11_figures.py:103-111`）。不画的原因项目文档无记录；推断：
   1. **数学冗余**：分母是三者均值 ⇒ 每个 bin 中 S01/base + S02/base + S03/base ≡ 3，S01 线 = 3 − S02 线 − S03 线，画出无新信息。
@@ -263,7 +267,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
    - `microhomology`：两侧共享的碱基，可归任一侧 ⇒ 断点只能定到区间（J0922 为 114,605,216–218）。`inserted`：两端之间不属于任一侧的插入碱基。
 2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §9 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
 3. **junction 参考行**：断点左右各 70 bp 的拼接序列。酒红 = A 侧（chr11），深青 = 微同源/插入，蓝 = B 侧（伙伴）。竖虚线 = 接头，位于微同源右边界。
-4. **read 行**：标签 "样本 Fxx/Rn"。同一 F 号的 R1/R2 是同一分子，**只计 1 个 fragment**（J0922：7 行 = F01–F04 = 4 fragment）。`.` = 与接头序列相同；字母 = 错配（显示 read 实际碱基）；`-` = 缺失；空白 = 未覆盖。只画**通过判定**的 read 端（两侧各连续跨 ≥ 20 bp 且接头模板 AS 比全基因组最佳高 ≥ 10），故有的 fragment 只出现 R1 或 R2。所有 read 已转到接头模板方向。
+4. **read 行**：标签 "样本 细胞系 群体/克隆号  Fxx/Rn"（2026-10-26 起，如 "S07 GM12878 c5  F01/R1"；此前只有样本号）。表头第 2 行（2026-10-26 新增）按细胞系列出带支持 read 的样本；若背景样本 S11–S18 也有支持，该行加粗并注明 "class uses S01-S10 only"。同一 F 号的 R1/R2 是同一分子，**只计 1 个 fragment**（J0922：7 行 = F01–F04 = 4 fragment）。`.` = 与接头序列相同；字母 = 错配（显示 read 实际碱基）；`-` = 缺失；空白 = 未覆盖。只画**通过判定**的 read 端（两侧各连续跨 ≥ 20 bp 且接头模板 AS 比全基因组最佳高 ≥ 10），故有的 fragment 只出现 R1 或 R2。所有 read 已转到接头模板方向。
 
 ### 7.3 四个判据
 
@@ -358,19 +362,19 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ---
 
-## 9. 已发现的呈现问题（第 7 条已修正；其余未修改，待用户决定）
+## 9. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理；其余未修改）
 
 | # | 图 | 问题 | 可选修改 |
 | :--- | :---: | :---: | :---: |
 | 1 | P42 Fig02 | repeat 区对照鼓包导致"两次下降"错觉；无对照比值 | 图注说明，或加一个 +Dox / mean(对照) 比值 panel |
 | 2 | P42 Fig02 | 两处 V 形凹陷未标注，可能被读成缺失 | 灰色阴影 + "AT-rich, no coverage in all 18 samples" |
-| 3 | P45 Fig1 顶部 | AT 富集段与 42 bp array 同色相连；标注只对应最长记录；图注单数 | 方案 A（推荐）：AT 富集段改灰/斜线并标注，42 bp 家族保留橙色；B：只画 42 bp 家族；C：仅改图注 |
-| 4 | P45 Fig1 中间 | 未说明为何不画 S01；棕线非独立对照 | 图注补 "S01 enters the baseline but is not drawn" |
+| 3 | P45 Fig1 顶部 | AT 富集段与 42 bp array 同色相连；标注只对应最长记录；图注单数 | **✅ 已修正 2026-10-26（方案 A）**：AT 富集段灰色斜线 + 图例，42 bp 家族橙色 + 图例；报告图注（英文源文件、交付报告、中文版）已改；旧版归档于 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/` |
+| 4 | P45 Fig1 中间 | 未说明为何不画 S01；棕线非独立对照 | **✅ 已修正 2026-10-26**：按用户要求画出 S01（灰色虚线）；图注写明三者比值平均为 1 及基线断崖的出处 |
 | 5 | P45 Fig1 中间 | 空窗原因未说明；凹陷 2 在 x 范围外 | 图注补原因；或 x 上限外扩至 114,633,500 |
 | 6 | P45 Fig1 底部 | 圆点混有 GM12878 事件；图例含本窗口不存在的 Well supported | 图注说明，或按细胞系区分形状/透明度 |
 | 7 | Fig5（伙伴端有歧义的 3 张：J0922、J1635、J1474） | 第 2 行 "has 3 equivalent placements; the coordinate shown is one of them" 与数据不符：代表位置 1 + 替代 3 = 4 处（J0922：chrX、chr10、chr2、chr4，报告正文亦为 4 处） | **✅ 已修正 2026-10-26**：改为 "has N alternative placement(s) besides the coordinate shown (N+1 equivalent in total)"；3 张图的 PNG/PDF 已替换（stage11 与交付目录），manifest 与 md5 已更新；旧版归档于 `superseded_for_comparison/analysis/v6_20261026_fig5_partner_placement_count_wording/` |
-| 8 | Fig5_J1592 等 | 分级只看 S01–S10 最大值，未计入背景细胞系（S11–S18）中的出现；J1592 因此与 J0359 同为 Limited，正文无解释 | 图上标注 background presence；或把 ≥ 2 个无关细胞系出现的接头单独归类 |
-| 9 | Fig5 全部 | read 标签只有样本号，看不出 S11/S15/S17 属于 Mutu I/DG75 | 标签加细胞系，或按细胞系着色 |
+| 8 | Fig5_J1592 等 | 分级只看 S01–S10 最大值，未计入背景细胞系（S11–S18）中的出现；J1592 因此与 J0359 同为 Limited，正文无解释 | **◐ 部分处理 2026-10-26**：图上已加"背景细胞系出现"标注（表头第 2 行加粗 NOTE，J1592 显示 S11、S15、S17）；**分级本身未改**（仍只基于 S01–S10）——是否改分级口径待用户决定，见对话 |
+| 9 | Fig5 全部 | read 标签只有样本号，看不出 S11/S15/S17 属于 Mutu I/DG75 | **✅ 已修正 2026-10-26**：17 张 Fig5 的 read 标签均带细胞系与群体/克隆号 |
 
 两图均已在交付目录中。任何修改前，须先将现有 PNG/PDF 与脚本快照归档到各自项目的 `superseded_for_comparison/`。
 

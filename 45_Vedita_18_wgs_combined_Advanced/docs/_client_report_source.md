@@ -173,7 +173,7 @@ The simpleRepeat annotation places a 42 bp unit repeated about 522 times across 
 
 ![Figure 1 — locus overview](figures/Fig1_locus_overview.png)
 
-*Figure 1. Top: target region and the tandem repeat array. Middle: depth of S04 and S05 (and of the no-Dox clones S02, S03) relative to the mean of S01–S03, 200 bp bins, MAPQ ≥ 20; shaded bands are the 95% CIs of the depth step; the gap at 114.6015–114.603 Mb has no MAPQ ≥ 20 reads in any sample. Bottom: every target-region junction with at least one supporting fragment, at the position of its target-side end; colour = class, marker shape = +Dox-specific events.*
+*Figure 1. Top: target region and the tandem repeats annotated by simpleRepeat (repeat unit ≥ 20 bp). Orange: the 42 bp repeat family, i.e. the array of about 522 copies (114,603,768–114,625,660), a 47 bp variant immediately proximal of it and a short distal remnant (114,631,682–114,632,022). Grey hatched: an AT-rich low-complexity block (114,601,509–114,603,053; repeat-unit GC ≤ 22%) that is not part of the 42 bp family; depth there is near zero in all 18 samples, a coverage gap common to every cell line. Middle: depth of S04 and S05, and of the no-Dox samples S01 (population, dashed) and S02, S03 (clones), relative to the mean of S01–S03, 200 bp bins, MAPQ ≥ 20. Because S01–S03 form the baseline, their three ratios average 1 in every bin; whether a baseline sample itself has a step is given by its own step fit (`supporting_analyses/depth_boundary/boundary_estimates.tsv`). Shaded bands are the 95% CIs of the S04 and S05 depth steps; the gap at 114.6015–114.603 Mb is the AT-rich block, where the baseline has no MAPQ ≥ 20 reads, and the ratios in the bins at its two edges rest on very few reads. Bottom: every target-region junction with at least one supporting fragment, at the position of its target-side end; colour = class, marker shape = +Dox-specific events.*
 
 ### 7.2 Read rescue
 
@@ -219,7 +219,7 @@ Positions are given as the range within which the junction can slide over identi
 
 ![Figure 5 — S04 junction at base resolution](figures/junction_views/Fig5_J0922.png)
 
-*Figure 5 (one of 17; all in `figures/junction_views/`). Junction sequence (wine: chr11 side, dark teal: microhomology, blue: partner side) and every read end that supports it, labelled by sample, fragment and read (R1/R2); "." marks a base identical to the junction sequence.*
+*Figure 5 (one of 17; all in `figures/junction_views/`). Junction sequence (wine: chr11 side, dark teal: microhomology or inserted bases, blue: partner side) and every read end that supports it, labelled by sample, cell line, population or clone, fragment and read (R1/R2); "." marks a base identical to the junction sequence. The second header line lists, by cell line, every sample with supporting reads, including the background samples S11–S18 (Mutu I, DG75); the evidence class is computed from S01–S10 only, so a junction that also appears in unrelated cell lines is flagged there.*
 
 ![Figure 0 — every junction with two or more fragments](figures/Fig0_key_events_summary.png)
 
