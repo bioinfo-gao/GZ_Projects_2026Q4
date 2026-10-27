@@ -197,7 +197,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 3 —— rescue 来源](../custom_research_report_20261025/figures/Fig3_rescue_sources.png)
 
-*图 3。每个样本 rescue 集合中的 read pair，按其进入集合的途径（第 5 节）划分。*
+*图 3。每个样本 rescue 集合中的 read pair，按其进入集合的途径（第 5 节）划分：绿色，在窗口内存有比对记录的 read pair（其 mate 几乎都也在窗口内）；紫色，比对在别处、仅因 XA 备选位置落在窗口内而进入的 read pair。mate、supplementary 片段与未比对 read pair 在任何样本中都没有再带来额外的 read pair。数量未按测序深度归一，样本间总数不可直接比较。*
 
 ### 7.3 一种 adapter 与 poly-G artefact
 
@@ -262,7 +262,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 4 —— rescue 前后对比](../custom_research_report_20261025/figures/Fig4_before_after_and_classes.png)
 
-*图 4。左：每个样本中 rescue 前后有支持的目标区 junction 数。右：527 个目标区 junction 的等级分布。*
+*图 4。左：每个样本中有支持的目标区 junction 数，rescue 前（标准计数，MAPQ ≥ 20）与 rescue 后（≥ 1 与 ≥ 2 个 fragment）；同一 junction 出现在多个样本中时在每个样本各计一次，柱子为净数，不显示哪些 junction 增加或减少（逐个 junction 见 `tables/junction_by_sample_long.tsv`）。右：527 个目标区 junction 的等级分布，对数刻度，稀有等级标出 junction 编号。*
 
 ### 7.6 bp 尺度上的深度断崖
 

@@ -196,15 +196,18 @@ finalize_figure(fig, f"{OUT}/Fig2_chr11_BAF", formats=["png", "pdf"], dpi=200)
 
 # ================================================================ Fig3 rescue sources
 src = {d["sample"]: d for d in tsv(f"{T10}/rescue_source_summary.tsv")}
-cats = [("only in W (a)", lambda d: int(d["qnames_only_a"]), "#80B1D3"),
-        ("in W + mate/SA/XA outside", lambda d: int(d["qnames_with_a"]) - int(d["qnames_only_a"]), "#B3DE69"),
-        ("mate in W only (b)", lambda d: int(d["qnames_only_b"]), "#FDB462"),
-        ("SA segment in W only (c)", lambda d: int(d["qnames_only_c"]), "#FB8072"),
-        ("XA alternative hit in W only (d)", lambda d: int(d["qnames_only_d"]), "#BEBADA"),
-        ("unmapped pair, aligns to W (e)", lambda d: int(d["qnames_only_e"]), "#FCCDE5")]
+# 1027: two segments only. Every pair is either stored in W (route a; its mate is almost always in W too) or entered
+# only through an XA alternative hit in W (route d); routes b (mate), c (SA) and e (unmapped pair) add no further pair.
+# This is asserted per sample, so a dataset where b/c/e do contribute fails here instead of being drawn wrongly.
+cats = [("record stored in the window (a)", lambda d: int(d["qnames_with_a"]), "#B3DE69"),
+        ("placed elsewhere, alternative (XA) hit in the window (d only)", lambda d: int(d["qnames_only_d"]), "#BEBADA")]
 assert_fill_not_near_black([c for _, _, c in cats])
-fig, axx = plt.subplots(figsize=(13, 6))
 ss = [s for s in REP if s in src]
+for s in ss:
+    d = src[s]
+    assert int(d["qnames_with_a"]) + int(d["qnames_only_d"]) == int(d["qnames_total"]), s
+    assert int(d["qnames_only_b"]) == int(d["qnames_only_c"]) == int(d["qnames_only_e"]) == 0, s
+fig, axx = plt.subplots(figsize=(13, 6.5))
 left = np.zeros(len(ss))
 for lab, fn, col in cats:
     v = np.array([fn(src[s]) for s in ss])
@@ -213,12 +216,16 @@ for lab, fn, col in cats:
 for i, s in enumerate(ss):
     axx.text(left[i], i, f" {int(left[i]):,}", va="center", fontsize=11)
 axx.set_yticks(range(len(ss)))
-axx.set_yticklabels([SH[s] for s in ss])
+axx.set_yticklabels([sample_label(s) for s in ss], fontsize=11)
 axx.invert_yaxis()
-axx.set_xlabel("read pairs in the rescue set")
-legend_outside(axx, ncol=2, fontsize=10)
+axx.set_xlabel("read pairs in the rescue set (not normalised for sequencing depth)")
+axx.set_xlim(0, max(left) * 1.12)
+legend_outside(axx, ncol=1, fontsize=10)
+axx.text(0, -0.17, "mate in the window (b), supplementary segment in the window (c) and unmapped pairs aligning to the "
+         "window (e) added no further pairs in any sample (0)", transform=axx.transAxes, fontsize=9, va="top")
 assert len(axx.patches) == len(ss) * len(cats)
 finalize_figure(fig, f"{OUT}/Fig3_rescue_sources", formats=["png", "pdf"], dpi=300)
+assert_no_text_collisions(fig)
 
 # ================================================================ Fig4 before vs after, classes
 fig, axx = plt.subplots(1, 2, figsize=(15, 5.5), gridspec_kw={"width_ratios": [2.2, 1]})
@@ -231,23 +238,39 @@ for off, v, col, lab in ((-0.27, b_, "#80B1D3", "before rescue: >= 1 fragment (s
                          (0.27, a2_, "#B3DE69", "after rescue: >= 2 fragments")):
     bars = axx[0].bar(x + off, v, width=0.26, color=col, edgecolor="black", lw=0.5, label=lab)
     for bb, vv in zip(bars, v):
-        axx[0].text(bb.get_x() + bb.get_width() / 2, vv, str(vv), ha="center", va="bottom", fontsize=9)
+        axx[0].annotate(str(vv), (bb.get_x() + bb.get_width() / 2, vv), xytext=(0, 3), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=9)               # 1027: offset so "0" clears the x axis
 axx[0].set_xticks(x)
-axx[0].set_xticklabels([SH[s] for s in ss])
+
+
+def tick3(s):                                                   # 1027: one item per line: S04 / DLD1 / c3 / +Dox
+    r_ = ALL18[s]
+    unit = "pop" if r_["role"] == "population" else f"c{r_['clone_no']}"
+    return (f"{SH[s]}\n{r_['cell_line'].replace('DLD1-136', 'DLD1')}\n{unit}"
+            + ("\n+Dox" if r_["dox"] == "yes" else ""))
+
+
+axx[0].set_xticklabels([tick3(s) for s in ss], fontsize=9)
 axx[0].set_ylabel("target-region junction events")
 legend_outside(axx[0], ncol=1, fontsize=10)
 cc = collections.Counter(e["classification"] for e in events)
 order = ["Well_supported", "Limited", "Ambiguous_repeat", "Weak", "Not_supported"]
 vals = [cc.get(k, 0) for k in order]
 bars = axx[1].barh(range(len(order)), vals, color=[CLASS_FILL[k] for k in order], edgecolor="black", lw=0.5)
-for i, v in enumerate(vals):
-    axx[1].text(v, i, f" {v}", va="center", fontsize=11)
+ids = collections.defaultdict(list)                             # 1027: name the rare classes on the bar
+for e in events:
+    ids[e["classification"]].append(e["junction_id"])          # client ID here (cid is set later, for Fig5)
+for i, (k, v) in enumerate(zip(order, vals)):
+    lab = f" {v}" + (f"  ({', '.join(sorted(ids[k]))})" if 0 < v <= 5 else "")
+    axx[1].text(max(v, 1.1), i, lab, va="center", fontsize=11, fontweight="bold" if 0 < v <= 5 else "normal")
 axx[1].set_yticks(range(len(order)))
 axx[1].set_yticklabels([k.replace("_", " ") for k in order])
 axx[1].invert_yaxis()
-axx[1].set_xlabel("target-region junction events")
-axx[1].set_xlim(0, max(vals) * 1.25 + 1)
+axx[1].set_xscale("log")                                        # 1027: linear scale hid the 3 Limited / 1 Ambiguous
+axx[1].set_xlim(0.8, 1500)
+axx[1].set_xlabel("junction events (log scale)")
 finalize_figure(fig, f"{OUT}/Fig4_before_after_and_classes", formats=["png", "pdf"], dpi=300)
+assert_no_text_collisions(fig)
 
 # ================================================================ Fig5 per-event base-level junction view
 alt_seq = {}

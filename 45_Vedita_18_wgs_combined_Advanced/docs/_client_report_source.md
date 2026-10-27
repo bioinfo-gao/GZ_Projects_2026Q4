@@ -194,7 +194,7 @@ About half of each rescue set consists of reads placed elsewhere whose alternati
 
 ![Figure 3 — rescue sources](figures/Fig3_rescue_sources.png)
 
-*Figure 3. Read pairs in each sample's rescue set, by the route through which they entered (Section 5).*
+*Figure 3. Read pairs in each sample's rescue set, by the route through which they entered (Section 5): green, pairs with a record stored in the window (almost always with the mate in the window too); purple, pairs placed elsewhere that entered only because an alternative (XA) hit lies in the window. Mates, supplementary segments and unmapped pairs added no further pairs in any sample. Counts are not normalised for sequencing depth, so totals are not comparable between samples.*
 
 ### 7.3 An adapter and poly-G artefact
 
@@ -259,7 +259,7 @@ For your question on Manta and DELLY: among the earlier Section 7.3 events, the 
 
 ![Figure 4 — before vs after rescue](figures/Fig4_before_after_and_classes.png)
 
-*Figure 4. Left: target-region junctions with support in each sample before and after rescue. Right: classes of the 527 target-region junctions.*
+*Figure 4. Left: number of target-region junctions with support in each sample before rescue (standard count, MAPQ ≥ 20) and after rescue (≥ 1 and ≥ 2 fragments); a junction present in several samples is counted in each, and the bars show net numbers, not which junctions were gained or lost (per junction: `tables/junction_by_sample_long.tsv`). Right: classes of the 527 target-region junctions on a log scale, with the junction IDs of the rare classes.*
 
 ### 7.6 The depth step at base-pair scale
 

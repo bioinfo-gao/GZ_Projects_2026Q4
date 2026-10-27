@@ -1,8 +1,8 @@
-# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）、P45 Fig5 接头碱基视图、Fig0 汇总矩阵与 Fig2 BAF
+# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）、P45 Fig5 接头碱基视图、Fig0 汇总矩阵、Fig2 BAF、Fig3 rescue 来源与 Fig4 rescue 前后
 
 > 内部文档，2026-10-26。对象：需要解读或向客户解释这两张图的我方人员。
 > 本文只解释"图怎么读"，不修改任何交付产物；文末列出已发现的呈现问题与待决定的修改方案。
-> 每条数值主张后给出来源文件与可复跑的核对命令（§12）。
+> 每条数值主张后给出来源文件与可复跑的核对命令（§14）。
 
 ## 0. 两张图在哪、看什么
 
@@ -107,7 +107,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ## 4. P45 Fig1 顶部 panel：蓝条与橙条
 
-> **2026-10-26 已改图（§11 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
+> **2026-10-26 已改图（§13 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
 
 ### 4.1 画法
 
@@ -157,7 +157,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ### 5.3 为什么没有 S01；为什么棕线不是独立对照
 
-> **2026-10-26 已改图（§11 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
+> **2026-10-26 已改图（§13 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
 
 - S01 **参与了分母**（`11_figures.py:102`），但只画 S02/S03（`11_figures.py:103-111`）。不画的原因项目文档无记录；推断：
   1. **数学冗余**：分母是三者均值 ⇒ 每个 bin 中 S01/base + S02/base + S03/base ≡ 3，S01 线 = 3 − S02 线 − S03 线，画出无新信息。
@@ -265,7 +265,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 1. **标题行**：`J0922 BND A=chr11:114605218:+ B=chrX:156030577:- (representative placement shown) class=… microhomology=GT inserted=-`
    - `:+`/`:-` 为断端方向：`chr11:114605218:+` = 沿 chr11 正链读到该位置后跳入伙伴序列。
    - `microhomology`：两侧共享的碱基，可归任一侧 ⇒ 断点只能定到区间（J0922 为 114,605,216–218）。`inserted`：两端之间不属于任一侧的插入碱基。
-2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §11 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
+2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §13 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
 3. **junction 参考行**：断点左右各 70 bp 的拼接序列。酒红 = A 侧（chr11），深青 = 微同源/插入，蓝 = B 侧（伙伴）。竖虚线 = 接头，位于微同源右边界。
 4. **read 行**：标签 "样本 细胞系 群体/克隆号  Fxx/Rn"（2026-10-26 起，如 "S07 GM12878 c5  F01/R1"；此前只有样本号）。表头第 2 行（2026-10-26 新增）按细胞系列出带支持 read 的样本；若背景样本 S11–S18 也有支持，该行加粗并注明 "class uses S01-S10 only"。同一 F 号的 R1/R2 是同一分子，**只计 1 个 fragment**（J0922：7 行 = F01–F04 = 4 fragment）。`.` = 与接头序列相同；字母 = 错配（显示 read 实际碱基）；`-` = 缺失；空白 = 未覆盖。只画**通过判定**的 read 端（两侧各连续跨 ≥ 20 bp 且接头模板 AS 比全基因组最佳高 ≥ 10），故有的 fragment 只出现 R1 或 R2。所有 read 已转到接头模板方向。
 
@@ -358,7 +358,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ## 8. Fig0 关键接头汇总矩阵（`figures/Fig0_key_events_summary`）
 
-> **2026-10-27 已改图（§11 第 11 条，用户批准 6 项）**：行按 §8.2 的 A–E 分组排列（组标题行；组内目标区在前、再按坐标）；表头两层（DLD1 / GM12878，下层 pop、c1… 与 +Dox），S05|S06 之间竖线分隔；underpowered 的空白格画斜线；新增 "S11-S18 (bg)" 列；行标签加 chr11 坐标与 T/F。分组规则只读已有字段：A = `DLD1_dox_comparison` 以 case_specific 开头，B = baseline_only，C = not_present 且 S06 有支持，D = not_present 且 S06 无支持，E = shared_with_baseline。数值、分级、结论层级均未改；图号未改。§8.1 与 §8.3 描述的是**改前**的图，§8.3 第 1–4 点在新图上已直接可见。旧版见 `superseded_for_comparison/analysis/v9_20261027_fig0_rows_not_grouped/`。
+> **2026-10-27 已改图（§13 第 11 条，用户批准 6 项）**：行按 §8.2 的 A–E 分组排列（组标题行；组内目标区在前、再按坐标）；表头两层（DLD1 / GM12878，下层 pop、c1… 与 +Dox），S05|S06 之间竖线分隔；underpowered 的空白格画斜线；新增 "S11-S18 (bg)" 列；行标签加 chr11 坐标与 T/F。分组规则只读已有字段：A = `DLD1_dox_comparison` 以 case_specific 开头，B = baseline_only，C = not_present 且 S06 有支持，D = not_present 且 S06 无支持，E = shared_with_baseline。数值、分级、结论层级均未改；图号未改。§8.1 与 §8.3 描述的是**改前**的图，§8.3 第 1–4 点在新图上已直接可见。旧版见 `superseded_for_comparison/analysis/v9_20261027_fig0_rows_not_grouped/`。
 
 **结论**：Fig0 是"接头 × 样本"的计数矩阵，相当于 Fig5 那 17 张碱基视图的总目录。17 行 = S01–S10 任一样本 rescue 后 ≥ 2 fragment 的接头（与 §7.1 同一批），10 列 = S01–S10。**要读的是每一行在各列上的分布形态，不是逐格数字**：分布形态决定它是克隆特有的、整个细胞系共有的，还是跨细胞系出现的伪像/多态。17 行中真正关系到"+Dox 克隆发生了什么"的只有 §8.2 的 A 组，核心是 J0922、J0359、J0786。
 
@@ -398,13 +398,13 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 5. **右侧是结论层级，不是证据分级**：如 J0922 证据分级为 Ambiguous_repeat，结论层级却是 "limited, coherent with copy-number step"——歧义只在伙伴端（端粒重复），chr11 端唯一且与深度断崖吻合（§6.2）。
 6. **数字未按深度校正**：各样本深度 14–19×（S05 最高 18.8×）；同行 3 与 4 的差别不可解读为丰度差异，只读 0 / 1 / ≥ 2 三档。
 
-**报告图注现状**："All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers." 未说明上述 1–4 点；已记为 §11 第 11 条，2026-10-27 已按批准方案改图并改写图注。
+**报告图注现状**："All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers." 未说明上述 1–4 点；已记为 §13 第 11 条，2026-10-27 已按批准方案改图并改写图注。
 
 ---
 
 ## 9. Fig2 chr11 B-allele fraction（`figures/Fig2_chr11_BAF`）
 
-> **2026-10-27 已改图（§11 第 12 条，用户批准）**：原图 GM12878 只画了 S06（即其选位点基线，必然无 LOH，无信息量），现已画出全部 S01–S10 十个 panel；panel 标签带细胞系与群体/克隆号（+Dox）。下文按新图描述；旧版见 `superseded_for_comparison/analysis/v10_20261027_fig2_GM12878_clones_not_shown/`。
+> **2026-10-27 已改图（§13 第 12 条，用户批准）**：原图 GM12878 只画了 S06（即其选位点基线，必然无 LOH，无信息量），现已画出全部 S01–S10 十个 panel；panel 标签带细胞系与群体/克隆号（+Dox）。下文按新图描述；旧版见 `superseded_for_comparison/analysis/v10_20261027_fig2_GM12878_clones_not_shown/`。
 
 **结论**：Fig2 回答"S04、S05 在断点远端丢的是不是一整条同源染色体"。答案是：从目标区起点（约 114.6 Mb）到染色体末端，S04、S05 的 BAF 从围绕 0.5 的一团塌缩为 0 和 1 两条线（LOH）；结合 Fig1 远端深度约为对照的一半 ⇒ **远端 11q 丢了一个拷贝、只剩一条同源染色体（半合子）**，不是 copy-neutral LOH。S05 另有一个现象：断点**近端**约 90–114.6 Mb 的 BAF 两带逐渐分开，越靠近断点越开。GM12878 的 S07–S10 全程没有塌缩。
 
@@ -449,13 +449,63 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ---
 
-## 10. 一句话总结
+## 10. Fig3 rescue 集合的来源（`figures/Fig3_rescue_sources`）
+
+> **2026-10-27 已改图（§13 第 13 条，用户批准）**：原图绿色图例 "in W + mate/SA/XA outside" 不准确，且列出了三类数量为 0 的图例；现改为两段（a；仅 d），b/c/e 为 0 写在脚注，并对每个样本断言 a + 仅 d = 总数、仅 b/c/e = 0；纵轴标签带细胞系；横轴注明未按深度归一。旧版见 `superseded_for_comparison/analysis/v11_20261027_fig3_misleading_legend__fig4_linear_scale/`。
+
+**结论**：Fig3 回答"为了不漏证据，在原有比对之外额外捞回了哪些 read"。每个样本的 rescue 集合有 18,225–39,040 个 read pair，其中**约一半（47–53%）不在窗口内**：比对器把它们放在基因组别处，只在 XA 标签里把窗口列为同样好或接近的备选位置——即客户要求纳入的多重比对 read。本图只说明证据池扩大了多少、来自哪里，**不涉及任何接头或拷贝数结论**。
+
+### 10.1 五条途径（报告 §5）与本数据的实测
+
+窗口 W = chr11:114,554,000–114,675,500（目标区 ± 50 kb）。数据：`analysis/20261025_p45/stage10_tables/rescue_source_summary.tsv`（18 个样本）。
+
+| 途径 | 含义 | 本数据 |
+| :--- | :---: | :---: |
+| (a) | 该 read pair 有比对记录存在 W 内 | 每样本约 8,800–18,500 对（绿色）；其中 mate 也在 W 内的占绝大多数（S01：13,040 / 13,093） |
+| (b) | mate 在 W 内 | 仅靠 (b) 进入 = **0** |
+| (c) | SA 片段（同一 read 另一段的比对）在 W 内 | 213–455 对，仅靠 (c) 进入 = **0** |
+| (d) | XA 备选位置在 W 内 | **仅靠 (d) 进入 9,440–20,554 对**（紫色） |
+| (e) | 两端未比对、但能比对到 W | 筛查 0.46–1.5 M 条未比对 read，**0** 条比对上 |
+
+18 个样本均满足：总数 = (a) + 仅 (d)，仅 (b)/(c)/(e) = 0（脚本逐样本断言）。
+
+### 10.2 怎么读
+
+1. **绿 ≈ 紫各占一半**：一半是本来就比对在窗口的普通 read pair，一半是从别处"借"来的多重比对 read。后者在接头判定时要与自己的最佳位置竞争，这就是 Fig4 中 269 个接头被判 Not supported 的来源。
+2. **b、c、e 没有额外贡献**：mate、SA 在 W 内的 pair 都已通过 (a) 或 (d) 进入；未比对 read 一条也没比对上 W ⇒ 没有遗漏的通道。
+3. **样本间总量不可直接比较**：未按测序深度归一（S10 最多 39,040，S06 最少 18,225，S06 深度约 11.9×）。如 S04 "W 内"部分少于 S05，同时受远端丢拷贝与深度两方面影响，本图分不开。
+
+## 11. Fig4 rescue 前后的接头证据（`figures/Fig4_before_after_and_classes`）
+
+> **2026-10-27 已改图（§13 第 14 条，用户批准）**：右图原为线性刻度，3 个 Limited、1 个 Ambiguous 几乎看不见；现改为对数刻度，并在 1–5 个事件的等级旁加粗标出接头编号；左图横轴标签带细胞系；"0" 标注不再压在横轴上。旧版同 §10。
+
+**结论**：rescue 使目标区"至少 1 个 fragment"的接头在多数样本中略增，**但 S05 减少（21 → 17）**；真正达到 ≥ 2 fragment 的，10 个样本合计只有 **4 次**。527 个目标区候选接头中：Not supported 269、Weak 254、Limited 3（J0359、J0786、J1036）、Ambiguous repeat 1（J0922）、Well supported 0（两个 Well supported 在侧翼：J0533、J1365）。
+
+### 11.1 左图：每个样本的事件数
+
+蓝 = rescue 前按标准计数（split read 或 discordant pair，两端 MAPQ ≥ 20）至少 1 个 fragment 的目标区事件数；橙 = rescue 后至少 1 个；绿 = rescue 后至少 2 个。
+
+| 现象 | 含义 |
+| :--- | :---: |
+| 多数样本 橙 > 蓝（如 S09 32 → 40） | 纳入 MAPQ 0 与多重比对 read 后多出一些**单 fragment** 支持 |
+| **S05 橙 < 蓝（21 → 17）** | rescue 不只加不减：每条 read 与自己的全基因组最佳位置竞争，部分原先计入的支持输给了别处 |
+| 绿柱只在 S03（1）、S04（1）、S05（2） | J1036（S03 对照事件）、J0922（S04）、J0359 + J0786（S05）——即 Fig0 的 A、B 组 |
+
+**注意**：数字是"每个样本有多少事件"，同一事件出现在多个样本会重复计；柱子是净数，看不出哪些事件增、哪些减（如 J0922 在 S04 中 0 → 4）。逐事件变化见 `tables/junction_by_sample_long.tsv`；报告 Key Findings 2a–2c 有文字说明。
+
+### 11.2 右图：527 个事件的分级
+
+每个事件只计一次（综合所有样本）。对数刻度下 3 和 1 的条可见，并标出编号；Well supported 为 0，只有数字没有条。读法：**目标区里没有任何一个达到 Well supported 的接头**；全部"值得看"的只有 Limited/Ambiguous 这 4 个，其中 J1036 是对照 S03 的事件，与 +Dox 无关。
+
+---
+
+## 12. 一句话总结
 
 先用 P42 回答"有无、范围"，再用 P45 回答"降多少、断在哪、附近有无接头"。两图一致：约 50% 深度下降，起点 114.605–114.606 Mb，位于 42 bp repeat array 内部；两处深度≈0 的凹陷是 AT 富集测序盲区，与处理无关；断点附近只有 1–2 个 +Dox 特异、2–4 fragment 的接头，证据有限且受 repeat 干扰。
 
 ---
 
-## 11. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 11、12 条已修正，第 10 条暂缓；其余未修改）
+## 13. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 11–14 条已修正，第 10 条暂缓；其余未修改）
 
 | # | 图 | 问题 | 可选修改 |
 | :--- | :---: | :---: | :---: |
@@ -471,12 +521,14 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 | 10 | 报告全文 | 图号按出图脚本顺序而非 Results 出现顺序：§7 中依次为 Figure 1、3、5、0、4、2（Fig0 为 P45 后加的汇总图） | **⏸ 暂缓（user 2026-10-26）**：用户审阅完毕后统一改。候选方案：按 Results 出现顺序重编为 1–6（7.1→1，7.2→2，7.4 汇总→3、碱基视图→4，7.5→5，7.7→6），同步改文件名、正文约 30 处引用、构建脚本 `Fig[0-4]_` 规则、manifest、md5 |
 | 11 | P45 Fig0 | 空白不区分"0 fragment"与 underpowered；背景细胞系 S11–S18 不在图上；表头无细胞系；目标区与侧翼混排、无位置；图注未说明这些 | **✅ 已修正 2026-10-27**：A–E 分组、两层表头、underpowered 斜线、S11–S18 列、坐标与 T/F；图注三处同步；旧版归档 v9 |
 | 12 | P45 Fig2 | GM12878 只画了 S06（即其选位点基线，必然无 LOH），S07–S10 未画；正文却写 "GM12878 (S06–S10) shows no homozygous segment"；panel 标签只有样本号 | **✅ 已修正 2026-10-27**：S01–S10 十个 panel 全画，标签带细胞系与群体/克隆号；图注三处同步；旧版归档 v10 |
+| 13 | P45 Fig3 | 绿色图例 "in W + mate/SA/XA outside" 不准确（mate 实际多在窗口内）；三类为 0 的图例无对应条；纵轴无细胞系；未注明未按深度归一 | **✅ 已修正 2026-10-27**：两段 + 逐样本断言 + 脚注 + 细胞系标签 + 深度说明；图注三处同步；旧版归档 v11 |
+| 14 | P45 Fig4 | 右图线性刻度使 Limited 3 / Ambiguous 1 几乎不可见；横轴无细胞系；"0" 标注压在横轴上；左图只给净数 | **✅ 已修正 2026-10-27**：对数刻度 + 稀有等级标编号；细胞系标签；"0" 标注上移；图注说明净数与逐事件出处；旧版归档 v11 |
 
 两图均已在交付目录中。任何修改前，须先将现有 PNG/PDF 与脚本快照归档到各自项目的 `superseded_for_comparison/`。
 
 ---
 
-## 12. 核对命令
+## 14. 核对命令
 
 ```bash
 P42=/home/gao/projects_2026Q4/42_Vedita_18_wgs_advanced_analysis
@@ -552,4 +604,7 @@ for a in range(85,115,5):
     x=[abs(float(r[1+i5])-0.5) for r in d if r[1+i5] and a*1e6<=int(r[0])<min(a+5,114.6)*1e6]
     print(a,a+5,len(x),round(st.median(x),3))
 print('S01 BAF==0.5:',sum(1 for r in d if r[1+i1]=='0.500'),'of',len(d))"
+# §10 Fig3：每样本 总数 = (a) + 仅(d)，仅(b)/(c)/(e) = 0
+awk -F'\t' 'NR==1{for(i=1;i<=NF;i++)c[$i]=i; next} {t=$c["qnames_total"]; a=$c["qnames_with_a"]; d=$c["qnames_only_d"]; z=$c["qnames_only_b"]+$c["qnames_only_c"]+$c["qnames_only_e"]; print $1, t, a, d, z, (a+d==t&&z==0)?"OK":"MISMATCH"}' \
+  /home/gao/projects_2026Q4/45_Vedita_18_wgs_combined_Advanced/analysis/20261025_p45/stage10_tables/rescue_source_summary.tsv
 ```
