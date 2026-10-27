@@ -1,8 +1,8 @@
-# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）与 P45 Fig5 接头碱基视图
+# 读图指南：P45 Fig1（locus overview）、P42 Fig02（DLD1 chr11 depth）、P45 Fig5 接头碱基视图与 Fig0 汇总矩阵
 
 > 内部文档，2026-10-26。对象：需要解读或向客户解释这两张图的我方人员。
 > 本文只解释"图怎么读"，不修改任何交付产物；文末列出已发现的呈现问题与待决定的修改方案。
-> 每条数值主张后给出来源文件与可复跑的核对命令（§10）。
+> 每条数值主张后给出来源文件与可复跑的核对命令（§11）。
 
 ## 0. 两张图在哪、看什么
 
@@ -107,7 +107,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ## 4. P45 Fig1 顶部 panel：蓝条与橙条
 
-> **2026-10-26 已改图（§9 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
+> **2026-10-26 已改图（§10 第 3 条，方案 A）**：AT 富集段（下表前两段）改为**灰色斜线**，图例 "AT-rich low-complexity, no coverage"；42 bp 家族（含 47 bp 变体与右端残片）保留橙色，图例 "42 bp repeat family (incl. 47 bp variant, distal remnant)"。划分规则：TRF 重复单元 GC < 0.24 为 AT 富集（实测 AT 段 ≤ 0.22，42 bp 家族 ≥ 0.26，两类之间无重叠）。报告图注同步改写。以下 §4.1–§4.3 描述的是**改前**的图（旧版见 `superseded_for_comparison/analysis/v7_20261026_fig1_one_repeat_colour_no_S01__fig5_no_cell_line/`），区间与解读仍然成立。
 
 ### 4.1 画法
 
@@ -157,7 +157,7 @@ P42 数据（MAPQ（mapping quality，比对质量）≥ 20，1 kb bin），各�
 
 ### 5.3 为什么没有 S01；为什么棕线不是独立对照
 
-> **2026-10-26 已改图（§9 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
+> **2026-10-26 已改图（§10 第 4 条）**：按用户要求 S01 已画出（灰色虚线，"S01 (no-Dox population)"）。下文"冗余"的论证仍然成立：S01 线 ≡ 3 − S02 线 − S03 线；S01 在空窗两侧各有一个尖峰（约 1.8 与 1.55），来自分母仅略高于 0.05 的边缘 bin（§3.3），不应解读。报告图注已写明三者比值平均为 1、基线自身有无断崖见 `boundary_estimates.tsv`。
 
 - S01 **参与了分母**（`11_figures.py:102`），但只画 S02/S03（`11_figures.py:103-111`）。不画的原因项目文档无记录；推断：
   1. **数学冗余**：分母是三者均值 ⇒ 每个 bin 中 S01/base + S02/base + S03/base ≡ 3，S01 线 = 3 − S02 线 − S03 线，画出无新信息。
@@ -265,7 +265,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 1. **标题行**：`J0922 BND A=chr11:114605218:+ B=chrX:156030577:- (representative placement shown) class=… microhomology=GT inserted=-`
    - `:+`/`:-` 为断端方向：`chr11:114605218:+` = 沿 chr11 正链读到该位置后跳入伙伴序列。
    - `microhomology`：两侧共享的碱基，可归任一侧 ⇒ 断点只能定到区间（J0922 为 114,605,216–218）。`inserted`：两端之间不属于任一侧的插入碱基。
-2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §9 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
+2. **第 2 行**：颜色说明 + 伙伴端状态（"B placement unique"，或 "AMBIGUOUS PARTNER … has N alternative placements besides the coordinate shown (N+1 equivalent in total)"——2026-10-26 修正后的措辞，见 §10 第 7 条）。注意 "placement unique" 指**接头模板 100 bp 侧翼**在参考中唯一，不等于支持 read 本身可唯一定位（§7.5）。
 3. **junction 参考行**：断点左右各 70 bp 的拼接序列。酒红 = A 侧（chr11），深青 = 微同源/插入，蓝 = B 侧（伙伴）。竖虚线 = 接头，位于微同源右边界。
 4. **read 行**：标签 "样本 细胞系 群体/克隆号  Fxx/Rn"（2026-10-26 起，如 "S07 GM12878 c5  F01/R1"；此前只有样本号）。表头第 2 行（2026-10-26 新增）按细胞系列出带支持 read 的样本；若背景样本 S11–S18 也有支持，该行加粗并注明 "class uses S01-S10 only"。同一 F 号的 R1/R2 是同一分子，**只计 1 个 fragment**（J0922：7 行 = F01–F04 = 4 fragment）。`.` = 与接头序列相同；字母 = 错配（显示 read 实际碱基）；`-` = 缺失；空白 = 未覆盖。只画**通过判定**的 read 端（两侧各连续跨 ≥ 20 bp 且接头模板 AS 比全基因组最佳高 ≥ 10），故有的 fragment 只出现 R1 或 R2。所有 read 已转到接头模板方向。
 
@@ -356,13 +356,57 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ---
 
-## 8. 一句话总结
+## 8. Fig0 关键接头汇总矩阵（`figures/Fig0_key_events_summary`）
+
+**结论**：Fig0 是"接头 × 样本"的计数矩阵，相当于 Fig5 那 17 张碱基视图的总目录。17 行 = S01–S10 任一样本 rescue 后 ≥ 2 fragment 的接头（与 §7.1 同一批），10 列 = S01–S10。**要读的是每一行在各列上的分布形态，不是逐格数字**：分布形态决定它是克隆特有的、整个细胞系共有的，还是跨细胞系出现的伪像/多态。17 行中真正关系到"+Dox 克隆发生了什么"的只有 §8.2 的 A 组，核心是 J0922、J0359、J0786。
+
+### 8.1 编码
+
+| 元素 | 含义 |
+| :--- | :---: |
+| 行标签 | 接头 ID + 类型（BND = 跨染色体或无法归类，INV = 倒位） |
+| 列 | S01–S05 = DLD1（S01 群体、S02/S03 无 Dox 克隆、S04/S05 +Dox 克隆）；S06–S10 = GM12878（S06 群体、S07–S10 克隆）。**表头没有写细胞系** |
+| 格子颜色 | 橙 ≥ 2 fragment；绿 = 1；空白 = 0 |
+| 格子数字 | 精确 fragment 数；颜色只分 0 / 1 / ≥ 2 三档（2 与 17 同色） |
+| 右侧文字 | 结论层级（claim level）+ 检出它的 SV caller（Manta/DELLY/GRIDSS/SvABA；SvABA 只跑了 S01–S05） |
+| 行顺序 | 先排"与深度断崖吻合"的两条（J0359、J0922），其余按 ID；**不按细胞系或分布形态排** |
+
+### 8.2 按分布形态分 5 组
+
+| 形态 | 接头 | 位置 | 怎么读 |
+| :--- | :---: | :---: | :---: |
+| **A. 只在 S04 或 S05（+Dox 特异）** | J0922（S04，4）、J0359（S05，2）、J0786（S05，3） | 目标区 114,605,218 / 114,605,973 / 114,607,192 | 报告的核心结果（三个 +Dox 接头）；前两个与深度断崖吻合 |
+| | J0591（S04，2） | 侧翼 114,602,528 | **落在 AT 富集测序盲区内**（§3），其余 9 个样本均 underpowered（参考 fragment < 10）⇒ "S04 特有"无法确认 |
+| | J0902（S05，2） | 侧翼 114,629,858 | repeat 定位有歧义，位于 42 bp array 下游 |
+| **B. 只在 S03（对照）** | J1036（2） | 目标区 114,609,273 | 对照克隆自身的局部事件，与 +Dox 无关 |
+| **C. GM12878 整系共有、DLD1 无** | J0533、J1365（S06–S10 全有，3–10） | 侧翼 114,590,799 / 114,590,721 | 唯二 well-supported，目标区近端约 13 kb；GM12878 细胞系本身的特征，非克隆事件 |
+| | J0771（S06、S08–S10） | 侧翼 114,645,158 | S07 空白；DLD1 的 S01–S04 均 underpowered ⇒ "DLD1 无"也不能确认 |
+| **D. 只在单个 GM12878 克隆** | J1592（S07，2） | 侧翼 114,555,232 | 背景细胞系 Mutu I、DG75 中另有 3 个样本出现，**本图看不到**（§7.5） |
+| | J1219（S09，2） | 侧翼 114,601,878 | 同样**落在 AT 富集测序盲区内**，其余 9 个样本均 underpowered |
+| **E. 跨细胞系出现** | J1775 | 侧翼 114,631,548 | S01–S10 全有 + 背景 8 个全有 = **18/18**：所有细胞系共有的序列特征（参考差异或群体多态），不是重排 |
+| | J1635 | 侧翼 114,598,294 | DLD1 S01–S05 全有（最多 17）+ 背景 8 个；GM12878 无，但 S06/S07 underpowered |
+| | J0907、J0715、J2143、J1474 | 侧翼各处 | DLD1 与 GM12878 都有（多数也在对照中），且多数也在背景细胞系中 ⇒ 不是克隆事件 |
+
+### 8.3 易错的 6 点
+
+1. **空白 ≠ 确认没有**：空白只表示 0 个支持 fragment；若该样本在此处参考 fragment < 10 则是 underpowered，图上不区分。例：J0786 在 S04 空白但 S04 underpowered（报告写明 S04 丢了那一段的一个拷贝）；J0591、J1219 其余 9 个样本全 underpowered。
+2. **只看了 S01–S10**：背景 S11–S18（Mutu I、DG75）不在图上。J1775、J1635、J0715 在全部 8 个背景样本中都有，J2143 有 6 个，J1592、J1474 各 3 个——只能查表格 `background_S11_S18_samples_present` 列。
+3. **表头没有细胞系**：须自己记住 S01–S05 = DLD1、S06–S10 = GM12878（与 Fig5 已改的问题同类）。
+4. **目标区与侧翼混排**：17 行中只有 4 行在目标区（J0359、J0922、J0786、J1036），其余 13 行在 ±50 kb 侧翼；图上无位置。
+5. **右侧是结论层级，不是证据分级**：如 J0922 证据分级为 Ambiguous_repeat，结论层级却是 "limited, coherent with copy-number step"——歧义只在伙伴端（端粒重复），chr11 端唯一且与深度断崖吻合（§6.2）。
+6. **数字未按深度校正**：各样本深度 14–19×（S05 最高 18.8×）；同行 3 与 4 的差别不可解读为丰度差异，只读 0 / 1 / ≥ 2 三档。
+
+**报告图注现状**："All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers." 未说明上述 1–4 点；已记为 §10 第 11 条，待用户审阅完毕后统一处理。
+
+---
+
+## 9. 一句话总结
 
 先用 P42 回答"有无、范围"，再用 P45 回答"降多少、断在哪、附近有无接头"。两图一致：约 50% 深度下降，起点 114.605–114.606 Mb，位于 42 bp repeat array 内部；两处深度≈0 的凹陷是 AT 富集测序盲区，与处理无关；断点附近只有 1–2 个 +Dox 特异、2–4 fragment 的接头，证据有限且受 repeat 干扰。
 
 ---
 
-## 9. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 10 条暂缓；其余未修改）
+## 10. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 10、11 条暂缓；其余未修改）
 
 | # | 图 | 问题 | 可选修改 |
 | :--- | :---: | :---: | :---: |
@@ -376,12 +420,13 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 | 8 | Fig5_J1592 等 | 分级只看 S01–S10 最大值，未计入背景细胞系（S11–S18）中的出现；J1592 因此与 J0359 同为 Limited，正文无解释 | **◐ 部分处理 2026-10-26**：图上已加"背景细胞系出现"标注（表头第 2 行加粗 NOTE，J1592 显示 S11、S15、S17）；**分级本身未改**（仍只基于 S01–S10）——是否改分级口径待用户决定，见对话 |
 | 9 | Fig5 全部 | read 标签只有样本号，看不出 S11/S15/S17 属于 Mutu I/DG75 | **✅ 已修正 2026-10-26**：17 张 Fig5 的 read 标签均带细胞系与群体/克隆号 |
 | 10 | 报告全文 | 图号按出图脚本顺序而非 Results 出现顺序：§7 中依次为 Figure 1、3、5、0、4、2（Fig0 为 P45 后加的汇总图） | **⏸ 暂缓（user 2026-10-26）**：用户审阅完毕后统一改。候选方案：按 Results 出现顺序重编为 1–6（7.1→1，7.2→2，7.4 汇总→3、碱基视图→4，7.5→5，7.7→6），同步改文件名、正文约 30 处引用、构建脚本 `Fig[0-4]_` 规则、manifest、md5 |
+| 11 | P45 Fig0 | 空白不区分"0 fragment"与 underpowered；背景细胞系 S11–S18 不在图上；表头无细胞系；目标区与侧翼混排、无位置；图注未说明这些 | **⏸ 暂缓（user 2026-10-26）**：审阅完毕后统一处理。候选：underpowered 格子加斜线/灰点；加一列"background S11–S18"；表头分组标 DLD1 / GM12878；行标签加位置与"target/flank"；图注补齐 |
 
 两图均已在交付目录中。任何修改前，须先将现有 PNG/PDF 与脚本快照归档到各自项目的 `superseded_for_comparison/`。
 
 ---
 
-## 10. 核对命令
+## 11. 核对命令
 
 ```bash
 P42=/home/gao/projects_2026Q4/42_Vedita_18_wgs_advanced_analysis
@@ -433,4 +478,15 @@ rc=lambda s:s[::-1].translate(str.maketrans('ACGTN','TGCAN'))
 for l in sys.stdin:
     fr,r,fl,pos,cig,s=l.split(); ro=rc(s) if int(fl)&16 else s
     print(fr,r,fl,pos,cig,'adapter_at',ro.find('AGATCGGAAGAGC'))"
+# §8 Fig0：17 个接头的位置、目标区/侧翼、DLD1/GM12878 比较、背景出现数、underpowered 样本
+python3 - <<'X'
+import csv
+T="/home/gao/projects_2026Q4/45_Vedita_18_wgs_combined_Advanced/analysis/20261025_p45/stage10_tables/"
+for t,tag in (("junction_table_target.tsv","target"),("junction_table_window_context.tsv","flank")):
+    for r in csv.DictReader(open(T+t),delimiter="\t"):
+        if int(r["max_after_frag_S01_S10"])<2: continue
+        up=[f"S{i:02d}" for i in range(1,11) if r.get(f"S{i:02d}_state")=="underpowered"]
+        print(r["junction_id"],tag,r["breakend_A"],r["breakend_B"],r["classification"],"bg:",r["background_S11_S18_samples_present"],
+              r["DLD1_dox_comparison"],r["GM12878_clone_specific"] or "-","underpowered:",",".join(up) or "-")
+X
 ```
