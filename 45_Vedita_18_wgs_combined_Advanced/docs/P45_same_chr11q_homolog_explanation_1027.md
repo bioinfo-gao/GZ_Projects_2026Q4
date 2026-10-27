@@ -50,7 +50,7 @@
 | 两个克隆丢的是**不同**的 homolog | 约 0%（一个处处剩 A，另一个处处剩 B） | — |
 
 - 一致率在两种假设下分别接近 100% 和 0%，不存在居中的结果，所以这项检验没有歧义。
-- 不一致的 18 个位点占 0.22%，与单个位点的分型误差在同一量级，不需要另找解释。
+- 不一致的 18 个位点占 0.22%。它们不影响结论（见 §2.4），但其成因未查明：2026-10-27 补查发现 18 个位点方向完全一致（S04 BAF 均为 0.00，S05 除 1 个为 0.91 外均为 1.00），不像方向随机的分型误差。此前写的「与分型误差同量级、不需另找解释」已收回。
 
 ### 2.3 两次丢失是独立发生的
 
@@ -62,6 +62,28 @@
 | S05 | 114,605,973 / 114,606,349 处的 fold-back inversion，以及 1.2 kb 以远的 chr21 接头 | 第 41、349 行 |
 
 断端结构不同，说明不是同一个祖先细胞里的一次事件被两个克隆共同继承，而是**两次独立断裂，打在了同一条 homolog 上**。
+
+### 2.4 一致性沿整个远端逐段成立（2026-10-27 补算）
+
+如果两个克隆只在部分区段丢的是不同的 homolog（例如其中一个克隆在远端某处发生过有丝分裂重组），平均 99.78% 会掩盖这一段：那一段的一致率会接近 0%。按 2 Mb 分段重算（数据：`baf_sites.tsv.gz`，判据同 §2.2）：
+
+| 区段（Mb） | 两克隆都 LOH 的位点 | 保留同一等位基因 | 一致率 |
+| :--- | :---: | :---: | :---: |
+| 114.7–116.7 | 819 | 819 | 1.0000 |
+| 116.7–118.7 | 602 | 602 | 1.0000 |
+| 118.7–120.7 | 699 | 699 | 1.0000 |
+| 120.7–122.7 | 601 | 599 | 0.9967 |
+| 122.7–124.7 | 800 | 799 | 0.9988 |
+| 124.7–126.7 | 894 | 892 | 0.9978 |
+| 126.7–128.7 | 674 | 667 | 0.9896 |
+| 128.7–130.7 | 665 | 664 | 0.9985 |
+| 130.7–132.7 | 1,039 | 1,035 | 0.9962 |
+| 132.7–134.7 | 988 | 987 | 0.9990 |
+| 134.7–135.0 | 223 | 223 | 1.0000 |
+
+- 11 段全部 ≥ 98.96%，没有任何一段接近 0%：从断崖到 11q 末端，两个克隆剩下的都是同一条。
+- 18 个不一致位点散布在 120.93–134.43 Mb，最密的 126.7–128.7 Mb 段有 7 个（674 个位点中），不构成一段连续的相反等位基因。
+- 18 个位点方向全部相同（S04 保留 ref、S05 保留 alt），成因未查（可能是位点级比对偏差，也可能是某一克隆的点突变，未核实）；无论哪种，都不改变「同一条 homolog」的结论。
 
 ## 3. 能说什么、不能说什么
 
@@ -94,7 +116,7 @@
 | 第 69 行 Key Finding 4 | **Both +Dox clones lost the same one of the two chr11 homologs distal of 114.6 Mb.** Evidence column: "At 7,986 of 8,004 sites (99.78%) that became homozygous in both clones, the two clones retained the same allele; had they lost different homologs, they would retain opposite alleles at nearly every site. The two losses have different broken ends and are therefore independent events. Whether this homolog is maternal or paternal cannot be determined without parental genotypes; with two independent clones, the same homolog is expected by chance in half of cases. Section 7.7." |
 | 第 40 行（S04） | 把 "the distal chr11q copy that is lost is one complete homolog" 改为 "distal of the break, one of the two chr11 homologs is lost to the end of 11q" |
 | 第 41 行（S05） | 把 "The same distal homolog is lost as in S04" 改为 "Distal of the step, the same homolog is lost as in S04 (Section 7.7)" |
-| 第 281 行（第 7.7 节） | 在 "...the same allele retained at 99.78%)" 后加："If the two clones had lost different homologs, they would retain opposite alleles at almost every one of these sites, so agreement near 100% identifies the same homolog; the 18 discordant sites (0.22%) are within the genotyping error expected per site. Which parent this homolog came from is not known. The comparison covers the distal segment only; on which homolog the graded proximal imbalance of S05 lies was not tested." |
+| 第 281 行（第 7.7 节） | 在 "...the same allele retained at 99.78%)" 后加："If the two clones had lost different homologs, they would retain opposite alleles at almost every one of these sites, so agreement near 100% identifies the same homolog; the agreement holds along the whole segment (≥ 98.96% in each of eleven 2 Mb windows from the step to the end of 11q), so no part of the distal arm was lost from different homologs in the two clones; the 18 discordant sites (0.22%) are scattered single sites, not a contiguous segment. Which parent this homolog came from is not known. The comparison covers the distal segment only; on which homolog the graded proximal imbalance of S05 lies was not tested." |
 | 第 348、349、358 行 | 不改 |
 | 第 381 行（Next Steps） | 在问题后加："With two clones, the same homolog is expected by chance in half of cases; a preference would require more independent clones (for example, all of six clones on the same homolog has a probability of about 3% by chance)." |
 
