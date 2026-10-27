@@ -53,7 +53,8 @@ SEG = {"target": "#80B1D3", "repeat_array": "#FDB462", "segdup": "#B3DE69", "at_
 CLASS_FILL = {"Well_supported": "#BC80BD", "Limited": "#FB8072", "Ambiguous_repeat": "#BEBADA",
               "Weak": "#CCEBC5", "Not_supported": "#FCCDE5"}                           # classification areas
 STROKE = {"S04": "#8E0152", "S05": "#0000CD", "base": "#8B4500", "line": "#000000", "ci": "#003C30",
-          "S01": "#4D4D4D", "at_hatch": "#595959"}                                       # 1026: S01 line, AT-rich hatch
+          "S01": "#4D4D4D", "at_hatch": "#595959",                                       # 1026: S01 line, AT-rich hatch
+          "S02": "#B35806", "S03": "#1B7837"}                     # 1026: each no-Dox clone gets its own colour
 assert_no_palette_collision({"Fig1a annotation": list(SEG.values()), "Fig4 classes": list(CLASS_FILL.values())})
 assert_fill_not_near_black(list(SEG.values()) + list(CLASS_FILL.values()))
 assert_visible_on_white(list(STROKE.values()), role="line")
@@ -129,9 +130,9 @@ for s, col, lab in (("S04_DLD1_c3_dox", STROKE["S04"], "S04 (+Dox clone 3)"),
     a1.axvspan(int(b["ci95_lo"]), int(b["ci95_hi"]) + 200, color=col, alpha=0.15, lw=0)
 y = np.array([float(d["S01_DLD1_pop"]) for d in bins]) / np.where(base > 0.05, base, np.nan)   # 1026: S01 drawn too
 a1.plot(xs, y, color=STROKE["S01"], lw=0.9, ls="--", alpha=0.8, label="S01 (no-Dox population)")
-for s in ("S02_DLD1_c1_ctrl", "S03_DLD1_c2_ctrl"):
+for s, lab in (("S02_DLD1_c1_ctrl", "S02 (no-Dox clone 1)"), ("S03_DLD1_c2_ctrl", "S03 (no-Dox clone 2)")):
     y = np.array([float(d[s]) for d in bins]) / np.where(base > 0.05, base, np.nan)
-    a1.plot(xs, y, color=STROKE["base"], lw=0.8, alpha=0.7, label="S02, S03 (no-Dox clones)" if s.startswith("S02") else None)
+    a1.plot(xs, y, color=STROKE[s[:3]], lw=0.9, alpha=0.8, label=lab)
 a1.axhline(1, color="black", lw=0.6, ls=":")
 a1.axhline(0.5, color="black", lw=0.6, ls=":")
 a1.set_ylim(0, 2.2)
