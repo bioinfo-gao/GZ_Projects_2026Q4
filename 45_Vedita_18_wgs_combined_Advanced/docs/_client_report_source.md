@@ -118,13 +118,15 @@ S11–S18 (Mutu I and DG75) were processed identically and used only to flag jun
 
 **Claim level (what may be concluded from the evidence).** The evidence class describes the reads; the claim level describes what a reader may conclude. It adds one test that uses information independent of the junction reads themselves, the copy-number step and the B-allele fraction (BAF), but still from the same sequencing data.
 
+**Coherence with the copy-number step.** A junction is called *coherent* in a sample when two tests, both computed in that sample, are met: (1) *position*: one of its chr11 breakpoint intervals overlaps the 95% confidence interval of that sample's depth step; and (2) *loss*: at least 90% of the sites heterozygous in all of S01–S03 are homozygous in that sample distal of the step (114.7–135.0 Mb), i.e. one copy of distal 11q is really lost. Test (2) is needed because a sample without a step has a confidence interval spanning the whole window, so test (1) alone would be met by any junction. Coherence uses only the chr11 end of the junction; it says that the junction lies where one copy is lost, not that it is the only structure there, and it is not independent confirmation, because the junction reads, the depth and the allele fractions all come from the same sequencing run. The tests were applied to every junction with two or more fragments in a sample (`tables/structural_coherence_tests.tsv`).
+
 | Claim level | Condition | Wording used in this report |
 | :--- | :---: | :---: |
 | Mapping observation | ≤ 1 fragment | not interpreted |
-| Repeat-ambiguous junction | Ambiguous (repeat), except when only the partner end is ambiguous and the event is coherent (next rows) | junction-like evidence with ambiguous placement |
+| Repeat-ambiguous junction | Ambiguous (repeat). Exception: if only the partner end is ambiguous and the chr11 end is unique, the junction can still be coherent (definition above) and is then classed in the last-but-one row | junction-like evidence with ambiguous placement |
 | Limited junction candidate | Limited, not coherent | limited junction candidate |
 | Well-supported junction candidate | Well supported, not coherent | well-supported junction candidate |
-| Limited, coherent with the copy-number step | Limited, Well supported, or Ambiguous only at the partner end; and, in a sample with ≥ 2 fragments, (1) a chr11 breakpoint interval lies inside that sample's depth-step 95% CI and (2) ≥ 90% of baseline-heterozygous sites distal of the step are homozygous in that sample | limited short-read evidence coherent with the local copy-number pattern |
+| Limited, coherent with the copy-number step | Limited, Well supported, or Ambiguous only at the partner end; and coherent with the copy-number step in a sample with ≥ 2 fragments (both tests of the definition above) | limited short-read evidence coherent with the local copy-number pattern |
 | Confirmed | any of the above plus an independent assay (PCR or FISH, fluorescence in situ hybridisation) | confirmed |
 
 No independent assay result was available, so no junction can be "confirmed"; this is a statement about the inputs, not a negative result (`tables/external_input_status.tsv`).
@@ -364,7 +366,7 @@ For the other 15 junctions, including the S05 fold-back, every candidate pair ha
 ### 8.3 Limitations
 
 * **Partner of the S04 junction.** The reads contain only (TTAGGG)n beyond the junction. They cannot distinguish new telomere added at the break from a join to the telomere of another chromosome end. In every supporting read the sequence beyond the junction is telomeric repeat up to the end of the read or of the DNA fragment.
-* **Support level.** The three +Dox junctions rest on 2–4 independent fragments each in one sample (about 10–15 fragments cover each position). None reached the "Well supported" class, and re-aligning the same sequencing data, however carefully, is not an independent biological test; the copy-number and BAF coherence of Section 5 comes from the same sequencing run. PCR across each junction is the direct confirmation (Section 8.4).
+* **Support level.** The three +Dox junctions rest on 2–4 independent fragments each in one sample (about 10–15 fragments cover each position). None reached the "Well supported" class, and re-aligning the same sequencing data, however carefully, is not an independent biological test; the coherence tests of Section 5 (depth step and allele fractions) comes from the same sequencing run. PCR across each junction is the direct confirmation (Section 8.4).
 * **Detection limit.** With 10–28 fragments spanning a position, a junction carried by a fraction 0.25 of the spanning DNA fragments yields ≥ 3 supporting fragments with probability about 0.5–0.97, and one at 0.10 with probability about 0.1–0.5 (per-sample values: `tables/junction_by_sample_long.tsv`). Junctions in a minority of cells may be missed; "absent" means "not found above roughly this level".
 * **Repeat array.** Within the 42 bp-unit array, a rearrangement that joins two near-identical copies (an expansion or contraction of the array) produces a sequence identical to the reference and cannot be seen at the junction level; such events would show only as a depth change.
 * **Window.** Junctions are examined when at least one end lies within the target ± 50 kb; events with both ends farther away are covered only by the genome-wide comparison of Section 7.9, which relies on caller output without read rescue.
@@ -394,7 +396,7 @@ All paths are relative to this delivery folder. This report is the entry point.
 | `tables/junction_table_window_context.tsv` | Same columns for junctions with ends only in the ± 50 kb flanks |
 | `tables/junction_by_sample_long.tsv` | Every junction × all 18 samples (S11–S18 marked as background panel): counts, allele fraction, detection probabilities |
 | `tables/caller_concordance_by_sample.tsv` | Every junction × sample × call set (Manta, DELLY, GRIDSS, SvABA): match class, smallest two-end distance, record IDs |
-| `tables/structural_coherence_tests.tsv` | For every junction with ≥ 2 fragments in a sample: the depth-step interval, the breakpoint intervals inside it, and the loss-of-heterozygosity fraction (the two tests of Section 5) |
+| `tables/structural_coherence_tests.tsv` | For every junction with ≥ 2 fragments in a sample: the depth-step interval, the breakpoint intervals inside it, and the loss-of-heterozygosity fraction (the two tests of Section 5); column `coherent` is 1 when `criterion1_in_step_ci` and `criterion2_LOH_ge_0.90` are both 1 |
 | `tables/key_junction_read_evidence.tsv` | For every junction with ≥ 2 fragments: every supporting read and all of its original alignment records (flag, position, CIGAR string — the per-base alignment description, MAPQ, SA/XA tags, duplicate flag, alignment scores, strand, query interval, read sequence, fragment ID, and the segment overlap or gap of the read end) |
 | `tables/rescue_source_summary.tsv` | Rescued read pairs per sample by source; completeness |
 | `tables/evidence_filter_impact.tsv` | Count of every evidence item removed and the reason |
