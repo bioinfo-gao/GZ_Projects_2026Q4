@@ -1,6 +1,6 @@
-443546dde0f653f27249e41985b4bd33  ./Chr11_Locus_and_DLD1_Clone_Analysis_Report_1025.md
-79148188a36536635c25d594634e597f  ./figures/Fig0_key_events_summary.pdf
-e2722c4305b2df1b9bc69181ea9c158e  ./figures/Fig0_key_events_summary.png
+bf73284f56e7b9a51535f9573c5df92e  ./Chr11_Locus_and_DLD1_Clone_Analysis_Report_1025.md
+c7d17916639a07d0f15f17c73f4631f4  ./figures/Fig0_key_events_summary.pdf
+f89088c5618783807c04c197f7eab2f7  ./figures/Fig0_key_events_summary.png
 0a299c39d76a4f8b13c68b4d4f9e0a31  ./figures/Fig1_locus_overview.pdf
 02c0e1a58dad83d24d4450cdaa0706b2  ./figures/Fig1_locus_overview.png
 6016c0eda14cf2256d73b3ac7a198438  ./figures/Fig2_chr11_BAF.pdf
@@ -9,7 +9,7 @@ ed8ff79c8da9cb12542fd2ecda9cd194  ./figures/Fig3_rescue_sources.pdf
 babeba34ebf84e4331df79e51b51c815  ./figures/Fig3_rescue_sources.png
 27a0297cf11f8b67389cb3774a6a3f52  ./figures/Fig4_before_after_and_classes.pdf
 cba22782b1f3af2d66546b22232bcf5f  ./figures/Fig4_before_after_and_classes.png
-1404056e31dc19c1dfbeb5ae0425c488  ./figures/figure_manifest.json
+d56f7aeab7afbb81f2161bdae8946d4a  ./figures/figure_manifest.json
 b1b2f519c13342ed0013b4844333e97d  ./figures/junction_views/Fig5_J0359.pdf
 236531ec13ce73af66fd399e8cf27bef  ./figures/junction_views/Fig5_J0359.png
 e4807d4770fc5325ae5a854002301276  ./figures/junction_views/Fig5_J0533.pdf

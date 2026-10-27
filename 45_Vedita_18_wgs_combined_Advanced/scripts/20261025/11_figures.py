@@ -4,7 +4,8 @@
     "AMBIGUOUS PARTNER" is printed in the panel; each read row is labelled sample / fragment ID / read end, so the
     grouping of read ends into fragments is visible without IGV;
   * Fig0 (new): narrow client-summary panel of every event with >= 2 fragments (fragments per sample, evidence class,
-    claim level, callers), checked with assert_no_text_collisions after rendering;
+    claim level, callers), checked with assert_no_text_collisions after rendering; 1026: rows grouped A-E by pattern,
+    two-level DLD1/GM12878 header, underpowered cells hatched, background (S11-S18) column, position + T/F in labels;
   * figure_manifest.json lists every figure file with its pixel size.
 Original P44 description:
 
@@ -387,30 +388,83 @@ CLAIM_TXT = {"structurally_coherent_limited_candidate": "limited, coherent with 
              "well_supported_junction_candidate": "well-supported junction candidate",
              "repeat_ambiguous_junction": "ambiguous (repeat placement)"}
 key = [e for e in events_all if int(e["max_after_frag_S01_S10"]) >= 2]
-key.sort(key=lambda e: (e["claim_level"] != "structurally_coherent_limited_candidate", e["cid"]))
+# 1026: rows grouped by their pattern across samples (rule-based on existing table fields, no new analysis):
+# A +Dox-specific, B DLD1 no-Dox clone only, C GM12878 line-wide (S06 present), D single GM12878 clone, E shared.
+GROUPS = [("A", "A  +Dox-specific: present in S04 or S05, absent from S01-S03"),
+          ("B", "B  DLD1 no-Dox clone only"),
+          ("C", "C  GM12878 line-wide: present in the GM12878 population (S06), absent from DLD1"),
+          ("D", "D  single GM12878 clone: absent from S06 and from DLD1"),
+          ("E", "E  shared across cell lines: present in the DLD1 baseline and in other cell lines")]
+TARGET_IDS = {e["cid"] for e in events}
+
+
+def fig0_group(e):
+    d = e["DLD1_dox_comparison"]
+    if d.startswith("case_specific"):
+        return "A"
+    if d == "baseline_only":
+        return "B"
+    if d == "shared_with_baseline":
+        assert ";" in e["cell_lines_present"], (e["cid"], e["cell_lines_present"])   # E really spans >= 2 lines
+        return "E"
+    assert d == "not_present", (e["cid"], d)
+    return "C" if int(e["S06_after"] or 0) > 0 else "D"
+
+
 CELL = {0: "#FFFFFF", 1: "#CCEBC5", 2: "#FDB462"}                 # 0 / 1 / >= 2 fragments (areas)
 assert_fill_not_near_black(list(CELL.values())[1:])
-fig, axx = plt.subplots(figsize=(11, 1.4 + 0.55 * len(key)))
-for i, e in enumerate(key):
+rows = []
+for g, title in GROUPS:
+    members = sorted((e for e in key if fig0_group(e) == g),
+                     key=lambda e: (e["cid"] not in TARGET_IDS, w_side(e)[1]))
+    if members:
+        rows.append(("hdr", title))
+        rows += [("ev", e) for e in members]
+assert sum(1 for r in rows if r[0] == "ev") == len(key)
+BGX = len(REP) + 0.3                                              # background column x
+fig, axx = plt.subplots(figsize=(14, 2.4 + 0.5 * len(rows)))
+y, n_cells = 0.0, 0
+for kind, obj in rows:
+    if kind == "hdr":
+        y -= 0.25
+        axx.text(-5.6, y, obj, ha="left", va="center", fontsize=10, fontweight="bold")
+        y -= 0.85
+        continue
+    e = obj
     for k, s in enumerate(REP):
         v = int(e.get(f"{SH[s]}_after", 0) or 0)
-        axx.add_patch(plt.Rectangle((k, -i - 0.5), 1, 1, facecolor=CELL[min(v, 2)], edgecolor="#999999", lw=0.5))
+        under = v == 0 and e.get(f"{SH[s]}_state") == "underpowered"
+        axx.add_patch(plt.Rectangle((k, y - 0.5), 1, 1, facecolor=CELL[min(v, 2)], edgecolor="#999999", lw=0.5,
+                                    hatch="////" if under else None))
+        n_cells += 1
         if v:
-            axx.text(k + 0.5, -i, str(v), ha="center", va="center", fontsize=10)
-    lab = f"{e['cid']} {e['type']}"
-    axx.text(-0.2, -i, lab, ha="right", va="center", fontsize=10)
-    axx.text(len(REP) + 0.2, -i, f"{CLAIM_TXT.get(e['claim_level'], e['claim_level'])}; callers: {e['caller_support']}",
+            axx.text(k + 0.5, y, str(v), ha="center", va="center", fontsize=10)
+    axx.plot([5, 5], [y - 0.5, y + 0.5], color="black", lw=1.2)     # separator drawn per cell row, so it never crosses a group title
+    axx.text(BGX + 0.5, y, e["background_S11_S18_samples_present"] or "0", ha="center", va="center", fontsize=10)
+    lab = f"{e['cid']} {e['type']}  {w_side(e)[1]:,}  {'T' if e['cid'] in TARGET_IDS else 'F'}"
+    axx.text(-0.2, y, lab, ha="right", va="center", fontsize=10)
+    axx.text(BGX + 1.3, y, f"{CLAIM_TXT.get(e['claim_level'], e['claim_level'])}; callers: {e['caller_support']}",
              ha="left", va="center", fontsize=9)
-for k, s in enumerate(REP):
-    axx.text(k + 0.5, 0.75, SH[s], ha="center", va="bottom", fontsize=10)
-axx.set_xlim(-3.2, len(REP) + 8.5)
-axx.set_ylim(-len(key) + 0.3, 1.4)
+    y -= 1.0
+y_end = y + 0.5
+for k, s in enumerate(REP):                                       # two-level header: cell line / sample + unit
+    r_ = ALL18[s]
+    unit = "pop" if r_["role"] == "population" else f"c{r_['clone_no']}"
+    axx.text(k + 0.5, 0.75, f"{SH[s]}\n{unit}" + ("\n+Dox" if r_["dox"] == "yes" else ""), ha="center", va="bottom", fontsize=9)
+axx.text(2.5, 1.85, "DLD1", ha="center", va="bottom", fontsize=11, fontweight="bold")
+axx.text(7.5, 1.85, "GM12878", ha="center", va="bottom", fontsize=11, fontweight="bold")
+axx.text(BGX + 0.5, 0.75, "S11-S18\n(bg)", ha="center", va="bottom", fontsize=9)
+axx.plot([5, 5], [0.7, 1.8], color="black", lw=1.2)                  # DLD1 | GM12878 separator (header part)
+axx.set_xlim(-5.6, BGX + 9.0)
+axx.set_ylim(y_end - 2.2, 2.5)
 axx.axis("off")
-axx.text(-3.2, -len(key) - 0.2, "cell = independent fragments supporting the junction after read rescue "
-         "(orange >= 2, green 1, blank 0)", fontsize=9, va="top")
+axx.text(-5.6, y_end - 0.4, "cell = independent fragments supporting the junction after read rescue (orange >= 2, green 1, "
+         "blank 0); hatched = 0 supporting fragments but < 10 reference fragments (absence not established)", fontsize=9, va="top")
+axx.text(-5.6, y_end - 1.1, "S11-S18 (bg) = number of background samples (Mutu I, DG75) with supporting reads; not used for the class. "
+         "T = target region, F = +/- 50 kb flank; position = chr11 breakend", fontsize=9, va="top")
 finalize_figure(fig, f"{OUT}/Fig0_key_events_summary", formats=["png", "pdf"], dpi=300)
 assert_no_text_collisions(fig)
-assert sum(1 for p_ in axx.patches) == len(key) * len(REP)
+assert n_cells == len(key) * len(REP)
 
 # ================================================================ P45 figure manifest
 import json

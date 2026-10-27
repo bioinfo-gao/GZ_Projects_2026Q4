@@ -226,7 +226,7 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 ![图 0 —— 全部有两个或以上 fragment 的 junction](../custom_research_report_20261025/figures/Fig0_key_events_summary.png)
 
-*图 0。窗口内在某个报告样本中有两个或以上 fragment 的全部 17 个 junction：rescue 后每个样本的 fragment 数、claim level 与支持的 caller。*
+*图 0。窗口（目标区 ± 50 kb）内在某个报告样本（S01–S10）中有两个或以上 fragment 的全部 17 个 junction，按其在各样本中的分布形态分组：A，+Dox 特异（S04 或 S05 中有、S01–S03 中无）；B，仅见于 DLD1 无 Dox 克隆；C，GM12878 整系共有（GM12878 群体 S06 中有、DLD1 中无）；D，仅见于单个 GM12878 克隆；E，DLD1 基线与其他细胞系中均有。每组内先列目标区 junction（T），再列侧翼 junction（F），按 chr11 坐标排序。格子为 rescue 后每个样本的独立 fragment 数；斜线格表示没有支持 fragment、但参考 fragment 少于 10 个，因此不能确认其不存在。S11–S18 列为有支持 read 的背景样本（Mutu I、DG75）数，这些样本不参与分级。右侧：claim level 与支持的 caller。*
 
 ### 7.5 全部目标区 junction：rescue 前后与 caller concordance
 

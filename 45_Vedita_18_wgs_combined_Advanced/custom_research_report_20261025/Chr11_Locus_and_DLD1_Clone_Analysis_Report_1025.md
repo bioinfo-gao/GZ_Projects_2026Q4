@@ -223,7 +223,7 @@ Positions are given as the range within which the junction can slide over identi
 
 ![Figure 0 — every junction with two or more fragments](figures/Fig0_key_events_summary.png)
 
-*Figure 0. All 17 junctions in the window with two or more fragments in a reported sample: fragments per sample after rescue, claim level and supporting callers.*
+*Figure 0. All 17 junctions in the window (target region ± 50 kb) with two or more fragments in a reported sample (S01–S10), grouped by their pattern across samples: A, +Dox-specific (present in S04 or S05, absent from S01–S03); B, DLD1 no-Dox clone only; C, GM12878 line-wide (present in the GM12878 population S06, absent from DLD1); D, a single GM12878 clone; E, present in the DLD1 baseline and in other cell lines. Within each group, target-region junctions (T) come first, then flank junctions (F), by chr11 position. Cells give independent fragments per sample after rescue; hatched cells have no supporting fragment but fewer than 10 reference fragments, so absence is not established there. The S11–S18 column counts the background samples (Mutu I, DG75) with supporting reads; these samples do not enter the class. Right: claim level and supporting callers.*
 
 ### 7.5 All target-region junctions, before and after rescue, and caller concordance
 
