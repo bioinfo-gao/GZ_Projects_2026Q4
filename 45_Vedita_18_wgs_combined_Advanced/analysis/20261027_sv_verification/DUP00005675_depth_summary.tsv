@@ -1,0 +1,9 @@
+sample	flank_median_depth	inside_median_depth	inside_over_flank	vs_mean_S01_S03	n_inside_bins
+S01_DLD1_pop	26.2	28.4	1.082	1.001	12
+S02_DLD1_c1_ctrl	23.8	25.3	1.062	0.982	12
+S03_DLD1_c2_ctrl	26.6	29.2	1.099	1.016	12
+S04_DLD1_c3_dox	27.4	43.3	1.576	1.458	12
+S05_DLD1_c4_dox	32.8	35.8	1.090	1.009	12
+S06_GM12878_pop	20.3	20.8	1.023	0.946	12
+S11_MutuI_pop	21.1	21.9	1.036	0.959	12
+S15_DG75_pop	32.8	32.6	0.994	0.920	12

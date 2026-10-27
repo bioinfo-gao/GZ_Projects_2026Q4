@@ -1,0 +1,11 @@
+sample	breakend	position	split_fragments_to_other_breakend	of_which_contain_adapter	reference_spanning_fragments_MAPQ20
+S01_DLD1_pop	A	156284229	0	0	10
+S01_DLD1_pop	B	157172208	0	0	5
+S02_DLD1_c1_ctrl	A	156284229	0	0	8
+S02_DLD1_c1_ctrl	B	157172208	0	0	14
+S03_DLD1_c2_ctrl	A	156284229	0	0	7
+S03_DLD1_c2_ctrl	B	157172208	0	0	11
+S04_DLD1_c3_dox	A	156284229	0	0	5
+S04_DLD1_c3_dox	B	157172208	0	0	10
+S05_DLD1_c4_dox	A	156284229	8	4	3
+S05_DLD1_c4_dox	B	157172208	8	4	12
