@@ -33,7 +33,7 @@ from pubfig import (FigureStyle, apply_publication_style, finalize_figure, asser
 
 BASE = L.P44R2                                     # P45: inherited stage 6 products
 T10 = f"{L.OUT}/stage10_tables"                    # P45 tables (client IDs)
-OUT = f"{L.OUT}/stage11_figures"
+OUT = os.environ.get("P45_FIG_OUT", f"{L.OUT}/stage11_figures")   # 1026: override = rerun into a new dir
 os.makedirs(f"{OUT}/junctions", exist_ok=True)
 SUP = L.SUP
 REP = [r["sample_id"] for r in L.samples(reported_only=True)]
@@ -324,9 +324,10 @@ for e in events_all:
     axx.text(0, 1.6, f"{e['cid']}  {e['type']}  A={A_}  B={B_lab}  class={e['classification'].replace('_', ' ')}  "
              f"microhomology={e['microhomology_seq'] or '-'}  inserted={e['inserted_seq'] or '-'}",
              fontsize=9, va="center")
-    alt_n = e["n_alternative_representations"]
-    partner = (f"AMBIGUOUS PARTNER: B-side sequence ({e['seqclass_flank_B']}) has {alt_n} equivalent placements; "
-               "the coordinate shown is one of them" if amb else
+    alt_n = int(e["n_alternative_representations"])   # alternatives besides the one shown (1026 wording fix)
+    partner = (f"AMBIGUOUS PARTNER: B-side sequence ({e['seqclass_flank_B']}) has {alt_n} alternative "
+               f"placement{'s' if alt_n != 1 else ''} besides the coordinate shown ({alt_n + 1} equivalent in total)"
+               if amb else
                f"B-side sequence class: {e['seqclass_flank_B']}; B placement unique")
     axx.text(0, 0.9, "wine = A side, dark teal = microhomology/inserted bases, blue = B side; dashed line = junction; "
              "'.' = read base identical to the junction sequence; " + partner, fontsize=8, va="center")
