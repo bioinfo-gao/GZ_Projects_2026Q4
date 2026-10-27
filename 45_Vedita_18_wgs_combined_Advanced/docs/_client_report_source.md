@@ -73,7 +73,7 @@ This section states, for each sample group, what the result means for you. Secti
 | **6** | **A widespread sequencing artefact explains a large class of earlier candidates.** | |
 | 6a | Reads from short DNA fragments run into the adapter and a poly-G tail; the tail aligns to a poly-G tract at chr2:32,916,3xx. This accounts for 693 of the 1,181 earlier target-region candidates. | Section 7.3 |
 | **7** | **Genome-wide DLD1 comparison.** | |
-| 7a | Of 12,953 DELLY events re-genotyped in S01–S05, 13 are +Dox-specific (8 in S04, 5 in S05) and none is shared by both clones; the largest are an 888 kb deletion on chr4 in S05 and a 327 kb duplication on chr8 in S04. The chr11q loss itself produces no caller event. | Section 7.9 |
+| 7a | Of 12,953 DELLY events re-genotyped in S01–S05, 13 are +Dox-specific (8 in S04, 5 in S05) and none is shared by both clones; the largest copy-number change is a 327 kb single-copy gain on chr8 in S04, confirmed by read depth and allele balance. The chr4 event in S05 called as an 888 kb deletion is a rearrangement junction; the 888 kb interval is not lost. The chr11q loss itself produces no caller event. | Section 7.9 |
 
 ---
 
@@ -306,8 +306,8 @@ Most events are shared with the baseline because they are germline structural va
 
 | Event | Type | Position (GRCh38) | Size | Clone | Variant / reference reads | Allele fraction | DELLY somatic filter | Also called by Manta | Gene at a breakend |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| DEL00003167 | deletion | chr4:156,284,227–157,172,208 | 888 kb | S05 | 22 / 16 | 0.58 | PASS | yes | — |
-| DUP00005675 | duplication | chr8:46,747,734–47,074,827 | 327 kb | S04 | 8 / 27 | 0.23 | not passed | yes | — |
+| DEL00003167 | rearrangement junction (deletion-type orientation); no copy loss of the 888 kb interval; ~3.4 kb gain at chr4:157,172,208–~157,175,500 | chr4:156,284,227–157,172,208 | 888 kb between breakends | S05 | 22 / 16 | 0.58 | PASS | yes | — |
+| DUP00005675 | duplication (read depth 1.46× and allele ratio 1:2 in S04) | chr8:46,747,734–47,074,827 | 327 kb | S04 | 8 / 27 | 0.23 | not passed | yes | — |
 | INV00010675 | inversion | chr18:22,608,248–22,663,024 | 55 kb | S04 | 15 / 23 | 0.39 | not passed | yes | — |
 | INV00004547 | inversion | chr6:115,967,399–115,967,894 | 495 bp | S04 | 14 / 34 | 0.29 | PASS | no | FRK |
 | INV00003974 | inversion | chr5:151,020,586–151,020,672 | 86 bp | S04 | 11 / 14 | 0.44 | not passed | no | GPX3 (one end) |
@@ -320,7 +320,7 @@ Most events are shared with the baseline because they are germline structural va
 | DEL00004257 | deletion | chr6:33,234,198–33,234,229 | 31 bp | S05 | 15 / 9 | 0.63 | PASS | yes | — |
 | DEL00004287 | deletion | chr6:40,563,333–40,563,359 | 26 bp | S04 | 19 / 7 | 0.73 | PASS | yes | LRFN2 |
 
-Read counts are DELLY's (variant pairs plus junction reads; Section 5). In every listed event each of S01–S03 has 0 variant reads and at least 11 reference reads. Allele fractions near 0.5 are what a heterozygous event in a clonal population gives; the two inversions at 0.10 and 0.16 rest on 4–5 variant reads and are the weakest entries. The 9 underpowered events (7 in S04, 2 in S05) have no variant read in S01–S03, but at least one baseline sample has fewer than 10 reference reads. DELLY's own somatic filter passes 7 events in total; 5 of them are among the 13. None of the 13 events is present in both +Dox clones, and none lies on chr11: the chr11q loss and its junctions (Sections 7.4–7.7) are not represented in the caller output, which is why the locus was analysed with read rescue. These genome-wide events were not read-rescued or curated individually; they are candidates for inspection in the whole-genome BAM files and for PCR.
+Read counts are DELLY's (variant pairs plus junction reads; Section 5). In every listed event each of S01–S03 has 0 variant reads and at least 11 reference reads. Allele fractions near 0.5 are what a heterozygous event in a clonal population gives; the two inversions at 0.10 and 0.16 rest on 4–5 variant reads and are the weakest entries. The 9 underpowered events (7 in S04, 2 in S05) have no variant read in S01–S03, but at least one baseline sample has fewer than 10 reference reads. DELLY's own somatic filter passes 7 events in total; 5 of them are among the 13. None of the 13 events is present in both +Dox clones, and none lies on chr11: the chr11q loss and its junctions (Sections 7.4–7.7) are not represented in the caller output, which is why the locus was analysed with read rescue. The two largest events were checked against read depth (MAPQ ≥ 20, each sample normalised to its own flanks and then to the mean of S01–S03) and against the allele fractions of SNPs heterozygous in S01–S03. The chr8 duplication is confirmed: depth in S04 is 1.46× across the whole interval, with the step at both breakends, and heterozygous SNPs inside it move from 1:1 to 1:2, as a single-copy gain in a clonal population gives. The chr4 event is not a deletion: depth over the 888 kb interval in S05 is 1.04× and all 358 heterozygous SNPs inside it remain heterozygous. Its junction is real (8 independent fragments in S05, none in S01–S04), and depth rises about 1.5× over the ~3.4 kb immediately beyond chr4:157,172,208; the other end of this segment lies in a LINE-1 (long interspersed nuclear element 1) repeat and could not be placed with short reads. The type column of the delivered table keeps DELLY's original call. The other 11 events were not read-rescued or curated individually; they are candidates for inspection in the whole-genome BAM files and for PCR.
 
 ### 7.10 Genome-wide SNV and indel calls
 
