@@ -11,7 +11,7 @@
 | 4 | "一致性（coherent with the copy-number step）"的定义与改写（§5 新增定义段，第 124、127、367、397 行） | 用户已同意（2026-10-27），已写入报告源文件 | `docs/P45_coherence_definition_explanation_1027.md` |
 | 5 | 下一版中文版：复制成新日期文件后再改，1025、1026 中文版不动；同步第 1、3、4 项 | 构建时做 | — |
 | 6 | 图 1 图注下层 panel 加注释：底部 y = 1 的密集 Weak 点是各样本共有的本底，可作对照 | 待审阅（措辞见下） | `custom_research_report_20261026/tables/junction_table_target.tsv`；`scripts/20261025/11_figures.py` 第 143–159 行 |
-| 7 | S04 与 S02、S03、S05 来自不同 DLD1 亚谱系：S04 的 +Dox-specific 事件不能排除早于 Dox 处理；处理方式 A/B/C 待定 | 待用户决定 | `docs/P45_DLD1_lineage_S04_vs_S02_S03_S05_1027.md` |
+| 7 | S04 与 S02、S03、S05 来自不同 DLD1 亚谱系：S04 的 +Dox-specific 事件不能排除早于 Dox 处理；用户选 A（2026-10-27） | 已写入报告源文件 §8.3（新增 Sub-lineages within DLD1 一条）；同时把 Genome-wide comparison 一条改为 "apart from the two largest"，与第 1 项一致 | `docs/P45_DLD1_lineage_S04_vs_S02_S03_S05_1027.md` |
 
 ## 第 6 项：图 1 下层 panel 注释
 
