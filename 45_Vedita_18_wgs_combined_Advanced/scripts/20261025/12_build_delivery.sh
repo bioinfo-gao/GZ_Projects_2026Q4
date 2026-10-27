@@ -17,7 +17,7 @@ if [[ -e $DELIV ]]; then
   mkdir -p "$PROJ/superseded_for_comparison/delivery_prebuilds"
   mv "$DELIV" "$PROJ/superseded_for_comparison/delivery_prebuilds/$(basename "$DELIV")_moved_$(date +%Y%m%d_%H%M%S)"
 fi
-mkdir -p "$DELIV"/{methods,figures/junction_views,tables,sequences,locus_BAM,supporting_analyses/{depth_boundary,chr11_BAF}} \
+mkdir -p "$DELIV"/{methods,figures/junction_views,tables,sequences,locus_BAM,supporting_analyses/{depth_boundary,chr11_BAF,SV_verification,DLD1_sub_lineage}} \
          "$DELIV"/{genome_wide_SV_VCF/locus_GRIDSS_SvABA,genome_wide_SNV_indel_VCF,genome_wide_DLD1_comparison}
 T=$OUT/stage10_tables; F=$OUT/stage11_figures; R2=$INH/P44_r2; S9=$INH/P44_r1_stage9_supporting
 G1=$OUT/G1_snv_indel; G2=$OUT/G2_dld1_genome_wide; X=$INH/P42/external_callers
@@ -56,6 +56,9 @@ for s in $(samples_reported); do
 done
 cp "$S9"/depth_boundary/{boundary_estimates.tsv,depth_bins_200bp.tsv} "$DELIV/supporting_analyses/depth_boundary/"
 cp "$S9"/chr11_baf/{baf_segments.tsv,retained_homolog_S04_vs_S05.tsv,baf_sites.tsv.gz} "$DELIV/supporting_analyses/chr11_BAF/"
+# 2026-10-27 checks cited in Sections 7.7, 7.9 and 8.3 (scripts/20261027/15_*, 16_*)
+cp "$PROJ"/analysis/20261027_sv_verification/*.tsv "$DELIV/supporting_analyses/SV_verification/"
+cp "$PROJ"/analysis/20261027_dld1_lineage/*.tsv "$DELIV/supporting_analyses/DLD1_sub_lineage/"
 cp -r "$S9"/vcf_package/{manta,delly,vcf_inventory.tsv} "$DELIV/genome_wide_SV_VCF/"
 cp "$X"/gridss_joint_18samples.vcf.gz "$DELIV/genome_wide_SV_VCF/locus_GRIDSS_SvABA/GRIDSS_joint_18samples.window.vcf.gz"
 for k in germline somatic; do

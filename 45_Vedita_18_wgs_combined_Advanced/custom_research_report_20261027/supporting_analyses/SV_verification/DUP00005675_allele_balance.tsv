@@ -1,0 +1,11 @@
+region	sample	n_baseline_het_snps_DP15	median_abs_AF_minus_0.5	frac_abs_dev_0.10_0.30	frac_abs_dev_gt_0.40
+inside	S01_DLD1_pop	177	0.079	0.305	0.000
+inside	S02_DLD1_c1_ctrl	152	0.079	0.329	0.000
+inside	S03_DLD1_c2_ctrl	159	0.079	0.283	0.000
+inside	S04_DLD1_c3_dox	218	0.167	0.711	0.005
+inside	S05_DLD1_c4_dox	202	0.065	0.327	0.000
+flank	S01_DLD1_pop	636	0.065	0.285	0.000
+flank	S02_DLD1_c1_ctrl	605	0.062	0.291	0.000
+flank	S03_DLD1_c2_ctrl	707	0.071	0.281	0.000
+flank	S04_DLD1_c3_dox	722	0.078	0.343	0.004
+flank	S05_DLD1_c4_dox	864	0.079	0.348	0.000
