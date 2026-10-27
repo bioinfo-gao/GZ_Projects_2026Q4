@@ -1,8 +1,8 @@
 # P42 分析 rationale 与过程说明（清晰版）
 
-**建立日期：** 2026-10-24
-**用途：** 内部研究、复核与交接。它重新说明 P42 的问题、证据模型、执行过程和结论边界；不替代任何历史记录，也不修改既有结果。
-**原始计划归档：** `docs/P42/P42_research_plan_and_review_1022.md`
+**建立日期：** 2026-10-24  
+**用途：** 内部研究、复核与交接。它重新说明 P42 的问题、证据模型、执行过程和结论边界；不替代任何历史记录，也不修改既有结果。  
+**原始计划归档：** `docs/P42/P42_research_plan_and_review_1022.md`  
 **当前客户问题英文报告：** `custom_research_report_supplementary_20261024_v8/P42_Client_Request_Completion_1024.md`
 
 ## 1. 一句话问题定义
@@ -13,12 +13,12 @@ P42 的核心不是泛化地“找出所有 SV”，而是在 18 个 short-read 
 
 ## 2. 必须先区分的四个层次
 
-| 层次              |                                观察单位                                |             不能混同为             | 在 P42 中的用途                                                      |
-| :---------------- | :---------------------------------------------------------------------: | :--------------------------------: | :------------------------------------------------------------------- |
-| Alignment record  |             一条 primary、secondary 或 supplementary record             |           独立 molecule           | 保留 CIGAR、FLAG、MAPQ、soft clip、SA 与 mate context                |
-| Read end          |                      `(sample, QNAME, read end)`                      |           独立 fragment           | 描述 split alignment、query overlap/gap 与 read-level support        |
-| Fragment/template |                           `(sample, QNAME)`                           |  Independent biological replicate  | 作为 candidate support 的主要计数单位；raw 与 standard-eligible 分开 |
-| Biological event  | 多条可定位、相互一致、满足敏感度要求的 fragments，并可有独立 assay 支持 | 单一 best-hit 或单个 caller record | 只有通过全部预设 gates 才能称为 high-confidence event                |
+| 层次 | 观察单位 | 不能混同为 | 在 P42 中的用途 |
+| :--- | :---: | :---: | :--- |
+| Alignment record | 一条 primary、secondary 或 supplementary record | 独立 molecule | 保留 CIGAR、FLAG、MAPQ、soft clip、SA 与 mate context |
+| Read end | `(sample, QNAME, read end)` | 独立 fragment | 描述 split alignment、query overlap/gap 与 read-level support |
+| Fragment/template | `(sample, QNAME)` | Independent biological replicate | 作为 candidate support 的主要计数单位；raw 与 standard-eligible 分开 |
+| Biological event | 多条可定位、相互一致、满足敏感度要求的 fragments，并可有独立 assay 支持 | 单一 best-hit 或单个 caller record | 只有通过全部预设 gates 才能称为 high-confidence event |
 
 这一区分是 P42 最重要的设计选择。Secondary/supplementary records 不能作为新增独立 molecules 叠加计数，但它们也不能因“避免双计数”而被删除，因为它们是 repeat、split/chimeric structure 与 placement ambiguity 的直接证据。
 
@@ -37,14 +37,15 @@ P42 的核心不是泛化地“找出所有 SV”，而是在 18 个 short-read 
 
 ## 4. 研究问题与预注册式判定表
 
-| 研究问题                                 |                                   证据与保留原则                                   |                               数值/结构判定                               | 能说什么                                                                 | 不能说什么                                                     |
-| :--------------------------------------- | :--------------------------------------------------------------------------------: | :-----------------------------------------------------------------------: | :----------------------------------------------------------------------- | :------------------------------------------------------------- |
-| 是否有 repeat-aware mapping evidence？   | 从 full-window raw records 开始；保留全部 alignment context 和 filter-impact audit |         Evidence clusters、candidate geometry、assembly placement         | 某位置有 mapping/junction-like evidence                                  | 单个 primary placement 就是真实 locus                          |
-| P41 EV0623 是否对应 P42 C2？             |         对照双方 chr11/partner geometry、sample、support 与 representation         | P41: chr11:114607192-chr21:20648241；P42: chr11:114607191;chr21:20648242 | 两端各 1 bp 的表示差异下，是同一 geometry 的 carry-forward               | 这是两个独立事件                                               |
-| C2 的 read-end representation 是否一致？ |             所有可用 sequence-bearing records，按 QNAME/read end 保留             |      5 个 read ends、3 QNAME、MAPQ 60、`AT` 2-bp overlap、0-bp gap      | 与 2-bp microhomology 一致的 split-read representation                   | 唯一、经生物学验证的 breakpoint                                |
-| Manta/DELLY 是否 concordant？            |                            72 个 source inputs 不丢记录                            |           两 BND ends 在任意方向均须落在 candidate 两端 ±50 bp           | 0/20 exact Manta、0/20 exact DELLY；C4 chr11-only anchors 非 concordance | “没有 exact record”就是生物学不存在                          |
-| 是否 clone-/doxycycline-specific？       |          S01-S05 采用同一 fixed-candidate rule；raw/standard counts 分开          | ≥3 standard-eligible QNAME、≥60x local context、sequence-level junction | 只有三项全过才为 high-confidence                                         | 在 14.7x-23.1x control depth 的 zero counts 下宣布高灵敏度阴性 |
-| Rescue 是否改变结论？                    |            5 个 rescued unmapped mates 与每个 candidate QNAME set 相交            |           C1 1→1、C2 3→3、C3 2→2、C4 1→1；intersection 均 0           | 本次 rescue 对 C1-C4 的增量为 0                                          | Rescue 在整个 locus 没有价值                                   |
+| 研究问题 | 证据与保留原则 | 数值/结构判定 | 能说什么 | 不能说什么 |
+| :--- | :---: | :---: | :--- | :--- |
+| 是否有 repeat-aware mapping evidence？ | 从 full-window raw records 开始；保留全部 alignment context 和 filter-impact audit | Evidence clusters、candidate geometry、assembly placement | 某位置有 mapping/junction-like evidence | 单个 primary placement 就是真实 locus |
+| P41 EV0623 是否对应 P42 C2？ | 对照双方 chr11/partner geometry、sample、support 与 representation | P41: chr11:114607192-chr21:20648241；P42: chr11:114607191;chr21:20648242 | 两端各 1 bp 的表示差异下，是同一 geometry 的 carry-forward | 这是两个独立事件 |
+| C2 的 read-end representation 是否一致？ | 所有可用 sequence-bearing records，按 QNAME/read end 保留 | 5 个 read ends、3 QNAME、MAPQ 60、`AT` 2-bp overlap、0-bp gap | 与 2-bp microhomology 一致的 split-read representation | 唯一、经生物学验证的 breakpoint |
+| Manta/DELLY 是否 concordant？ | 72 个 source inputs 不丢记录 | 两 BND ends 在任意方向均须落在 candidate 两端 ±50 bp | 0/20 exact Manta、0/20 exact DELLY；C4 chr11-only anchors 非 concordance | “没有 exact record”就是生物学不存在 |
+| 是否 clone-/doxycycline-specific？ | S01-S05 采用同一 fixed-candidate rule；raw/standard counts 分开 | ≥3 standard-eligible QNAME、≥60x local context、sequence-level junction | 只有三项全过才为 high-confidence | 在 14.7x-23.1x control depth 的 zero counts 下宣布高灵敏度阴性 |
+| Rescue 是否改变结论？ | 5 个 rescued unmapped mates 与每个 candidate QNAME set 相交 | C1 1→1、C2 3→3、C3 2→2、C4 1→1；intersection 均 0 | 本次 rescue 对 C1-C4 的增量为 0 | Rescue 在整个 locus 没有价值 |
+
 
 ## 5. 实际执行过程
 
@@ -75,32 +76,35 @@ Manta/DELLY source records、GRIDSS/SvABA context、assembly/read evidence 被�
 
 ## 6. 当前结果应如何解读
 
-| 对象        |                                  观察到的事实                                  |                    当前可用结论                    | 关键限制                                                    |
-| :---------- | :-----------------------------------------------------------------------------: | :------------------------------------------------: | :---------------------------------------------------------- |
-| 全队列      | 282 candidate observations、94 个双端几何可解析、4 个 DLD1 case-only candidates |     没有 candidate 被升格为 high-confidence SV     | Repeat placement ambiguity、短读长 coverage context         |
-| C1          |                          S05 raw/standard support 1/1                          |               Low-support candidate               | 无独立 junction/clone-specific proof                        |
-| C2          |       S05 raw 3，standard 0；5 read ends 均 `AT` 2-bp overlap/0-bp gap       |     P41 EV0623 的优先 carry-forward hypothesis     | 无 standard-eligible support、深度不足、无独立 confirmation |
-| C3          |                          S04/S05 raw 1/1，standard 0/1                          | 两个 +doxycycline samples 的 low-support candidate | 未过 high-confidence gate                                   |
-| C4          |               S05 raw/standard 1/1；5 条 DELLY chr11-only anchors               |    Low-support candidate，anchor context 被保留    | chr11-chr3 BND 未得 exact concordance                       |
-| Manta/DELLY |                  20 comparisons 的 exact two-end match 都为 0                  |            无 caller exact concordance            | 同一 WGS 的 caller comparison 不是独立 validation           |
-| Rescue      |                5 recovered mates，所有 C1-C4 intersections 为 0                |             对这四个 candidates 无增加             | 不外推到其他 loci                                           |
+| 对象 | 观察到的事实 | 当前可用结论 | 关键限制 |
+| :--- | :---: | :---: | :--- |
+| 全队列 | 282 candidate observations、94 个双端几何可解析、4 个 DLD1 case-only candidates | 没有 candidate 被升格为 high-confidence SV | Repeat placement ambiguity、短读长 coverage context |
+| C1 | S05 raw/standard support 1/1 | Low-support candidate | 无独立 junction/clone-specific proof |
+| C2 | S05 raw 3，standard 0；5 read ends 均 `AT` 2-bp overlap/0-bp gap | P41 EV0623 的优先 carry-forward hypothesis | 无 standard-eligible support、深度不足、无独立 confirmation |
+| C3 | S04/S05 raw 1/1，standard 0/1 | 两个 +doxycycline samples 的 low-support candidate | 未过 high-confidence gate |
+| C4 | S05 raw/standard 1/1；5 条 DELLY chr11-only anchors | Low-support candidate，anchor context 被保留 | chr11-chr3 BND 未得 exact concordance |
+| Manta/DELLY | 20 comparisons 的 exact two-end match 都为 0 | 无 caller exact concordance | 同一 WGS 的 caller comparison 不是独立 validation |
+| Rescue | 5 recovered mates，所有 C1-C4 intersections 为 0 | 对这四个 candidates 无增加 | 不外推到其他 loci |
 
 ## 7. 已建立、未建立与下一步
 
-**已建立：** P41 EV0623→P42 C2 的正确 crosswalk；C
+**已建立：** P41 EV0623→P42 C2 的正确 crosswalk；C2 的 read-end microhomology-like representation；caller exact-concordance 的缺失；rescue 对 C1-C4 的零增量；四个 fixed candidates 都未过预设 high-confidence gate；C2 的 in-silico assay design。
 
+**未建立：** 唯一真实 genomic breakpoint、clone-/doxycycline-specific biological event、经验证 allele fraction、与 FISH/cytogenetic subpopulation 的因果联系、project-wide SNV/indel callset 的存在。
+
+**合理的后续证据：** 在 independent DLD1 genomic DNA 上测定 C2 junction-spanning PCR assay，并以相应 controls 和实测 analytical sensitivity 解释；若希望达到 3-fragment/5% target，先确认 local depth 是否达到 60x context；若要连接 FISH，须取得 raw images 与 per-cell scoring table。这里没有也不应以重新运行同一短读长数据取代独立验证。
 
 ## 8. 关键文件导航
 
-| 用途                 | 当前文件                                                                                                 |
-| :------------------- | :------------------------------------------------------------------------------------------------------- |
-| 客户问题英文报告     | `custom_research_report_supplementary_20261024_v8/P42_Client_Request_Completion_1024.md`               |
-| 中文阅读版           | `docs/P42-updated1/P42_Client_Request_Completion_1024_CN.md`                                           |
-| C2 read-end 证据     | `custom_research_report_supplementary_20261024_v8/results/c2_read_end_junction_resolution.tsv`         |
-| Caller comparison    | `custom_research_report_supplementary_20261024_v8/results/candidate_manta_delly_concordance.tsv`       |
+| 用途 | 当前文件 |
+| :--- | :--- |
+| 客户问题英文报告 | `custom_research_report_supplementary_20261024_v8/P42_Client_Request_Completion_1024.md` |
+| 中文阅读版 | `docs/P42-updated1/P42_Client_Request_Completion_1024_CN.md` |
+| C2 read-end 证据 | `custom_research_report_supplementary_20261024_v8/results/c2_read_end_junction_resolution.tsv` |
+| Caller comparison | `custom_research_report_supplementary_20261024_v8/results/candidate_manta_delly_concordance.tsv` |
 | DLD1 gate comparison | `custom_research_report_supplementary_20261024_v8/results/clone_specific_comparison_with_criteria.tsv` |
-| Rescue accounting    | `custom_research_report_supplementary_20261024_v8/results/read_rescue_candidate_impact.tsv`            |
-| C2 assay design      | `custom_research_report_supplementary_20261024_v5/results/assay_design_selection.tsv`                  |
-| 单一客户包（构建中） | `custom_research_report_20261024/`                                                                     |
+| Rescue accounting | `custom_research_report_supplementary_20261024_v8/results/read_rescue_candidate_impact.tsv` |
+| C2 assay design | `custom_research_report_supplementary_20261024_v5/results/assay_design_selection.tsv` |
+| 单一客户包（构建中） | `custom_research_report_20261024/` |
 
 本说明只重组 rationale 与过程；数值主张均可回溯到上述 source tables 或正式英文报告。若有新的原始 assay/FISH/SNV-indel input，应作为新阶段输入，不覆盖本轮 evidence ledger 或结论边界。
