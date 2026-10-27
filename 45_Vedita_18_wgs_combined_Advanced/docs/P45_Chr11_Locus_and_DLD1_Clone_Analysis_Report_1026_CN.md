@@ -1,9 +1,9 @@
 # Chr11 位点 junction 层面分析（含 read rescue）与 DLD1 克隆比较 —— 中文版
 
-> **内部中文阅读版，不进客户交付，未发送。** 英文原件（唯一的交付版本）：`../custom_research_report_20261025/Chr11_Locus_and_DLD1_Clone_Analysis_Report_1025.md`，本文由该文件逐节翻译（2026-10-25）。英文原件若再修改，以英文原件为准，本文需同步。
-> 文中反引号内的文件路径均**相对于交付目录** `custom_research_report_20261025/`；图片链接已改为指向该目录。
+> **内部中文阅读版，不进客户交付，未发送。** 英文原件（唯一的交付版本）：`../custom_research_report_20261026/Chr11_Locus_and_DLD1_Clone_Analysis_Report_1026.md`，本文由该文件逐节翻译（2026-10-25）。英文原件若再修改，以英文原件为准，本文需同步。
+> 文中反引号内的文件路径均**相对于交付目录** `custom_research_report_20261026/`；图片链接已改为指向该目录。
 
-**Report Date（报告日期）:** 2026-10-25
+**Report Date（报告日期）:** 2026-10-26
 **Prepared by（编写人）:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics
 **Prepared for（客户）:** Xin Lin and Vedita Anand Singh, Li lab, Boston Children's Hospital / Harvard Medical School
 **Analysis Platform（分析平台）:** Linux HPC server
@@ -62,15 +62,15 @@
 | **1** | **目标区位于一段 22 kb 的 tandem repeat array 内。** | |
 | 1a | chr11:114,603,768–114,625,660 是一个 42 bp 重复单元组成的 array（`GGTAACCACTGTTACCTGGTGGATAATAAGTATTGCCTCGTG`，约 522 个拷贝），内部含一段 identity 90.2% 的 segmental duplication。 | 第 7.1 节；图 1 |
 | **2** | **read rescue 使 junction 证据向两个方向改变。** | |
-| 2a | 每个样本为窗口 rescue 了 18,225–39,040 个 read pair；其中 9,440–20,554 个在原始比对中被放在别处，只在 alternative hit 中列出该窗口。 | 第 7.2 节；图 3 |
+| 2a | 每个样本为窗口 rescue 了 18,225–39,040 个 read pair；其中 9,440–20,554 个在原始比对中被放在别处，只在 alternative hit 中列出该窗口。 | 第 7.2 节；图 2 |
 | 2b | S04 的端粒 junction 按标准计数有 0 个支持 fragment，rescue 后为 4 个。 | 第 7.4 节 |
 | 2c | 当每条 read 竞争其最佳定位后，527 个目标区候选中有 269 个用未重排的 repeat 拷贝能解释得更好或同样好。 | 第 7.3、7.5 节 |
 | **3** | **三个 junction 为 +Dox 克隆所特有；其中两个位于深度断崖之内。** | |
-| 3a | S04：chr11:114,605,216–218 连接（TTAGGG）n；4 个 fragment（7 个 read end）；allele fraction 0.29（95% confidence interval，CI，0.12–0.55）。 | 第 7.4 节；图 5 |
-| 3b | S05：fold-back inversion chr11:114,605,973 / 114,606,349，2 个 fragment；chr11:114,607,192–chr21:20,648,241，3 个 fragment。 | 第 7.4 节；图 5 |
+| 3a | S04：chr11:114,605,216–218 连接（TTAGGG）n；4 个 fragment（7 个 read end）；allele fraction 0.29（95% confidence interval，CI，0.12–0.55）。 | 第 7.4 节；图 4 |
+| 3b | S05：fold-back inversion chr11:114,605,973 / 114,606,349，2 个 fragment；chr11:114,607,192–chr21:20,648,241，3 个 fragment。 | 第 7.4 节；图 4 |
 | 3c | 深度断崖：S04 位于 114,605,200（95% CI 114,605,000–114,605,400）；S05 位于 114,605,800（95% CI 114,605,600–114,606,000）。 | 第 7.6 节；图 1 |
 | **4** | **两个 +Dox 克隆丢失的是同一条 chr11q homolog。** | |
-| 4a | 远端 chr11q（114.7–135.0 Mb）：在 S01–S03 中杂合的位点，S04 有 97.8%、S05 有 98.0% 变为纯合；在两个克隆中都纯合的 8,004 个位点上，99.78% 保留的是同一个等位基因。 | 第 7.7 节；图 2 |
+| 4a | 远端 chr11q（114.7–135.0 Mb）：在 S01–S03 中杂合的位点，S04 有 97.8%、S05 有 98.0% 变为纯合；在两个克隆中都纯合的 8,004 个位点上，99.78% 保留的是同一个等位基因。 | 第 7.7 节；图 6 |
 | **5** | **在该位点，caller 与 read 证据很少一致。** | |
 | 5a | 527 个目标区 junction 中，没有一个同时被 Manta 和 DELLY 调出；S05 的 chr21 junction 被 DELLY、GRIDSS 和 SvABA 调出；29 个只被 GRIDSS 调出或被 GRIDSS 与 Manta 共同调出，多为单 fragment 事件。 | 第 7.5 节 |
 | **6** | **一种普遍存在的测序 artefact 解释了此前一大类候选。** | |
@@ -174,7 +174,7 @@ S11–S18（Mutu I 与 DG75）以相同方式处理，只用于标出那些也�
 
 simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522 次的 42 bp 单元，覆盖整个目标区（图 1 上部）。相邻拷贝之间只差几个碱基，因此一条 150 bp 的 read 通常仍有一个最佳位置，但往往只比下一个拷贝高出几个 alignment score 分。这就是前一份报告把许多事件标为 repeat-ambiguous 的原因，也是为什么 junction 支持必须通过定位之间的竞争来判断，而不能只看 mapping quality。
 
-![图 1 —— 位点概览](../custom_research_report_20261025/figures/Fig1_locus_overview.png)
+![图 1 —— 位点概览](../custom_research_report_20261026/figures/Fig1_locus_overview.png)
 
 *图 1。上：目标区与 simpleRepeat 注释的串联重复（重复单元 ≥ 20 bp）。橙色：42 bp 重复家族，即约 522 拷贝的 array（114,603,768–114,625,660）、紧邻其近端的 47 bp 变体，以及远端一小段残余拷贝（114,631,682–114,632,022）。灰色斜线：一段富含 AT 的低复杂度区（114,601,509–114,603,053；重复单元 GC ≤ 22%），不属于 42 bp 家族；全部 18 个样本在此深度都接近 0，是所有细胞系共有的覆盖缺口。中：S04、S05 以及无 Dox 样本 S01（群体，虚线）和 S02、S03（克隆）相对于 S01–S03 均值的深度，200 bp bin，MAPQ ≥ 20。因为 S01–S03 本身构成基线，三者的比值在每个 bin 中平均恰为 1；基线样本自身有无断崖，见其各自的断崖拟合（`supporting_analyses/depth_boundary/boundary_estimates.tsv`）。阴影带为 S04、S05 深度断崖的 95% CI；114.6015–114.603 Mb 的空缺就是这段 AT 富集区，基线在此没有 MAPQ ≥ 20 的 read，空缺两侧边缘 bin 的比值只基于极少的 read。下：每个至少有一个支持 fragment 的目标区 junction，画在其目标区一侧断端的位置；颜色 = 等级，标记形状 = +Dox-specific 事件。*
 
@@ -193,11 +193,11 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 | S09 | 34,350 | 34,400 | 17,165 |
 | S10 | 36,811 | 39,040 | 20,554 |
 
-每个 rescue 集合中约一半是被放在别处、但其 alternative 定位位于窗口内的 read —— 即客户要求纳入的 multi-mapping read。两端都 unmapped 的 read（18 个样本中每样本 0.25–3.3 百万条）没有一条能比对到窗口序列。18 个样本中窗口内没有任何 record 是 hard-clipped 的或是显式 secondary alignment，所以每条 record 都带完整 read 序列（图 3）。
+每个 rescue 集合中约一半是被放在别处、但其 alternative 定位位于窗口内的 read —— 即客户要求纳入的 multi-mapping read。两端都 unmapped 的 read（18 个样本中每样本 0.25–3.3 百万条）没有一条能比对到窗口序列。18 个样本中窗口内没有任何 record 是 hard-clipped 的或是显式 secondary alignment，所以每条 record 都带完整 read 序列（图 2）。
 
-![图 3 —— rescue 来源](../custom_research_report_20261025/figures/Fig3_rescue_sources.png)
+![图 2 —— rescue 来源](../custom_research_report_20261026/figures/Fig2_rescue_sources.png)
 
-*图 3。每个样本 rescue 集合中的 read pair，按其进入集合的途径（第 5 节）划分：绿色，在窗口内存有比对记录的 read pair（其 mate 几乎都也在窗口内）；紫色，比对在别处、仅因 XA 备选位置落在窗口内而进入的 read pair。mate、supplementary 片段与未比对 read pair 在任何样本中都没有再带来额外的 read pair。数量未按测序深度归一，样本间总数不可直接比较。*
+*图 2。每个样本 rescue 集合中的 read pair，按其进入集合的途径（第 5 节）划分：绿色，在窗口内存有比对记录的 read pair（其 mate 几乎都也在窗口内）；紫色，比对在别处、仅因 XA 备选位置落在窗口内而进入的 read pair。mate、supplementary 片段与未比对 read pair 在任何样本中都没有再带来额外的 read pair。数量未按测序深度归一，样本间总数不可直接比较。*
 
 ### 7.3 一种 adapter 与 poly-G artefact
 
@@ -214,19 +214,19 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 位置以 junction 可在相同序列（microhomology）上滑动的范围给出。“(+)”表示保留该位置左侧的 chr11 序列；“(−)”表示保留右侧序列。`tables/structural_coherence_tests.tsv` 对每个样本和事件给出第 5 节的两项一致性检验。
 
-**S04（J0922）。** 来自四个 DNA fragment 的七个 read end，读到 chr11 序列的 114,605,216–218 为止，之后只有 TTAGGG 重复，一直到 read 末端或 DNA fragment 末端（图 5，`figures/junction_views/Fig5_J0922.png`）。该重复与 chrX、chr2、chr4 末端的端粒重复区以及 chr10 的一段 interstitial 区同样匹配，因此 partner 端没有唯一的基因组位置；为它标注的坐标只是一个代表性定位。chr11 端是唯一的（其 100 bp flank 只有一个定位）。四个 fragment 一个都没有被标准方法计入，因为 read 的端粒部分被 soft-clip 或以 MAPQ 0 比对到别处；这个 junction 只是通过被 rescue 的比对才被找到。该 junction 位于 S04 深度断崖的 95% CI 之内（第 7.6 节）。其 allele fraction 与两条 chr11 拷贝中的一条相符。
+**S04（J0922）。** 来自四个 DNA fragment 的七个 read end，读到 chr11 序列的 114,605,216–218 为止，之后只有 TTAGGG 重复，一直到 read 末端或 DNA fragment 末端（图 4，`figures/junction_views/Fig4_J0922.png`）。该重复与 chrX、chr2、chr4 末端的端粒重复区以及 chr10 的一段 interstitial 区同样匹配，因此 partner 端没有唯一的基因组位置；为它标注的坐标只是一个代表性定位。chr11 端是唯一的（其 100 bp flank 只有一个定位）。四个 fragment 一个都没有被标准方法计入，因为 read 的端粒部分被 soft-clip 或以 MAPQ 0 比对到别处；这个 junction 只是通过被 rescue 的比对才被找到。该 junction 位于 S04 深度断崖的 95% CI 之内（第 7.6 节）。其 allele fraction 与两条 chr11 拷贝中的一条相符。
 
 **S05（J0359、J0786）。** fold-back inversion 把 114,605,973 处的正链连接到 114,606,349 处的负链（两端都是“+”端），即序列在 376 bp 之后折回自身；它位于 S05 深度断崖的 95% CI 之内。chr21 junction（前一份报告中的 EV0623，细化到相同坐标与 `AT` microhomology；每个支持的 read end 都显示同样的 2 bp overlap）位于断崖远端 1.2 kb，其 chr21 端可唯一定位；由于它位于断崖区间之外，claim level 停留在“limited junction candidate”。它在 S04 中为 underpowered（7 个 reference fragment），因为 S04 已丢失其中一条拷贝的这一段。
 
 **S03（J1036）。** repeat array 内的一个 10 bp inversion，只在无 Dox 对照克隆 S03 中有 2 个 fragment；与 +Dox 表型无关。
 
-![图 5 —— S04 junction 的碱基水平视图](../custom_research_report_20261025/figures/junction_views/Fig5_J0922.png)
+![图 3 —— 全部有两个或以上 fragment 的 junction](../custom_research_report_20261026/figures/Fig3_key_events_summary.png)
 
-*图 5（共 17 张之一；全部在 `figures/junction_views/`）。junction 序列（酒红：chr11 侧；深青：microhomology 或插入碱基；蓝：partner 侧）及支持它的每个 read end，按样本、细胞系、群体或克隆号、fragment 和 read（R1/R2）标注；“.”表示与 junction 序列相同的碱基。第二行表头按细胞系列出所有带支持 read 的样本，包括背景样本 S11–S18（Mutu I、DG75）；证据分级只基于 S01–S10 计算，因此在无关细胞系中也出现的 junction 会在这一行标出。*
+*图 3。窗口（目标区 ± 50 kb）内在某个报告样本（S01–S10）中有两个或以上 fragment 的全部 17 个 junction，按其在各样本中的分布形态分组：A，+Dox 特异（S04 或 S05 中有、S01–S03 中无）；B，仅见于 DLD1 无 Dox 克隆；C，GM12878 整系共有（GM12878 群体 S06 中有、DLD1 中无）；D，仅见于单个 GM12878 克隆；E，DLD1 基线与其他细胞系中均有。每组内先列目标区 junction（T），再列侧翼 junction（F），按 chr11 坐标排序。格子为 rescue 后每个样本的独立 fragment 数；斜线格表示没有支持 fragment、但参考 fragment 少于 10 个，因此不能确认其不存在。S11–S18 列为有支持 read 的背景样本（Mutu I、DG75）数，这些样本不参与分级。右侧：claim level 与支持的 caller。*
 
-![图 0 —— 全部有两个或以上 fragment 的 junction](../custom_research_report_20261025/figures/Fig0_key_events_summary.png)
+![图 4 —— S04 junction 的碱基水平视图](../custom_research_report_20261026/figures/junction_views/Fig4_J0922.png)
 
-*图 0。窗口（目标区 ± 50 kb）内在某个报告样本（S01–S10）中有两个或以上 fragment 的全部 17 个 junction，按其在各样本中的分布形态分组：A，+Dox 特异（S04 或 S05 中有、S01–S03 中无）；B，仅见于 DLD1 无 Dox 克隆；C，GM12878 整系共有（GM12878 群体 S06 中有、DLD1 中无）；D，仅见于单个 GM12878 克隆；E，DLD1 基线与其他细胞系中均有。每组内先列目标区 junction（T），再列侧翼 junction（F），按 chr11 坐标排序。格子为 rescue 后每个样本的独立 fragment 数；斜线格表示没有支持 fragment、但参考 fragment 少于 10 个，因此不能确认其不存在。S11–S18 列为有支持 read 的背景样本（Mutu I、DG75）数，这些样本不参与分级。右侧：claim level 与支持的 caller。*
+*图 4（共 17 张之一；全部在 `figures/junction_views/`）。junction 序列（酒红：chr11 侧；深青：microhomology 或插入碱基；蓝：partner 侧）及支持它的每个 read end，按样本、细胞系、群体或克隆号、fragment 和 read（R1/R2）标注；“.”表示与 junction 序列相同的碱基。第二行表头按细胞系列出所有带支持 read 的样本，包括背景样本 S11–S18（Mutu I、DG75）；证据分级只基于 S01–S10 计算，因此在无关细胞系中也出现的 junction 会在这一行标出。*
 
 ### 7.5 全部目标区 junction：rescue 前后与 caller concordance
 
@@ -260,9 +260,9 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 
 关于客户 Manta 与 DELLY 的问题：在前一份报告第 7.3 节的事件中，S05 的 chr21 junction（EV0623）只被 DELLY 调出（每样本 unfiltered 输出），没有事件被两者同时调出。在同一批 read 上运行的 caller 之间的一致是算法层面的一致，不是独立验证；没有 call 也不是不存在的证据：第 7.4 节的四个 junction 中有两个 —— S04 的端粒 junction 与 S05 的 fold-back inversion —— 没有被任何 caller 调出；端粒 junction 之所以无法被任何 caller 定位，是因为其 partner 序列存在于每条染色体末端。在 S01–S10 中至少有一个 fragment 的 258 个事件中，11 个在 Mutu I 或 DG75 样本中也有 fragment；第 7.4 节的四个事件都没有。
 
-![图 4 —— rescue 前后对比](../custom_research_report_20261025/figures/Fig4_before_after_and_classes.png)
+![图 5 —— rescue 前后对比](../custom_research_report_20261026/figures/Fig5_before_after_and_classes.png)
 
-*图 4。左：每个样本中有支持的目标区 junction 数，rescue 前（标准计数，MAPQ ≥ 20）与 rescue 后（≥ 1 与 ≥ 2 个 fragment）；同一 junction 出现在多个样本中时在每个样本各计一次，柱子为净数，不显示哪些 junction 增加或减少（逐个 junction 见 `tables/junction_by_sample_long.tsv`）。右：527 个目标区 junction 的等级分布，对数刻度，稀有等级标出 junction 编号。*
+*图 5。左：每个样本中有支持的目标区 junction 数，rescue 前（标准计数，MAPQ ≥ 20）与 rescue 后（≥ 1 与 ≥ 2 个 fragment）；同一 junction 出现在多个样本中时在每个样本各计一次，柱子为净数，不显示哪些 junction 增加或减少（逐个 junction 见 `tables/junction_by_sample_long.tsv`）。右：527 个目标区 junction 的等级分布，对数刻度，稀有等级标出 junction 编号。*
 
 ### 7.6 bp 尺度上的深度断崖
 
@@ -281,17 +281,17 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 | 近端 99.0–114.5 Mb | 11,363 | 0.000 | 0.004 | 0.003 | 0.100 | 0.159 |
 | 远端 114.7–135.0 Mb | 16,650 | 0.000 | 0.978 | 0.980 | 0.500 | 0.500 |
 
-“纯合比例”统计在 S01–S03 中全部杂合、而在该克隆中 BAF < 0.1 或 > 0.9 的位点。断崖远端，两个克隆都只保留一条 chr11q homolog —— 而且是同一条（8,004 个位点在两个克隆中都纯合；99.78% 保留同一等位基因）。在 S05 中，近端失衡向断崖方向递增（图 2），同时伴有此前报告的 1.48× 近端深度。GM12878（S06–S10）在 chr11 上没有纯合区段（所有比例 ≤ 0.007）。
+“纯合比例”统计在 S01–S03 中全部杂合、而在该克隆中 BAF < 0.1 或 > 0.9 的位点。断崖远端，两个克隆都只保留一条 chr11q homolog —— 而且是同一条（8,004 个位点在两个克隆中都纯合；99.78% 保留同一等位基因）。在 S05 中，近端失衡向断崖方向递增（图 6），同时伴有此前报告的 1.48× 近端深度。GM12878（S06–S10）在 chr11 上没有纯合区段（所有比例 ≤ 0.007）。
 
-![图 2 —— chr11 B-allele fraction](../custom_research_report_20261025/figures/Fig2_chr11_BAF.png)
+![图 6 —— chr11 B-allele fraction](../custom_research_report_20261026/figures/Fig6_chr11_BAF.png)
 
-*图 2。在细胞系无 Dox 基线中杂合位点上的 BAF（DLD1：S01–S03 全部杂合；GM12878：S06），对全部报告样本 S01–S10 作图。由于位点按基线中 allele fraction 0.25–0.75 选取，基线 panel（S01–S03、S06）必然落在该范围内；S04、S05 与 GM12878 克隆 S07–S10 则可以自由偏离。竖线：目标区起点。*
+*图 6。在细胞系无 Dox 基线中杂合位点上的 BAF（DLD1：S01–S03 全部杂合；GM12878：S06），对全部报告样本 S01–S10 作图。由于位点按基线中 allele fraction 0.25–0.75 选取，基线 panel（S01–S03、S06）必然落在该范围内；S04、S05 与 GM12878 克隆 S07–S10 则可以自由偏离。竖线：目标区起点。*
 
 ### 7.8 位点上的克隆特异事件
 
 DLD1，目标区：39 个 junction 在 S04 或 S05 中存在、在 S01–S03 中都不存在（S04 22 个，S05 17 个）；其中 3 个有 ≥ 2 个 fragment（即第 7.4 节的三个 +Dox junction），36 个只有 1 个 fragment；39 个中有 10 个至少有一个基线样本为 underpowered。没有 junction 同时存在于两个 +Dox 克隆中。GM12878，目标区：122 个 junction 在某一个克隆中存在、在 S06 中不存在（S07 36，S08 20，S09 40，S10 29）；每个都只有单个 fragment。每样本标签见 `tables/junction_table_target.tsv`（列 `DLD1_dox_comparison`、`GM12878_clone_specific`、`S0n_state`）。
 
-在 ± 50 kb 翼侧，另有 13 个 junction 有两个或以上 fragment（图 0；`tables/junction_table_window_context.tsv`）。其中两个与克隆有关：J0902（仅 S05，2 个 fragment；chr11:114,629,853–858 连接到 chrX 上的一个 L1PA3 LINE 元件，该重复有数百个同样好的定位，因此为“ambiguous”）与 J0591（仅 S04，2 个 fragment；chr11:114,602,525–528 连接到 chr16 上的一个 AluSx3 SINE 元件，位于任何样本都没有 MAPQ ≥ 20 read 覆盖的低复杂度区段内，因此没有基线样本能被判为 absent）。两者都不在深度断崖区间之内。两个 well-supported 翼侧 junction —— J1365（chr11:114,590,721 到 chr18:64,754,327）与 J0533（chr11:114,590,798–799 到 chr14:83,887,907–908；被 Manta、DELLY 和 GRIDSS 调出）—— 在全部五个 GM12878 样本中各有 3–10 个 fragment，在所有 DLD1 样本中均不存在；由于群体和每个克隆都共有，它们是 GM12878 细胞系的特征，而不属于任何一个克隆。其余有两个或以上 fragment 的翼侧事件在不同细胞系间共有，或出现在 background panel 中，没有克隆特异信号。
+在 ± 50 kb 翼侧，另有 13 个 junction 有两个或以上 fragment（图 3；`tables/junction_table_window_context.tsv`）。其中两个与克隆有关：J0902（仅 S05，2 个 fragment；chr11:114,629,853–858 连接到 chrX 上的一个 L1PA3 LINE 元件，该重复有数百个同样好的定位，因此为“ambiguous”）与 J0591（仅 S04，2 个 fragment；chr11:114,602,525–528 连接到 chr16 上的一个 AluSx3 SINE 元件，位于任何样本都没有 MAPQ ≥ 20 read 覆盖的低复杂度区段内，因此没有基线样本能被判为 absent）。两者都不在深度断崖区间之内。两个 well-supported 翼侧 junction —— J1365（chr11:114,590,721 到 chr18:64,754,327）与 J0533（chr11:114,590,798–799 到 chr14:83,887,907–908；被 Manta、DELLY 和 GRIDSS 调出）—— 在全部五个 GM12878 样本中各有 3–10 个 fragment，在所有 DLD1 样本中均不存在；由于群体和每个克隆都共有，它们是 GM12878 细胞系的特征，而不属于任何一个克隆。其余有两个或以上 fragment 的翼侧事件在不同细胞系间共有，或出现在 background panel 中，没有克隆特异信号。
 
 ### 7.9 全基因组 DLD1 克隆比较
 
@@ -357,11 +357,11 @@ S01–S10 的联合 calling 在拆分 multi-allelic 位点后得到 10,104,360 �
 
 ### 8.2 实用解读（Practical reading）
 
-1. **S04：断端已解析 —— chr11 的 114,605,216–218 连接到端粒重复。** 证据：第 7.4 节，`tables/junction_table_target.tsv`（J0922 行），`figures/junction_views/Fig5_J0922.png`，`tables/key_junction_read_evidence.tsv`，`locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`；引物见第 7.11 节。
-2. **S05：同一条 homolog 上一个不同且更复杂的断端 —— 断崖处的 fold-back inversion 和一个 chr21 junction。** 证据：第 7.4 与 7.7 节，J0359 与 J0786 行，`figures/junction_views/Fig5_J0359.png` 与 `Fig5_J0786.png`，`supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`，`tables/caller_concordance_by_sample.tsv`。
+1. **S04：断端已解析 —— chr11 的 114,605,216–218 连接到端粒重复。** 证据：第 7.4 节，`tables/junction_table_target.tsv`（J0922 行），`figures/junction_views/Fig4_J0922.png`，`tables/key_junction_read_evidence.tsv`，`locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`；引物见第 7.11 节。
+2. **S05：同一条 homolog 上一个不同且更复杂的断端 —— 断崖处的 fold-back inversion 和一个 chr21 junction。** 证据：第 7.4 与 7.7 节，J0359 与 J0786 行，`figures/junction_views/Fig4_J0359.png` 与 `Fig4_J0786.png`，`supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`，`tables/caller_concordance_by_sample.tsv`。
 3. **S01–S03 仍是有效基线。** 证据：第 7.4 节表格（reference fragment 计数），`tables/junction_by_sample_long.tsv`。
 4. **GM12878 克隆：位点上没有超过一个 fragment 的克隆特异重排。** 证据：第 7.5 与 7.8 节，`tables/junction_table_target.tsv` 的 `GM12878_clone_specific` 列，`tables/junction_table_window_context.tsv` 的 J1365 与 J0533 行。
-5. **该位点的大多数 junction 候选是 22 kb repeat 内的单 read，不应逐个跟进。** 证据：第 7.1 与 7.5 节，图 4，`tables/junction_table_target.tsv` 的 `classification` 与 `claim_level` 列。
+5. **该位点的大多数 junction 候选是 22 kb repeat 内的单 read，不应逐个跟进。** 证据：第 7.1 与 7.5 节，图 5，`tables/junction_table_target.tsv` 的 `classification` 与 `claim_level` 列。
 6. **全基因组。** 证据：第 7.9 节，`genome_wide_DLD1_comparison/dld1_dox_specific_events.tsv`。
 
 ### 8.3 局限（Limitations）
@@ -406,8 +406,8 @@ S01–S10 的联合 calling 在拆分 multi-allelic 位点后得到 10,104,360 �
 | `tables/external_input_status.tsv` | 本分析无法获得的输入及其对解读的影响 |
 | `tables/data_inventory.tsv` | 每个交付文件及其大小 |
 | `methods/header_sanitization_audit.tsv`、`methods/delly_conversion_audit.tsv` | BAM/VCF header 中本地路径的删除，以及 DELLY BCF 到 VCF 的转换，均附前后的 record 数与校验值 |
-| `figures/` | 图 0（`Fig0_key_events_summary`）与图 1–4（`Fig1_locus_overview`、`Fig2_chr11_BAF`、`Fig3_rescue_sources`、`Fig4_before_after_and_classes`），PNG 与 PDF；`figure_manifest.json` 列出每个图件文件 |
-| `figures/junction_views/` | 图 5：每个有 ≥ 2 个 fragment 的 junction 一张碱基水平视图（17 个 junction；PNG 与 PDF） |
+| `figures/` | 图 1、2、3、5、6（`Fig1_locus_overview`、`Fig2_rescue_sources`、`Fig3_key_events_summary`、`Fig5_before_after_and_classes`、`Fig6_chr11_BAF`），PNG 与 PDF；`figure_manifest.json` 列出每个图件文件 |
+| `figures/junction_views/` | 图 4：每个有 ≥ 2 个 fragment 的 junction 一张碱基水平视图（17 个 junction；PNG 与 PDF） |
 | `locus_BAM/` | S01–S10：每个被 rescue 的 read pair 的全部 alignment record（`<sample>.locus_rescue.bam` 及索引），可在 Integrative Genomics Viewer（IGV）中查看；tag `ZR` 给出 rescue 来源 |
 | `sequences/junction_and_reference_templates.fa` | 每个 junction 的 junction 序列与参考序列（每侧 400 bp）；引物设计的基础 |
 | `sequences/local_assembly_contigs.fa` | 全部局部组装 contig |

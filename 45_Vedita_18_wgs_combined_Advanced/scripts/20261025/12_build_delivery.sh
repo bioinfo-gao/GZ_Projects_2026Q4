@@ -22,9 +22,24 @@ mkdir -p "$DELIV"/{methods,figures/junction_views,tables,sequences,locus_BAM,sup
 T=$OUT/stage10_tables; F=$OUT/stage11_figures; R2=$INH/P44_r2; S9=$INH/P44_r1_stage9_supporting
 G1=$OUT/G1_snv_indel; G2=$OUT/G2_dld1_genome_wide; X=$INH/P42/external_callers
 cid() { sed -E 's/\bP44J([0-9]+)/J\1/g'; }
-cp "$F"/Fig[0-4]_*.{png,pdf} "$DELIV/figures/"
-sed 's#"junctions/#"junction_views/#' "$F/figure_manifest.json" > "$DELIV/figures/figure_manifest.json"
-cp "$F"/junctions/Fig5_*.{png,pdf} "$DELIV/figures/junction_views/"
+# 1027: figures are numbered in the order they appear in the report (Results), not in script order. Analysis outputs keep
+# their script names; the report number is assigned here. FIGMAP is the single place where the mapping lives.
+declare -A FIGMAP=([Fig1_locus_overview]=Fig1_locus_overview [Fig3_rescue_sources]=Fig2_rescue_sources
+                   [Fig0_key_events_summary]=Fig3_key_events_summary [Fig4_before_after_and_classes]=Fig5_before_after_and_classes
+                   [Fig2_chr11_BAF]=Fig6_chr11_BAF)
+for src in "${!FIGMAP[@]}"; do for ext in png pdf; do cp "$F/$src.$ext" "$DELIV/figures/${FIGMAP[$src]}.$ext"; done; done
+for p in "$F"/junctions/Fig5_*.{png,pdf}; do b=$(basename "$p"); cp "$p" "$DELIV/figures/junction_views/Fig4_${b#Fig5_}"; done
+$PY - "$F/figure_manifest.json" "$DELIV/figures/figure_manifest.json" \
+    $(for k in "${!FIGMAP[@]}"; do printf '%s=%s ' "$k" "${FIGMAP[$k]}"; done) <<'PYEOF'
+import json, sys
+m = dict(a.split("=", 1) for a in sys.argv[3:])          # FIGMAP from the shell, so the mapping exists only once
+man = json.load(open(sys.argv[1]))
+for x in man:
+    f = x["file"].replace("junctions/Fig5_", "junction_views/Fig4_")
+    stem, ext = f.rsplit(".", 1)
+    x["file"] = f"{m.get(stem, stem)}.{ext}"
+json.dump(man, open(sys.argv[2], "w"), indent=1)
+PYEOF
 cp "$T"/junction_table_target.tsv "$T"/junction_table_window_context.tsv "$T"/junction_by_sample_long.tsv \
    "$T"/rescue_source_summary.tsv "$T"/key_junction_read_evidence.tsv "$DELIV/tables/"
 cid < "$R2/stage4_clusters/filter_impact.tsv" > "$DELIV/tables/evidence_filter_impact.tsv"

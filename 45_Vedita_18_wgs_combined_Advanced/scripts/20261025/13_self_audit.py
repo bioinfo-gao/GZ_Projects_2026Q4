@@ -56,8 +56,8 @@ ge2_t = [r for r in T if int(r["max_after_frag_S01_S10"]) >= 2]
 ge2_all = [r for r in T + W if int(r["max_after_frag_S01_S10"]) >= 2]
 need(f"After read rescue, {len(ge2_t)} have two or more independent fragments", "core >=2")
 need(f"In the ± 50 kb flanks, {len(ge2_all) - len(ge2_t)} further junctions have two or more fragments", "flank >=2")
-need(f"All {len(ge2_all)} junctions in the window with two or more fragments", "Fig0 caption")
-need(f"(one of {len(ge2_all)}; all in", "Fig5 caption")
+need(f"All {len(ge2_all)} junctions in the window (target region ± 50 kb) with two or more fragments", "Figure 3 caption (summary matrix; 1027 wording)")
+need(f"(one of {len(ge2_all)}; all in", "Figure 4 caption (junction views)")
 need(f"({len(ge2_all)} junctions; PNG and PDF)", "section 9 junction views")
 cs = [r for r in T if r["DLD1_dox_comparison"].startswith("case_specific")]
 cnt = collections.Counter(r["DLD1_dox_case_samples"] for r in cs)
@@ -230,7 +230,7 @@ inv = tsv(f"{D}/tables/data_inventory.tsv")
 nfiles = sum(1 for f in glob.glob(f"{D}/**/*", recursive=True) if os.path.isfile(f) and not f.endswith("md5sums_delivery.txt"))
 if len(inv) != nfiles:
     fails.append(f"inventory rows {len(inv)} != files {nfiles}")
-for f in ("Fig0_key_events_summary", "Fig1_locus_overview", "Fig2_chr11_BAF", "Fig3_rescue_sources", "Fig4_before_after_and_classes"):
+for f in ("Fig1_locus_overview", "Fig2_rescue_sources", "Fig3_key_events_summary", "Fig5_before_after_and_classes", "Fig6_chr11_BAF"):   # 1027: report-order numbers
     for ext in ("png", "pdf"):
         if not os.path.exists(f"{D}/figures/{f}.{ext}"):
             fails.append(f"missing figure {f}.{ext}")

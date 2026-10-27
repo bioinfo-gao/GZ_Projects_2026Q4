@@ -3,6 +3,17 @@
 > 内部文档，2026-10-26。对象：需要解读或向客户解释这两张图的我方人员。
 > 本文只解释"图怎么读"，不修改任何交付产物；文末列出已发现的呈现问题与待决定的修改方案。
 > 每条数值主张后给出来源文件与可复跑的核对命令（§14）。
+>
+> **⚠ 图号对照（2026-10-27）**：本文按**出图脚本**的图号书写（与 `custom_research_report_20261025/` 一致）。自 `custom_research_report_20261026/` 起，交付报告按 Results 中出现的顺序重新编号；分析目录 `analysis/20261025_p45/stage11_figures/` 中的文件名不变，编号在构建交付包时由 `scripts/20261025/12_build_delivery.sh` 的 `FIGMAP` 赋予。
+>
+> | 本文 / 1025 包 / 分析目录 | 1026 起的交付报告 | 文件名（1026 包） |
+> | :--- | :---: | :---: |
+> | Fig1 locus overview | **Figure 1** | `Fig1_locus_overview` |
+> | Fig3 rescue sources | **Figure 2** | `Fig2_rescue_sources` |
+> | Fig0 key events summary | **Figure 3** | `Fig3_key_events_summary` |
+> | Fig5 junction views（17 张） | **Figure 4** | `junction_views/Fig4_<ID>` |
+> | Fig4 before/after and classes | **Figure 5** | `Fig5_before_after_and_classes` |
+> | Fig2 chr11 BAF | **Figure 6** | `Fig6_chr11_BAF` |
 
 ## 0. 两张图在哪、看什么
 
@@ -505,7 +516,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 
 ---
 
-## 13. 已发现的呈现问题（第 3、4、7、9 条已修正，第 8 条部分处理，第 11–14 条已修正，第 10 条暂缓；其余未修改）
+## 13. 已发现的呈现问题（第 3、4、7、9、10–14 条已修正，第 8 条部分处理；其余未修改）
 
 | # | 图 | 问题 | 可选修改 |
 | :--- | :---: | :---: | :---: |
@@ -518,7 +529,7 @@ J0922 在 S04 阴影（114,605,000–114,605,600）内，J0359 在 S05 阴影（
 | 7 | Fig5（伙伴端有歧义的 3 张：J0922、J1635、J1474） | 第 2 行 "has 3 equivalent placements; the coordinate shown is one of them" 与数据不符：代表位置 1 + 替代 3 = 4 处（J0922：chrX、chr10、chr2、chr4，报告正文亦为 4 处） | **✅ 已修正 2026-10-26**：改为 "has N alternative placement(s) besides the coordinate shown (N+1 equivalent in total)"；3 张图的 PNG/PDF 已替换（stage11 与交付目录），manifest 与 md5 已更新；旧版归档于 `superseded_for_comparison/analysis/v6_20261026_fig5_partner_placement_count_wording/` |
 | 8 | Fig5_J1592 等 | 分级只看 S01–S10 最大值，未计入背景细胞系（S11–S18）中的出现；J1592 因此与 J0359 同为 Limited，正文无解释 | **◐ 部分处理 2026-10-26**：图上已加"背景细胞系出现"标注（表头第 2 行加粗 NOTE，J1592 显示 S11、S15、S17）；**分级本身未改**（仍只基于 S01–S10）——是否改分级口径待用户决定，见对话 |
 | 9 | Fig5 全部 | read 标签只有样本号，看不出 S11/S15/S17 属于 Mutu I/DG75 | **✅ 已修正 2026-10-26**：17 张 Fig5 的 read 标签均带细胞系与群体/克隆号 |
-| 10 | 报告全文 | 图号按出图脚本顺序而非 Results 出现顺序：§7 中依次为 Figure 1、3、5、0、4、2（Fig0 为 P45 后加的汇总图） | **⏸ 暂缓（user 2026-10-26）**：用户审阅完毕后统一改。候选方案：按 Results 出现顺序重编为 1–6（7.1→1，7.2→2，7.4 汇总→3、碱基视图→4，7.5→5，7.7→6），同步改文件名、正文约 30 处引用、构建脚本 `Fig[0-4]_` 规则、manifest、md5 |
+| 10 | 报告全文 | 图号按出图脚本顺序而非 Results 出现顺序：§7 中依次为 Figure 1、3、5、0、4、2（Fig0 为 P45 后加的汇总图） | **✅ 已修正 2026-10-27（于 custom_research_report_20261026/）**：按 Results 出现顺序编为 1–6（见文首对照表）；§7.4 中汇总矩阵（新 Figure 3）置于碱基视图（新 Figure 4）之前；1025 包保持旧编号不变 |
 | 11 | P45 Fig0 | 空白不区分"0 fragment"与 underpowered；背景细胞系 S11–S18 不在图上；表头无细胞系；目标区与侧翼混排、无位置；图注未说明这些 | **✅ 已修正 2026-10-27**：A–E 分组、两层表头、underpowered 斜线、S11–S18 列、坐标与 T/F；图注三处同步；旧版归档 v9 |
 | 12 | P45 Fig2 | GM12878 只画了 S06（即其选位点基线，必然无 LOH），S07–S10 未画；正文却写 "GM12878 (S06–S10) shows no homozygous segment"；panel 标签只有样本号 | **✅ 已修正 2026-10-27**：S01–S10 十个 panel 全画，标签带细胞系与群体/克隆号；图注三处同步；旧版归档 v10 |
 | 13 | P45 Fig3 | 绿色图例 "in W + mate/SA/XA outside" 不准确（mate 实际多在窗口内）；三类为 0 的图例无对应条；纵轴无细胞系；未注明未按深度归一 | **✅ 已修正 2026-10-27**：两段 + 逐样本断言 + 脚注 + 细胞系标签 + 深度说明；图注三处同步；旧版归档 v11 |
