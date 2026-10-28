@@ -1,13 +1,13 @@
 # Chr11 Locus Junction-Level Analysis with Read Rescue, and DLD1 Clone Comparison
 
-**Report Date:** @@REPORT_DATE@@
-**Prepared by:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics
-**Prepared for:** Xin Lin and Vedita Anand Singh, Li lab, Boston Children's Hospital / Harvard Medical School
-**Analysis Platform:** Linux HPC server
-**Species:** Homo sapiens (reference genome hg38 / GRCh38, the same alignments as the 2026-10-09 report)
-**Tissue / Cell type:** DLD1-136 and GM12878 cell lines (populations and clones), as named by the client; no further tissue annotation was supplied
-**Target region:** chr11:114,604,000–114,625,500 (GRCh38), analysed within the window chr11:114,554,000–114,675,500 (target ± 50 kb, as in the earlier report)
-**Samples reported:** S01–S10 (DLD1-136 n = 5, GM12878 n = 5); S11–S18 were used only as a background panel (Section 5)
+**Report Date:** @@REPORT_DATE@@\
+**Prepared by:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics\
+**Prepared for:** Xin Lin and Vedita Anand Singh, Li lab, Boston Children's Hospital / Harvard Medical School\
+**Analysis Platform:** Linux HPC server\
+**Species:** Homo sapiens (reference genome hg38 / GRCh38, the same alignments as the 2026-10-09 report)\
+**Tissue / Cell type:** DLD1-136 and GM12878 cell lines (populations and clones), as named by the client; no further tissue annotation was supplied\
+**Target region:** chr11:114,604,000–114,625,500 (GRCh38), analysed within the window chr11:114,554,000–114,675,500 (target ± 50 kb, as in the earlier report)\
+**Samples reported:** S01–S10 (DLD1-136 n = 5, GM12878 n = 5); S11–S18 were used only as a background panel (Section 5)\
 **Relation to earlier work:** this report extends Section 7.3 of the report dated 2026-10-09 (`Chr11_Repeat_Region_WGS_SV_Report_1009.md`); that report is unchanged and its findings stand.
 
 ---
@@ -33,22 +33,14 @@ All of these are answered in this report. Analysis 2 is reported twice, at two l
 
 ## 2. Core Conclusions
 
-This section states, for each sample group, what the result means for you. Section 3 lists the measurements by topic; Section 8.1 adds the basis of each conclusion; Section 8.2 names the section and delivered file behind each point; Section 8.3 states what the data cannot show; Section 8.4 pairs each open question with an experiment.
+This section gives each conclusion in one sentence, what it means for you, and where the evidence is. Section 3 lists the measurements by topic; Section 8.1 sets out the basis of each conclusion; Section 8.2 explains each result per sample group in more detail; Section 8.3 states what the data cannot show; Section 8.4 pairs each open question with an experiment.
 
-| Sample group | Samples | Result | What it means |
-| :--- | :---: | :---: | :---: |
-| **DLD1 +Dox clone 3** | S04 | The broken end is resolved at base-pair level: chr11 sequence ends at 114,605,216–114,605,218 and continues directly into the telomeric repeat (TTAGGG)n. The position lies inside the depth step, and distal of the break one of the two chr11 homologs is lost to the end of 11q. | A terminal deletion of 11q whose broken end carries telomeric repeat, the pattern of a broken chromosome end capped by telomere sequence. A junction-specific PCR primer pair is provided. |
-| **DLD1 +Dox clone 4** | S05 | Two junctions near the step, both absent from S01–S03: a 376 bp fold-back inversion inside the depth step (chr11:114,605,973 joined head-to-head to 114,606,349), and a junction from chr11:114,607,192 to chr21:20,648,241, 1.2 kb distal of the step. Distal of the step, the same homolog is lost as in S04 (Section 7.7); the proximal side shows a graded allelic imbalance. | A more complex end than in S04; the combination is consistent with repeated breakage and rejoining at this site. The chr21 junction is the event called by three of the four callers. |
-| **DLD1 no-Dox population and controls** | S01–S03 | None of the three S04/S05 junctions is present (each with at least 11 reference fragments examined); S03 carries one 2-fragment local event of its own. | They remain a valid baseline: the S04/S05 junctions are specific to the +Dox clones. |
-| **GM12878 population and clones** | S06–S10 | No clone-specific junction above one fragment at the locus. All five GM12878 samples share two well-supported junctions 13 kb proximal of the target (chr11:114,590,721 and 114,590,799), absent from every DLD1 sample. | No clone-specific rearrangement at the locus above the detection limit; the shared junction pair is a feature of the GM12878 line itself, not of any clone. |
-| **All 527 target-region junction candidates** | S01–S10 | After read rescue, 4 have two or more independent fragments; 254 rest on a single fragment; 269 are explained at least as well by an unrearranged copy of the repeat. | The locus is a 22 kb tandem repeat; most single-read junctions cannot be distinguished from repeat-copy misplacement. |
-| **DLD1, genome-wide** | S01–S05 | 13 structural variants elsewhere in the genome are present in S04 or S05 and absent from all of S01–S03 (8 in S04, 5 in S05); none is present in both +Dox clones and none lies on chr11. 7 of the 13 are also called by Manta. | Candidate clone-specific events outside the locus, each private to one clone; none points to a second rearrangement shared by the two +Dox clones. |
-
-**Notes on the table**
-
-1. **Row 1.** "Telomeric repeat" is a sequence description: the reads show only (TTAGGG)n beyond the junction, a sequence present at every chromosome end, so short reads cannot say whether new telomere was added at the break or the break joined an existing chromosome end (Section 8.3). The orientation of the repeat is the one found on a natural chromosome end.
-2. **Row 2.** "Consistent with repeated breakage and rejoining" is our interpretation of three measurements together (a fold-back inversion at the step, the proximal gain and graded imbalance, the distal loss); it is not a measurement in itself.
-3. **Rows 1–2.** Each event rests on 2–4 independent DNA fragments in one sample. The highest claim level any junction reaches in this report is "limited, coherent with the copy-number step" (Section 5): the sequence evidence is exact, but no independent assay has been run. PCR across each junction is the direct confirmation (Section 8.4).
+1. **S04 (+Dox clone 3): the broken end is resolved — chr11 at 114,605,216–218 joined to telomeric repeat, and distal of it one chr11q homolog is lost to the end of 11q.** What it means: this clone carries a terminal deletion of 11q whose broken end is capped by telomeric repeat. A junction-specific PCR primer pair (Section 7.11) can confirm it on S04 DNA, with S01–S03 as negative controls. Evidence: Section 7.4, `tables/junction_table_target.tsv` (row J0922), `figures/junction_views/Fig4_J0922.png`, `tables/key_junction_read_evidence.tsv`, `locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`.
+2. **S05 (+Dox clone 4): the same chr11q homolog is lost, but the end is different and more complex — a 376 bp fold-back inversion at the step and a chr21 junction 1.2 kb distal of it.** What it means: at the fold-back the broken end has folded back on itself (it is not an insertion); the chr21 junction carries only about 1 kb of chr11 sequence and does not contradict the distal loss; how the two events relate is open (Section 7.4). The chr21 junction can be tested with the J0786 primer pairs (Section 7.11); the fold-back needs a different design (Section 8.4). Evidence: Sections 7.4 and 7.7, rows J0359 and J0786, `figures/junction_views/Fig4_J0359.png` and `Fig4_J0786.png`, `supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`, `tables/caller_concordance_by_sample.tsv`.
+3. **S01–S03 remain a valid baseline: none of them carries any of the three +Dox junctions.** What it means: they can serve as negative controls in junction PCR. S04 belongs to a sub-lineage that none of the control clones represents, so events labelled +Dox-specific in S04 cannot be distinguished from variants already present in that sub-lineage before doxycycline treatment (Section 8.3); S05 is not affected. Evidence: Section 7.4 table (reference fragment counts), `tables/junction_by_sample_long.tsv`.
+4. **GM12878 clones: no clone-specific rearrangement at the locus above one fragment.** What it means: no event at this locus in S07–S10 calls for follow-up; the junction pair 13 kb proximal of the target, present in all five GM12878 samples, is a feature of the GM12878 line rather than of any clone. Evidence: Sections 7.5 and 7.8, `tables/junction_table_target.tsv` column `GM12878_clone_specific`, `tables/junction_table_window_context.tsv` rows J1365 and J0533.
+5. **Most junction candidates at this locus are single reads inside a 22 kb repeat and should not be followed up individually.** What it means: of 527 candidates, 4 have two or more independent fragments after read rescue, and three of these are the +Dox junctions of points 1–2; follow-up effort is best spent on those. Evidence: Sections 7.1 and 7.5, Figure 5, `tables/junction_table_target.tsv` columns `classification` and `claim_level`.
+6. **Genome-wide: 13 candidate structural variants are private to one +Dox clone (8 in S04, 5 in S05); none is shared by the two clones and none lies on chr11.** What it means: no second rearrangement common to both +Dox clones was found. Of the two largest events, the 327 kb chr8 duplication in S04 is confirmed by read depth and allele balance, and the chr4 event in S05 is a real junction but not a deletion; the other 11 are candidates for inspection in the whole-genome BAM files and for PCR (Section 8.4). Evidence: Section 7.9, `genome_wide_DLD1_comparison/dld1_dox_specific_events.tsv`, `supporting_analyses/SV_verification/`.
 
 ---
 
@@ -152,7 +144,7 @@ No independent assay result was available, so no junction can be "confirmed"; th
 
 **Genotyping.** For each junction a 400 + 400 bp junction template and two 801 bp reference templates were built; all rescued reads of all samples were aligned to them (bwa-mem2 `mem -a -Y`) and scored as in Section 5. Junctions whose support comes from the same reads and differ only in the placement of the partner end were merged into one event, listing the alternative placements.
 
-**Breakpoint annotation.** Microhomology and breakpoint uncertainty were computed from the reference by sliding the junction while the junction sequence stays identical; inserted sequence comes from the reads or contigs. For every supporting read end, the overlap (positive, microhomology) or gap (negative, inserted bases) between its consecutive aligned segments was also measured directly from the alignments (`tables/key_junction_read_evidence.tsv`). Each 100 bp flank was aligned to GRCh38 with `mem -a` to count equally good placements. Repeat annotation: UCSC hg38 RepeatMasker, simpleRepeat and genomicSuperDups tables.
+**Breakpoint annotation.** Microhomology and breakpoint uncertainty were computed from the reference by sliding the junction while the junction sequence stays identical; inserted sequence comes from the reads or contigs. For every supporting read end, the overlap (positive, microhomology) or gap (negative, inserted bases) between its consecutive aligned segments was also measured directly from the alignments (`tables/key_junction_read_evidence.tsv`). Each 100 bp flank was aligned to GRCh38 with `mem -a` to count equally good placements. Repeat annotation: UCSC hg38 RepeatMasker, simpleRepeat (tandem repeats detected by Tandem Repeats Finder) and genomicSuperDups (segmental duplications) tables.
 
 **Caller concordance.** Four callers were compared with every junction. Manta 1.6.0 (per sample genome-wide `diploidSV` and `candidateSV`; joint target-window run) and DELLY v2.3.0 (per sample discovery; window re-genotyping) are the outputs of the 2026-10-09 run. GRIDSS (joint run over all 18 samples) and SvABA (joint run over S01–S05) were run on the analysis window with the same BAM files. A caller supports a junction when one of its records has both ends within 100 bp of the junction's two ends (as in the earlier report) with the same orientation; records with only one end nearby, and GRIDSS single-breakend records, are listed as anchors and do not count as support. The smallest end-to-end distance of each supporting record is reported, so a stricter tolerance can be applied from the table.
 
@@ -217,6 +209,8 @@ Positions are given as the range within which the junction can slide over identi
 **S04 (J0922).** Seven read ends from four DNA fragments read chr11 sequence up to 114,605,216–218 and then only TTAGGG repeats, up to the end of the read or of the DNA fragment (Figure 4, `figures/junction_views/Fig4_J0922.png`). The repeat matches telomeric-repeat tracts at the ends of chrX, chr2 and chr4 and an interstitial tract on chr10 equally well, so the partner end has no unique genomic position; the coordinate printed for it is one representative placement. The chr11 end is unique (one placement for its 100 bp flank). None of the four fragments was counted by the standard method, because the telomeric part of the reads was soft-clipped or aligned elsewhere with MAPQ 0; the junction was found only through the rescued alignments. The junction lies inside the 95% CI of the S04 depth step (Section 7.6). Its allele fraction is compatible with one of two chr11 copies.
 
 **S05 (J0359, J0786).** The fold-back inversion joins the plus strand at 114,605,973 to the minus strand at 114,606,349 (both "+" ends), i.e. the sequence folds back on itself 376 bp further along; it lies inside the 95% CI of the S05 depth step. The chr21 junction (the earlier report's EV0623, refined to the same coordinates and `AT` microhomology; every supporting read end shows the same 2 bp overlap) lies 1.2 kb distal of the step and its chr21 end is uniquely placeable; because it lies outside the step interval it stays at the claim level "limited junction candidate". It is underpowered in S04 (7 reference fragments) because S04 has lost that segment of one copy.
+
+How the chr21 junction relates to the fold-back and to the distal loss is not resolved. Three readings remain open, and the present data do not distinguish them: (i) the segment duplicated by the fold-back broke again and was joined to chr21, i.e. a second round of breakage and rejoining on the same homolog; (ii) the junction is carried by only part of the clone: its allele fraction, 0.27 (3 junction and 8 reference fragments; 95% CI 0.10–0.57), is below the 0.5 expected if every cell carried the junction on one chr11 homolog, but with three junction fragments it cannot be distinguished from 0.5; (iii) it is an event independent of the 11q loss. chr21 copy number was not examined. Junction-spanning PCR with the J0786 primer pairs (Section 7.11) tests whether the junction is real; which homolog carries it and whether every cell carries it would need further assays, for example single-cell PCR.
 
 **S03 (J1036).** A 10 bp inversion inside the repeat array with 2 fragments in the no-Dox control clone S03 only; it is not related to the +Dox phenotype.
 
@@ -357,12 +351,24 @@ For the other 15 junctions, including the S05 fold-back, every candidate pair ha
 
 ### 8.2 Practical reading
 
-1. **S04: the broken end is resolved — chr11 at 114,605,216–218 joined to telomeric repeat.** Evidence: Section 7.4, `tables/junction_table_target.tsv` (row J0922), `figures/junction_views/Fig4_J0922.png`, `tables/key_junction_read_evidence.tsv`, `locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`; primers in Section 7.11.
-2. **S05: a different and more complex end on the same homolog — a fold-back inversion at the step and a chr21 junction.** Evidence: Sections 7.4 and 7.7, rows J0359 and J0786, `figures/junction_views/Fig4_J0359.png` and `Fig4_J0786.png`, `supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`, `tables/caller_concordance_by_sample.tsv`.
-3. **S01–S03 remain a valid baseline.** Evidence: Section 7.4 table (reference fragment counts), `tables/junction_by_sample_long.tsv`.
-4. **GM12878 clones: no clone-specific rearrangement at the locus above one fragment.** Evidence: Sections 7.5 and 7.8, `tables/junction_table_target.tsv` column `GM12878_clone_specific`, `tables/junction_table_window_context.tsv` rows J1365 and J0533.
-5. **Most junction candidates at this locus are single reads inside a 22 kb repeat and should not be followed up individually.** Evidence: Sections 7.1 and 7.5, Figure 5, `tables/junction_table_target.tsv` columns `classification` and `claim_level`.
-6. **Genome-wide.** Evidence: Section 7.9, `genome_wide_DLD1_comparison/dld1_dox_specific_events.tsv`.
+This section explains, for each sample group, what each result is and what it means, in more detail than Section 2; the notes below the table state the interpretation limits of the S04 and S05 rows.
+
+| Sample group | Samples | Result | What it means |
+| :--- | :---: | :---: | :---: |
+| **DLD1 +Dox clone 3** | S04 | The broken end is resolved at base-pair level: chr11 sequence ends at 114,605,216–114,605,218 and continues directly into the telomeric repeat (TTAGGG)n. The position lies inside the depth step, and distal of the break one of the two chr11 homologs is lost to the end of 11q. | A terminal deletion of 11q whose broken end carries telomeric repeat, the pattern of a broken chromosome end capped by telomere sequence. A junction-specific PCR primer pair is provided. |
+| **DLD1 +Dox clone 4**: overall | S05 | Distal of the step, the same homolog is lost as in S04 (Section 7.7); the proximal side shows a graded allelic imbalance. Two junctions lie near the step, both absent from S01–S03 (next two rows). | A more complex end than in S04; the combination is consistent with repeated breakage and rejoining at this site. |
+| **DLD1 +Dox clone 4**: fold-back inversion | S05 | A 376 bp fold-back inversion inside the depth step: chr11:114,605,973 joined head-to-head to 114,606,349. | The 376 bp is not inserted foreign sequence: chr11 is read up to 114,605,973 and then continues backwards from 114,606,349, i.e. the broken end has folded back on itself. That homolog therefore carries no chr11 sequence beyond this point, which matches the distal loss. |
+| **DLD1 +Dox clone 4**: chr21 junction | S05 | A junction from chr11:114,607,192 to chr21:20,648,241, 1.2 kb distal of the step; the event called by three of the four callers. | Only the chr11 sequence up to 114,607,192 is joined to chr21; the remaining ~20 Mb of distal 11q is not part of it and is still present on only one homolog, so the junction does not contradict the loss. How it relates to the fold-back is not resolved; Section 7.4 sets out three possible readings. |
+| **DLD1 no-Dox population and controls** | S01–S03 | None of the three S04/S05 junctions is present (each with at least 11 reference fragments examined); S03 carries one 2-fragment local event of its own. | They remain a valid baseline: the S04/S05 junctions are specific to the +Dox clones. |
+| **GM12878 population and clones** | S06–S10 | No clone-specific junction above one fragment at the locus. All five GM12878 samples share two well-supported junctions 13 kb proximal of the target (chr11:114,590,721 and 114,590,799), absent from every DLD1 sample. | No clone-specific rearrangement at the locus above the detection limit; the shared junction pair is a feature of the GM12878 line itself, not of any clone. |
+| **All 527 target-region junction candidates** | S01–S10 | After read rescue, 4 have two or more independent fragments; 254 rest on a single fragment; 269 are explained at least as well by an unrearranged copy of the repeat. | The locus is a 22 kb tandem repeat; most single-read junctions cannot be distinguished from repeat-copy misplacement. |
+| **DLD1, genome-wide** | S01–S05 | 13 structural variants elsewhere in the genome are present in S04 or S05 and absent from all of S01–S03 (8 in S04, 5 in S05); none is present in both +Dox clones and none lies on chr11. 7 of the 13 are also called by Manta. | Candidate clone-specific events outside the locus, each private to one clone; none points to a second rearrangement shared by the two +Dox clones. |
+
+**Notes on the table**
+
+1. **Row 1.** "Telomeric repeat" is a sequence description: the reads show only (TTAGGG)n beyond the junction, a sequence present at every chromosome end, so short reads cannot say whether new telomere was added at the break or the break joined an existing chromosome end (Section 8.3). The orientation of the repeat is the one found on a natural chromosome end.
+2. **Row 2.** "Consistent with repeated breakage and rejoining" is our interpretation of three measurements together (a fold-back inversion at the step, the proximal gain and graded imbalance, the distal loss); it is not a measurement in itself.
+3. **Rows 1–4.** Each event rests on 2–4 independent DNA fragments in one sample. The highest claim level any junction reaches in this report is "limited, coherent with the copy-number step" (Section 5): the sequence evidence is exact, but no independent assay has been run. PCR across each junction is the direct confirmation (Section 8.4).
 
 ### 8.3 Limitations
 
@@ -424,5 +430,5 @@ All paths are relative to this delivery folder. This report is the entry point.
 
 ---
 
-**Zhen Gao, PhD**
+**Zhen Gao, PhD**\
 Principal Bioinformatics Scientist, Athenomics

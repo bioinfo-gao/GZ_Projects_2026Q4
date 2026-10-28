@@ -78,7 +78,7 @@ $PY "$SCRIPTS/12b_delivery_tables.py" "$DELIV" || { echo "delivery tables failed
 # ---- hard checks
 fail() { echo "CHECK FAILED: $*"; exit 1; }
 [[ $(find "$DELIV" -maxdepth 1 -name '*.md' | wc -l) -eq 1 ]] || fail "not exactly one report .md"
-grep -q "^\*\*Report Date:\*\* $DATE\$" "$DELIV/$REPORT" || fail "Report Date line"
+grep -qE "^\*\*Report Date:\*\* $DATE\\\\?\$" "$DELIV/$REPORT" || fail "Report Date line"   # optional trailing \ = hard line break
 grep -q '@@REPORT_DATE@@' "$DELIV/$REPORT" && fail "placeholder left"
 grep -rlP '[\x{4e00}-\x{9fff}]' "$DELIV" --include='*.md' --include='*.tsv' --include='*.json' && fail "CJK text in deliverable"
 grep -rlE '\bP4[0-9]J?[0-9]*\b|P4[0-9]_' "$DELIV" --include='*.md' --include='*.tsv' --include='*.json' --include='*.fa' && fail "internal project number in deliverable"

@@ -1,16 +1,16 @@
 # Chr11 位点 junction 层面分析（含 read rescue）与 DLD1 克隆比较 —— 中文版
 
-> **内部中文阅读版，不进客户交付，未发送。** 英文原件（唯一的交付版本）：`../custom_research_report_20261027/Chr11_Locus_and_DLD1_Clone_Analysis_Report_1027.md`，本文由该文件逐节翻译（2026-10-25 起；2026-10-27 同步至 1027 版）。英文原件若再修改，以英文原件为准，本文需同步。
+> **内部中文阅读版，不进客户交付，未发送。** 英文原件（唯一的交付版本）：`../custom_research_report_20261027/Chr11_Locus_and_DLD1_Clone_Analysis_Report_1027.md`，本文由该文件逐节翻译（2026-10-25 起；2026-10-27 同步至 1027 最终版，即用户“审阅完毕”的版本）。英文原件若再修改，以英文原件为准，本文需同步。
 > 文中反引号内的文件路径均**相对于交付目录** `custom_research_report_20261027/`；图片链接已改为指向该目录。
 
-**Report Date（报告日期）:** 2026-10-27
-**Prepared by（编写人）:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics
-**Prepared for（客户）:** Xin Lin and Vedita Anand Singh, Li lab, Boston Children's Hospital / Harvard Medical School
-**Analysis Platform（分析平台）:** Linux HPC server
-**Species（物种）:** Homo sapiens（参考基因组 hg38 / GRCh38，与 2026-10-09 报告使用同一套比对结果）
-**Tissue / Cell type（组织／细胞）:** DLD1-136 与 GM12878 细胞系（群体与克隆），名称按客户提供；客户未提供其他组织注释
-**Target region（目标区）:** chr11:114,604,000–114,625,500（GRCh38），在分析窗口 chr11:114,554,000–114,675,500（目标区 ± 50 kb，与前一份报告相同）内分析
-**Samples reported（报告样本）:** S01–S10（DLD1-136 n = 5，GM12878 n = 5）；S11–S18 只作 background panel（第 5 节）
+**Report Date（报告日期）:** 2026-10-27\
+**Prepared by（编写人）:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics\
+**Prepared for（客户）:** Xin Lin and Vedita Anand Singh, Li lab, Boston Children's Hospital / Harvard Medical School\
+**Analysis Platform（分析平台）:** Linux HPC server\
+**Species（物种）:** Homo sapiens（参考基因组 hg38 / GRCh38，与 2026-10-09 报告使用同一套比对结果）\
+**Tissue / Cell type（组织／细胞）:** DLD1-136 与 GM12878 细胞系（群体与克隆），名称按客户提供；客户未提供其他组织注释\
+**Target region（目标区）:** chr11:114,604,000–114,625,500（GRCh38），在分析窗口 chr11:114,554,000–114,675,500（目标区 ± 50 kb，与前一份报告相同）内分析\
+**Samples reported（报告样本）:** S01–S10（DLD1-136 n = 5，GM12878 n = 5）；S11–S18 只作 background panel（第 5 节）\
 **与此前工作的关系:** 本报告是对 2026-10-09 报告（`Chr11_Repeat_Region_WGS_SV_Report_1009.md`）第 7.3 节的延伸；该报告不作改动，其结论成立。
 
 ---
@@ -36,22 +36,14 @@
 
 ## 2. 核心结论（Core Conclusions）
 
-本节按样本组说明结果对客户意味着什么。第 3 节按主题列出测量结果；第 8.1 节补充每条结论的依据；第 8.2 节列出每条结论背后的章节与交付文件；第 8.3 节说明数据不能说明什么；第 8.4 节为每个未决问题配一个实验。
+本节每条给出一句话结论、对客户意味着什么、证据在哪里。第 3 节按主题列出测量结果；第 8.1 节说明每条结论的依据；第 8.2 节按样本组更详细地解释每项结果；第 8.3 节说明数据不能说明什么；第 8.4 节为每个未决问题配一个实验。
 
-| 样本组 | 样本 | 结果 | 意味着什么 |
-| :--- | :---: | :---: | :---: |
-| **DLD1 +Dox 克隆 3** | S04 | 断端已解析到 bp 水平：chr11 序列终止于 114,605,216–114,605,218，紧接着直接进入端粒重复（TTAGGG）n。该位置位于深度断崖之内；断点以远，两条 chr11 同源染色体（homolog）中的一条一直丢失到 11q 末端。 | 11q 末端缺失，其断端带有端粒重复 —— 即染色体断端被端粒序列封顶的模式。已提供 junction-specific 的 PCR 引物对。 |
-| **DLD1 +Dox 克隆 4** | S05 | 断崖附近有两个 junction，S01–S03 中均不存在：一个位于深度断崖内的 376 bp fold-back inversion（chr11:114,605,973 与 114,606,349 头对头相连），以及一个 chr11:114,607,192 到 chr21:20,648,241 的 junction，位于断崖远端 1.2 kb。断崖以远丢失的是与 S04 相同的那条 homolog（第 7.7 节）；近端呈渐变的等位基因失衡。 | 断端比 S04 更复杂；这些特征的组合符合在该位点发生反复断裂与重连。chr21 junction 是四个 caller 中有三个调出的那个事件。 |
-| **DLD1 无 Dox 群体与对照** | S01–S03 | S04/S05 的三个 junction 一个也不存在（每个 junction 至少检查了 11 个 reference fragment）；S03 自身带有一个 2-fragment 的局部事件。 | 它们仍是有效的基线：S04/S05 的 junction 为 +Dox 克隆所特有。 |
-| **GM12878 群体与克隆** | S06–S10 | 位点上没有超过一个 fragment 的克隆特异 junction。五个 GM12878 样本共有两个 well-supported junction，位于目标区近端 13 kb（chr11:114,590,721 与 114,590,799），所有 DLD1 样本中均不存在。 | 位点上没有超过检出下限的克隆特异重排；这对共有 junction 是 GM12878 细胞系本身的特征，不属于任何一个克隆。 |
-| **目标区全部 527 个 junction 候选** | S01–S10 | read rescue 后，4 个有两个或以上独立 fragment；254 个只有一个 fragment；269 个用未重排的 repeat 拷贝至少同样能解释。 | 该位点是一段 22 kb 的 tandem repeat；大多数单 read 的 junction 无法与 repeat 拷贝的错误定位区分。 |
-| **DLD1，全基因组** | S01–S05 | 基因组其他位置有 13 个结构变异在 S04 或 S05 中存在、在 S01–S03 中均不存在（S04 8 个，S05 5 个）；没有一个在两个 +Dox 克隆中都存在，也没有一个位于 chr11。13 个中有 7 个也被 Manta 调出。 | 位点之外的克隆特异候选事件，各自只属于一个克隆；没有任何一个提示两个 +Dox 克隆共有第二处重排。 |
-
-**表注**
-
-1. **第 1 行。** “端粒重复”是对序列的描述：junction 之后的 read 只显示（TTAGGG）n，这种序列在每条染色体末端都有，因此 short read 无法判断是在断点处新加了端粒，还是断端连接到了某个已有的染色体末端（第 8.3 节）。该重复的方向与天然染色体末端的方向一致。
-2. **第 2 行。** “符合反复断裂与重连”是我们对三项测量结果合并后的解读（断崖处的 fold-back inversion、近端的拷贝增加与渐变失衡、远端的丢失），本身不是一项测量。
-3. **第 1–2 行。** 每个事件都只依靠单个样本中的 2–4 个独立 DNA fragment。本报告中任何 junction 达到的最高 claim level 是“limited，与拷贝数断崖一致”（第 5 节）：序列证据是精确的，但尚未做任何独立检测。跨每个 junction 的 PCR 是直接的验证方式（第 8.4 节）。
+1. **S04（+Dox 克隆 3）：断端已解析 —— chr11 的 114,605,216–218 连接到端粒重复，其远端一条 chr11q homolog 一直丢失到 11q 末端。** 意味着什么：该克隆带有 11q 末端缺失，其断端被端粒重复封顶。可用 junction-specific 的 PCR 引物对（第 7.11 节）在 S04 DNA 上验证，以 S01–S03 作阴性对照。证据：第 7.4 节，`tables/junction_table_target.tsv`（J0922 行），`figures/junction_views/Fig4_J0922.png`，`tables/key_junction_read_evidence.tsv`，`locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`。
+2. **S05（+Dox 克隆 4）：丢失的是同一条 chr11q homolog，但断端不同且更复杂 —— 断崖处一个 376 bp 的 fold-back inversion，以及断崖远端 1.2 kb 处的一个 chr21 junction。** 意味着什么：在 fold-back 处，断端折回到自身（不是插入）；chr21 junction 只带走约 1 kb 的 chr11 序列，与远端丢失不矛盾；两个事件之间的关系尚未确定（第 7.4 节）。chr21 junction 可用 J0786 引物对验证（第 7.11 节）；fold-back 需要另行设计（第 8.4 节）。证据：第 7.4 与 7.7 节，J0359 与 J0786 行，`figures/junction_views/Fig4_J0359.png` 与 `Fig4_J0786.png`，`supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`，`tables/caller_concordance_by_sample.tsv`。
+3. **S01–S03 仍是有效基线：三者都不带三个 +Dox junction 中的任何一个。** 意味着什么：可在 junction PCR 中作阴性对照。S04 属于一个没有任何对照克隆代表的亚系（sub-lineage），因此 S04 中标为 +Dox-specific 的事件无法与该亚系在 doxycycline 处理之前已有的变异区分（第 8.3 节）；S05 不受此影响。证据：第 7.4 节表格（reference fragment 计数），`tables/junction_by_sample_long.tsv`。
+4. **GM12878 克隆：位点上没有超过一个 fragment 的克隆特异重排。** 意味着什么：S07–S10 在该位点没有需要跟进的事件；目标区近端 13 kb 处、五个 GM12878 样本都有的那对 junction 是 GM12878 细胞系本身的特征，不属于任何一个克隆。证据：第 7.5 与 7.8 节，`tables/junction_table_target.tsv` 的 `GM12878_clone_specific` 列，`tables/junction_table_window_context.tsv` 的 J1365 与 J0533 行。
+5. **该位点的大多数 junction 候选是 22 kb repeat 内的单 read，不应逐个跟进。** 意味着什么：527 个候选中，read rescue 后有 4 个具有两个或以上独立 fragment，其中三个就是第 1–2 条的 +Dox junction；后续工作应集中在这些上。证据：第 7.1 与 7.5 节，图 5，`tables/junction_table_target.tsv` 的 `classification` 与 `claim_level` 列。
+6. **全基因组：13 个候选结构变异只属于其中一个 +Dox 克隆（S04 8 个，S05 5 个）；没有一个为两个克隆共有，也没有一个位于 chr11。** 意味着什么：没有发现两个 +Dox 克隆共有的第二处重排。两个最大的事件中，S04 的 327 kb chr8 duplication 经 read depth 与等位基因平衡确认；S05 的 chr4 事件是真实的 junction，但不是缺失；其余 11 个是候选，可在全基因组 BAM 文件中查看并做 PCR（第 8.4 节）。证据：第 7.9 节，`genome_wide_DLD1_comparison/dld1_dox_specific_events.tsv`，`supporting_analyses/SV_verification/`。
 
 ---
 
@@ -155,7 +147,7 @@ S11–S18（Mutu I 与 DG75）以相同方式处理，只用于标出那些也�
 
 **Genotyping。** 为每个 junction 构建一个 400 + 400 bp 的 junction 模板和两个 801 bp 的参考模板；把所有样本的全部被 rescue 的 read 比对到这些模板上（bwa-mem2 `mem -a -Y`），并按第 5 节打分。支持来自同一批 read、只在 partner 端定位上不同的 junction 合并为一个事件，并列出 alternative 定位。
 
-**断点注释。** microhomology 与断点不确定区间由参考序列计算：在 junction 序列保持不变的前提下滑动 junction；inserted sequence 来自 read 或 contig。对每个支持的 read end，还直接从比对中测量其相邻比对段之间的 overlap（正值，microhomology）或 gap（负值，插入碱基）（`tables/key_junction_read_evidence.tsv`）。每个 100 bp flank 用 `mem -a` 比对到 GRCh38，统计同样好的定位数。Repeat 注释：UCSC hg38 RepeatMasker、simpleRepeat 与 genomicSuperDups 表。
+**断点注释。** microhomology 与断点不确定区间由参考序列计算：在 junction 序列保持不变的前提下滑动 junction；inserted sequence 来自 read 或 contig。对每个支持的 read end，还直接从比对中测量其相邻比对段之间的 overlap（正值，microhomology）或 gap（负值，插入碱基）（`tables/key_junction_read_evidence.tsv`）。每个 100 bp flank 用 `mem -a` 比对到 GRCh38，统计同样好的定位数。Repeat 注释：UCSC hg38 RepeatMasker、simpleRepeat（由 Tandem Repeats Finder 检出的串联重复）与 genomicSuperDups（片段重复，segmental duplications）表。
 
 **Caller concordance。** 把四个 caller 与每个 junction 比较。Manta 1.6.0（每样本 genome-wide `diploidSV` 与 `candidateSV`；目标窗口联合运行）与 DELLY v2.3.0（每样本 discovery；窗口 re-genotyping）是 2026-10-09 运行的输出。GRIDSS（全部 18 个样本联合运行）与 SvABA（S01–S05 联合运行）在分析窗口上用同一批 BAM 文件运行。某个 caller 的某条 record 两端都在 junction 两端 100 bp 以内（与前一份报告相同）且方向一致时，该 caller 算支持该 junction；只有一端靠近的 record，以及 GRIDSS 的 single-breakend record，作为 anchor 列出，不算支持。报告每条支持 record 的最小端到端距离，因此可以从表中套用更严格的容差。
 
@@ -220,6 +212,8 @@ simpleRepeat 注释在 chr11:114,603,768–114,625,660 标出一个重复约 522
 **S04（J0922）。** 来自四个 DNA fragment 的七个 read end，读到 chr11 序列的 114,605,216–218 为止，之后只有 TTAGGG 重复，一直到 read 末端或 DNA fragment 末端（图 4，`figures/junction_views/Fig4_J0922.png`）。该重复与 chrX、chr2、chr4 末端的端粒重复区以及 chr10 的一段 interstitial 区同样匹配，因此 partner 端没有唯一的基因组位置；为它标注的坐标只是一个代表性定位。chr11 端是唯一的（其 100 bp flank 只有一个定位）。四个 fragment 一个都没有被标准方法计入，因为 read 的端粒部分被 soft-clip 或以 MAPQ 0 比对到别处；这个 junction 只是通过被 rescue 的比对才被找到。该 junction 位于 S04 深度断崖的 95% CI 之内（第 7.6 节）。其 allele fraction 与两条 chr11 拷贝中的一条相符。
 
 **S05（J0359、J0786）。** fold-back inversion 把 114,605,973 处的正链连接到 114,606,349 处的负链（两端都是“+”端），即序列在 376 bp 之后折回自身；它位于 S05 深度断崖的 95% CI 之内。chr21 junction（前一份报告中的 EV0623，细化到相同坐标与 `AT` microhomology；每个支持的 read end 都显示同样的 2 bp overlap）位于断崖远端 1.2 kb，其 chr21 端可唯一定位；由于它位于断崖区间之外，claim level 停留在“limited junction candidate”。它在 S04 中为 underpowered（7 个 reference fragment），因为 S04 已丢失其中一条拷贝的这一段。
+
+chr21 junction 与 fold-back、与远端丢失之间的关系尚未确定。有三种解读仍然成立，现有数据无法区分：（i）fold-back 复制出的那一段再次断裂并连接到 chr21，即在同一条 homolog 上发生第二轮断裂与重连；（ii）该 junction 只存在于克隆中的一部分细胞：其等位基因频率为 0.27（3 个 junction fragment 与 8 个 reference fragment；95% CI 0.10–0.57），低于每个细胞都在一条 chr11 homolog 上带有该 junction 时预期的 0.5，但只有三个 junction fragment，无法与 0.5 区分；（iii）它是与 11q 丢失无关的独立事件。未检查 chr21 的拷贝数。用 J0786 引物对（第 7.11 节）做跨 junction 的 PCR，可检验该 junction 是否真实；它位于哪条 homolog、是否每个细胞都带，需要进一步的检测，例如单细胞 PCR。
 
 **S03（J1036）。** repeat array 内的一个 10 bp inversion，只在无 Dox 对照克隆 S03 中有 2 个 fragment；与 +Dox 表型无关。
 
@@ -360,12 +354,24 @@ S01–S10 的联合 calling 在拆分 multi-allelic 位点后得到 10,104,360 �
 
 ### 8.2 实用解读（Practical reading）
 
-1. **S04：断端已解析 —— chr11 的 114,605,216–218 连接到端粒重复。** 证据：第 7.4 节，`tables/junction_table_target.tsv`（J0922 行），`figures/junction_views/Fig4_J0922.png`，`tables/key_junction_read_evidence.tsv`，`locus_BAM/S04_DLD1_c3_dox.locus_rescue.bam`；引物见第 7.11 节。
-2. **S05：同一条 homolog 上一个不同且更复杂的断端 —— 断崖处的 fold-back inversion 和一个 chr21 junction。** 证据：第 7.4 与 7.7 节，J0359 与 J0786 行，`figures/junction_views/Fig4_J0359.png` 与 `Fig4_J0786.png`，`supporting_analyses/chr11_BAF/retained_homolog_S04_vs_S05.tsv`，`tables/caller_concordance_by_sample.tsv`。
-3. **S01–S03 仍是有效基线。** 证据：第 7.4 节表格（reference fragment 计数），`tables/junction_by_sample_long.tsv`。
-4. **GM12878 克隆：位点上没有超过一个 fragment 的克隆特异重排。** 证据：第 7.5 与 7.8 节，`tables/junction_table_target.tsv` 的 `GM12878_clone_specific` 列，`tables/junction_table_window_context.tsv` 的 J1365 与 J0533 行。
-5. **该位点的大多数 junction 候选是 22 kb repeat 内的单 read，不应逐个跟进。** 证据：第 7.1 与 7.5 节，图 5，`tables/junction_table_target.tsv` 的 `classification` 与 `claim_level` 列。
-6. **全基因组。** 证据：第 7.9 节，`genome_wide_DLD1_comparison/dld1_dox_specific_events.tsv`。
+本节按样本组解释每项结果是什么、意味着什么，比第 2 节更详细；表后的注释说明 S04 与 S05 各行的解读限度。
+
+| 样本组 | 样本 | 结果 | 意味着什么 |
+| :--- | :---: | :---: | :---: |
+| **DLD1 +Dox 克隆 3** | S04 | 断端已解析到 bp 水平：chr11 序列终止于 114,605,216–114,605,218，紧接着直接进入端粒重复（TTAGGG）n。该位置位于深度断崖之内；断点以远，两条 chr11 同源染色体（homolog）中的一条一直丢失到 11q 末端。 | 11q 末端缺失，其断端带有端粒重复 —— 即染色体断端被端粒序列封顶的模式。已提供 junction-specific 的 PCR 引物对。 |
+| **DLD1 +Dox 克隆 4**：总体 | S05 | 断崖以远丢失的是与 S04 相同的那条 homolog（第 7.7 节）；近端呈渐变的等位基因失衡。断崖附近有两个 junction，S01–S03 中均不存在（见下两行）。 | 断端比 S04 更复杂；这些特征的组合符合在该位点发生反复断裂与重连。 |
+| **DLD1 +Dox 克隆 4**：fold-back inversion | S05 | 位于深度断崖内的 376 bp fold-back inversion：chr11:114,605,973 与 114,606,349 头对头相连。 | 这 376 bp 不是插入的外来序列：chr11 读到 114,605,973 后，从 114,606,349 开始反向继续，即断端折回到自身。因此该 homolog 在此点以远没有 chr11 序列，与远端丢失吻合。 |
+| **DLD1 +Dox 克隆 4**：chr21 junction | S05 | chr11:114,607,192 到 chr21:20,648,241 的 junction，位于断崖远端 1.2 kb；是四个 caller 中有三个调出的那个事件。 | 连接到 chr21 的只有截至 114,607,192 的 chr11 序列；其余约 20 Mb 的远端 11q 不在其中，且仍只存在于一条 homolog 上，因此该 junction 与远端丢失不矛盾。它与 fold-back 的关系尚未确定；第 7.4 节列出三种可能的解读。 |
+| **DLD1 无 Dox 群体与对照** | S01–S03 | S04/S05 的三个 junction 一个也不存在（每个 junction 至少检查了 11 个 reference fragment）；S03 自身带有一个 2-fragment 的局部事件。 | 它们仍是有效的基线：S04/S05 的 junction 为 +Dox 克隆所特有。 |
+| **GM12878 群体与克隆** | S06–S10 | 位点上没有超过一个 fragment 的克隆特异 junction。五个 GM12878 样本共有两个 well-supported junction，位于目标区近端 13 kb（chr11:114,590,721 与 114,590,799），所有 DLD1 样本中均不存在。 | 位点上没有超过检出下限的克隆特异重排；这对共有 junction 是 GM12878 细胞系本身的特征，不属于任何一个克隆。 |
+| **目标区全部 527 个 junction 候选** | S01–S10 | read rescue 后，4 个有两个或以上独立 fragment；254 个只有一个 fragment；269 个用未重排的 repeat 拷贝至少同样能解释。 | 该位点是一段 22 kb 的 tandem repeat；大多数单 read 的 junction 无法与 repeat 拷贝的错误定位区分。 |
+| **DLD1，全基因组** | S01–S05 | 基因组其他位置有 13 个结构变异在 S04 或 S05 中存在、在 S01–S03 中均不存在（S04 8 个，S05 5 个）；没有一个在两个 +Dox 克隆中都存在，也没有一个位于 chr11。13 个中有 7 个也被 Manta 调出。 | 位点之外的克隆特异候选事件，各自只属于一个克隆；没有任何一个提示两个 +Dox 克隆共有第二处重排。 |
+
+**表注**
+
+1. **第 1 行。** “端粒重复”是对序列的描述：junction 之后的 read 只显示（TTAGGG）n，这种序列在每条染色体末端都有，因此 short read 无法判断是在断点处新加了端粒，还是断端连接到了某个已有的染色体末端（第 8.3 节）。该重复的方向与天然染色体末端的方向一致。
+2. **第 2 行。** “符合反复断裂与重连”是我们对三项测量结果合并后的解读（断崖处的 fold-back inversion、近端的拷贝增加与渐变失衡、远端的丢失），本身不是一项测量。
+3. **第 1–4 行。** 每个事件都只依靠单个样本中的 2–4 个独立 DNA fragment。本报告中任何 junction 达到的最高 claim level 是“limited，与拷贝数断崖一致”（第 5 节）：序列证据是精确的，但尚未做任何独立检测。跨每个 junction 的 PCR 是直接的验证方式（第 8.4 节）。
 
 ### 8.3 局限（Limitations）
 
@@ -427,5 +433,5 @@ S01–S10 的联合 calling 在拆分 multi-allelic 位点后得到 10,104,360 �
 
 ---
 
-**Zhen Gao, PhD**
+**Zhen Gao, PhD**\
 Principal Bioinformatics Scientist, Athenomics
