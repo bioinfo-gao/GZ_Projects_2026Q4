@@ -1,0 +1,11 @@
+sample_name,role,service_type,sample_type,nucleic_acid_type,species,storage_reagent,conc_as_written,volume_uL,total_ug,shipping_condition,post_project_handling,analysis_required,R1_GiB,R2_GiB,raw_read_pairs,raw_depth_x,notes
+Ctr_1,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Control role inferred from 'Ctr_' prefix only; whether CRISPR-naive parental is not stated"
+Ctr_2,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Form name carries trailing space ('Ctr_2 ') in both A30 and A43"
+Ctr_3,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 1,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Identity (clone / gRNA / vector) not stated"
+Sample 2,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 3,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 4,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 5,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 6,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 7,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
