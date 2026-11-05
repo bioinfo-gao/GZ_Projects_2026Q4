@@ -4,6 +4,7 @@ Plan Date（创建）: 2026-10-29
 
 更新记录：
 - 2026-10-29 — 阅读 Gmail、调研 GitHub 原仓库、建立待确认的证据模型与配色方案。仅调研，未启动正式分析。
+- 2026-11-04 — 新增方法学调研 [P47_scRNAseq_best_practices_github_survey_1104.md](P47_scRNAseq_best_practices_github_survey_1104.md)；其 §6 与 §8 含待确认的计划修订建议，本计划正文未改。未启动正式分析。
 
 ## 1. 已知事实与输入状态
 

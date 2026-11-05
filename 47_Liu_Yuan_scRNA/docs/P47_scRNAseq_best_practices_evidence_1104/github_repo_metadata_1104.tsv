@@ -1,0 +1,46 @@
+scverse/scanpy	2608	2026-11-05	False	  rel: 1.12.5 2026-10-29
+satijalab/seurat	2811	2026-10-28	False	  rel: Version 5.6.0 2026-10-03
+scverse/scvi-tools	1720	2026-11-04	False	  rel: scvi-tools 1.5.2 2026-10-28
+scverse/anndata	783	2026-11-04	False	  rel: 0.13.4 2026-09-18
+theislab/single-cell-best-practices	1297	2026-11-04	False	  rel: 0.2.0 2026-10-29
+nf-core/scrnaseq	364	2026-11-01	False	  rel: 4.2.0 2026-07-04
+nf-core/scdownstream	118	2026-10-28	False	  rel: no-release
+openproblems-bio/openproblems	444	2026-10-02	False	  rel: v2.1.0 2026-06-03
+plger/scDblFinder	276	2026-10-18	False	  rel: no-release
+constantAmateur/SoupX	346	2022-11-01	False	  rel: no-release
+broadinstitute/CellBender	428	2026-09-12	False	  rel: CellBender 0.4.0 release 2026-08-15
+campbio/celda	156	2026-10-09	False	  rel: v1.28.0 2026-09-27
+immunogenomics/harmony	674	2026-10-15	False	  rel: v2.1.0: [META] Version bump 2026-10-15
+YosefLab/scib-metrics	98	2026-11-04	False	  rel: scib-metrics 0.6.2 2026-11-01
+theislab/scib	435	2026-04-27	False	  rel: v1.2.1 2026-04-28
+Teichlab/celltypist	517	2026-05-22	False	  rel: celltypist 1.7.1 2025-06-25
+scverse/pertpy	357	2026-11-04	False	  rel: 1.5.0 🌈 2026-11-03
+saezlab/decoupleR	314	2026-11-04	False	  rel: v2.9.7 2024-03-28
+scverse/liana	325	2026-11-02	False	  rel: v2.1.0 2026-10-31
+HelenaLC/muscat	249	2026-07-06	False	  rel: no-release
+GabrielHoffman/dreamlet	38	2026-09-23	False	  rel: 1.7.1 to zenodo 2025-10-20
+MangiolaLaboratory/sccomp	137	2026-10-30	False	  rel: mean-variability association redesign + smooths 2026-08-06
+phipsonlab/speckle	71	2022-12-08	False	  rel: no-release
+theislab/scCODA	205	2026-01-13	False	  rel: 0.1.9 2023-02-01
+jinworks/CellChat	691	2026-03-04	False	  rel: Version 2.1 2025-04-16
+theislab/cellrank NOTFOUND:Moved Permanently	None		None	  rel: v2.3.3 2026-09-16
+theislab/scvelo	514	2026-02-25	False	  rel: v0.3.4 2026-02-24
+aertslab/pySCENIC	648	2025-06-26	False	  rel: 0.12.1 2022-11-21
+scverse/rapids-singlecell	409	2026-11-04	False	  rel: v.0.19.0rc1 2026-11-02
+bnprks/BPCells	310	2026-10-26	False	  rel: v0.3.1 2025-07-21
+alexdobin/STAR	2282	2025-03-18	False	  rel: STAR 2.7.11b --- 2024/01/24 ::: Minor in one parameter. 2024-01-26
+pachterlab/kb_python	193	2026-10-08	False	  rel: v0.30.2 2026-05-19
+COMBINE-lab/alevin-fry	220	2026-10-29	False	  rel: 0.19.0 (2026-10-25) 2026-10-25
+owkin/PyDESeq2 NOTFOUND:Moved Permanently	None		None	  rel: v0.5.4 2026-01-23
+scverse/PyDESeq2	768	2026-11-02	False	  rel: v0.5.4 2026-01-23
+wheaton5/souporcell	216	2026-04-30	False	  rel: v3.0 2026-04-02
+caleblareau/maegatk	24	2024-01-16	False	  rel: no-release
+single-cell-genetics/cellsnp-lite	174	2026-09-29	False	  rel: Release v1.2.4 2025-10-30
+single-cell-genetics/vireo	106	2026-11-04	False	  rel: release v0.2.3 2020-03-22
+kharchenkolab/numbat	233	2026-02-04	False	  rel: v1.5.1 2025-10-21
+velocyto-team/velocyto.py	177	2025-10-07	False	  rel: 0.17.17 2019-01-31
+Lun-Lab/scrapper NOTFOUND:Not Found	None		None	  rel: no-release
+libscran/scrapper	10	2026-11-03	False	  rel: no-release
+LTLA/scrapper NOTFOUND:Not Found	None		None	  rel: no-release
+scverse/cellrank	459	2026-11-04	False	  rel: v2.3.3 2026-09-16
+scverse/decoupler	300	2026-11-02	False	  rel: v2.3.1

@@ -1,0 +1,5 @@
+suppressMessages(library(DESeq2))
+m<-as.matrix(read.csv("pb.csv",row.names=1,check.names=FALSE)); cd<-read.csv("col.csv",row.names=1)
+stopifnot(identical(colnames(m),rownames(cd))); cd$group<-relevel(factor(cd$group),ref="C")
+d<-DESeqDataSetFromMatrix(m,cd,~group); d<-d[rowSums(counts(d)>=10)>=3,]; d<-DESeq(d,quiet=TRUE)
+r<-results(d,contrast=c("group","E","C")); print(dim(r)); print(sum(r$padj<0.05,na.rm=TRUE)); print(head(as.data.frame(r),2))
