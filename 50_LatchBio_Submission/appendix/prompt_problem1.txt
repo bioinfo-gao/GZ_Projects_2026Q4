@@ -1,0 +1,58 @@
+OUTPUT FORMAT - READ THIS FIRST, IT IS GRADED.
+Your reply must contain exactly one <EVAL_ANSWER> block holding a single JSON object
+with the fields specified at the end of this prompt. The block is required even when you
+also explain your reasoning; put all reasoning outside the block. If for any reason you
+do not produce the block, restate each field name followed by its value, one per line, so
+that the answer can still be scored.
+
+A randomised phase 3 trial in newly diagnosed glioblastoma compared standard
+radiotherapy plus temozolomide with the same regimen plus an anti-VEGF antibody.
+Progression-free survival (PFS) was a co-primary endpoint, determined by radiographic
+criteria anchored to contrast enhancement on MRI.
+
+TABLE 1 — Reported efficacy (source: published trial report)
+  Endpoint                 Anti-VEGF arm        Placebo arm
+  Patients randomised      312                  309
+  Median PFS (months)      10.7 (95% CI 10.0-12.2)   7.3 (95% CI 5.9-7.9)
+  PFS hazard ratio         0.79 (95% CI 0.66-0.94), P = 0.007
+  Median OS (months)       15.7                 16.1
+  OS hazard ratio          1.13 (not significant)
+
+TABLE 2 — Blinded central review audit of how each progression event was first
+declared. These counts are a hypothetical audit constructed for this exercise; they
+are not reported in the trial publication.
+  Category                                          Anti-VEGF arm   Placebo arm
+  Total progression events                          240             250
+  First declared on new/enlarging contrast enhancement   134         213
+  First declared on non-enhancing T2/FLAIR growth        106          37
+
+Using only the tables above, do the following.
+
+1. For each arm, compute the proportion of progression events that were first declared
+   on non-enhancing T2/FLAIR growth.
+2. Compute the absolute difference between those two proportions, in percentage points.
+3. Choose the interpretation best supported by the data.
+
+Which interpretation is best supported?
+  A. Progression events in the two arms were detected through the same channel, so
+     enhancement-anchored PFS is directly comparable between arms.
+  B. The detection channel differs between arms, so comparability of enhancement-
+     anchored PFS between them cannot be assumed. The tables cannot distinguish
+     suppression of the enhancement signal from a genuine shift towards non-enhancing
+     growth, nor establish how much of the PFS difference is a measurement effect.
+  C. The difference is explained by a genuine shift towards infiltrative non-enhancing
+     growth rather than by any change in detection, so PFS remains a valid comparison
+     between the arms.
+  D. The tables are insufficient to assess whether progression detection differs by
+     treatment arm.
+
+Return EXACTLY the following block. Do not omit the <EVAL_ANSWER> tags:
+
+<EVAL_ANSWER>
+{"nonenhancing_fraction_treated": <float>, "nonenhancing_fraction_placebo": <float>,
+ "absolute_difference_pp": <float>, "answer": "<letter>"}
+</EVAL_ANSWER>
+
+Report the two fractions as proportions rounded to two decimals, and the difference in
+percentage points rounded to one decimal, where <letter> is A, B, C, or D. Provide a
+one-line rationale outside the answer tags.

@@ -1,0 +1,42 @@
+MODEL: OpenAI ChatGPT (free tier, web)   DATE: 2026-11-05   PROBLEM: 1   RUN: 2
+PROMPT VERSION: revised (output-format instruction moved to the top; option set rewritten)
+PROMPT MODIFICATION: the operator appended the instruction "in detailed English" to the prompt when running this test.
+
+The fractions are 0.44 and 0.15, with an absolute difference of 29.4 percentage points. B is the closest available answer, although its categorical claim that PFS is "not comparable" goes beyond what these tables establish.
+
+The requested proportions use the total number of progression events in each arm as the denominator.
+Calculation | Anti-VEGF arm | Placebo arm
+Progression first declared on non-enhancing T2/FLAIR growth | 106 | 37
+Total progression events | 240 | 250
+Fraction | 106/240 = 0.441667 | 37/250 = 0.148000
+Rounded fraction | 0.44 | 0.15
+Percentage | 44.17% | 14.80%
+
+Calculate the absolute difference before rounding the fractions.
+Absolute difference = |106/240 - 37/250| x 100 = 29.3667 ~= 29.4 percentage points.
+
+The audit directly establishes a difference in the observed channel of first progression detection. Among recorded progression events, the anti-VEGF arm had a much larger proportion first declared through non-enhancing T2/FLAIR growth. Correspondingly, enhancement first triggered detection in 55.8% of treated-arm events and 85.2% of placebo-arm events.
+
+However, these counts alone cannot distinguish two explanations.
+- Suppression of the enhancement signal. Treatment could make enhancement less likely to reveal progression, potentially delaying the recorded event until another imaging criterion is met.
+- A genuine change in tumour growth pattern. Treatment could change the relative occurrence of enhancing and non-enhancing progression, producing a different distribution of first detection channels.
+Both explanations fit the observed counts. A combination also fits them.
+
+The limitation in option B is its assertion that either explanation necessarily invalidates PFS comparability. A genuine shift in growth pattern could still permit a valid PFS comparison if the assessment criteria capture both patterns adequately and consistently. Establishing detection bias would require additional information about assessment sensitivity, scan timing, and the relationship between recorded progression and underlying tumour progression.
+
+Moreover, Table 2 describes the detection channel conditional on an observed progression event. These proportions alone cannot estimate how many events were missed or delayed, or how much of the 3.4-month median PFS difference reflects a measurement effect. The absence of a statistically significant OS benefit also cannot resolve those questions.
+
+The choices can therefore be assessed as follows.
+Option | Assessment
+A | Conflicts with the substantial observed difference in first detection channels.
+B | Closest to the evidence because it recognises the channel difference and the unresolved mechanism. Its conclusion about invalid comparability is too categorical.
+C | Assigns a specific biological explanation that the tables cannot establish.
+D | Too broad because the audit does show that observed first detection channels differ by treatment arm.
+
+My selection of B should therefore be understood as a forced-choice selection with that qualification.
+
+<EVAL_ANSWER>
+{"nonenhancing_fraction_treated": 0.44, "nonenhancing_fraction_placebo": 0.15, "absolute_difference_pp": 29.4, "answer": "B"}
+</EVAL_ANSWER>
+
+The detection channel differs between arms, raising concerns about enhancement-anchored PFS comparability, although these tables cannot establish the mechanism or prove that comparability is invalid.

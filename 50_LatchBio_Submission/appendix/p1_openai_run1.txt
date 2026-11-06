@@ -1,0 +1,19 @@
+MODEL: OpenAI ChatGPT (free tier, web)   DATE: 2026-11-05   PROBLEM: 1   RUN: 1
+PROMPT MODIFICATION: the operator appended the instruction "in detailed English" to the prompt when running this test.
+
+1. Proportion of progression events first declared on T2/FLAIR. The denominator in each arm is the number of progression events.
+Arm | Events first declared on T2/FLAIR | Total progression events | Proportion
+Anti-VEGF | 106 | 240 | 106/240 = 44.17%
+Placebo | 37 | 250 | 37/250 = 14.80%
+
+2. Absolute difference. Using the unrounded fractions, 100 x (106/240 - 37/250) = 29.3667 percentage points, which rounds to 29.4 percentage points.
+
+3. Interpretation. B is the best-supported choice, with a qualification. Among recorded progression events, contrast enhancement first signaled progression in 55.8% of events in the anti-VEGF arm versus 85.2% in the placebo arm. If treatment suppresses the enhancement that would otherwise reveal progression on MRI, a treated patient's progression could be recorded later, when growth becomes apparent on T2/FLAIR. That delay could account for part of the observed median PFS difference of 10.7 versus 7.3 months.
+
+The audit records which imaging finding first triggered the progression call. Establishing that PFS actually overstated the benefit would also require evidence about when the tumour truly progressed. A treatment-induced change in the underlying pattern of tumour growth could also shift the proportions. Thus, the tables support B's proposed explanation, while leaving the presence and magnitude of any PFS overstatement uncertain.
+
+<EVAL_ANSWER>
+{"nonenhancing_fraction_treated": 0.44, "nonenhancing_fraction_placebo": 0.15, "absolute_difference_pp": 29.4, "answer": "B"}
+</EVAL_ANSWER>
+
+[rationale, as returned, in Chinese] 在已判定进展的事件中，抗 VEGF 组更常由非增强性生长首次检出，这与增强信号受抑、影像学 PFS 因而可能高估获益的解释一致。

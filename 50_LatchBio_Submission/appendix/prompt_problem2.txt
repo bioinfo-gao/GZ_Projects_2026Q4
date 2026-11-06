@@ -1,0 +1,45 @@
+OUTPUT FORMAT - READ THIS FIRST, IT IS GRADED.
+Your reply must contain exactly one <EVAL_ANSWER> block holding a single JSON object
+with the fields specified at the end of this prompt. The block is required even when you
+also explain your reasoning; put all reasoning outside the block. If for any reason you
+do not produce the block, restate each field name followed by its value, one per line, so
+that the answer can still be scored.
+
+In newly diagnosed glioblastoma, a randomised phase 3 trial added an anti-VEGF antibody
+to radiotherapy plus temozolomide. Progression-free survival improved (10.7 vs 7.3
+months, HR 0.79) while overall survival did not (15.7 vs 16.1 months). The trial also
+reported worse neurocognitive function and greater symptom burden in the anti-VEGF arm.
+
+Background you may rely on, and nothing else:
+  - Glioblastoma comprises a contrast-enhancing bulk and a non-enhancing infiltrating
+    margin. Recurrence arises from the infiltrating margin.
+  - Anti-VEGF therapy acts on tumour vasculature. Answer for sustained therapy, beyond
+    any transient vascular-normalisation window.
+  - Temozolomide is an alkylating agent whose lesions become lethal principally during
+    DNA replication.
+
+A colleague proposes continuing anti-VEGF therapy first-line in all patients, arguing
+that improved perfusion will increase temozolomide delivery to the infiltrating margin
+and that the PFS gain will eventually translate into survival with longer follow-up.
+
+Evaluate that proposal.
+
+Which single statement is best supported?
+  A. The proposal is sound; longer follow-up is the main missing ingredient.
+  B. The PFS gain is partly an artefact of an enhancement-anchored endpoint, and
+     sustained anti-VEGF therapy does not increase, and may reduce, cytotoxic exposure
+     and cytotoxic sensitivity at the infiltrating margin.
+  C. The proposal fails only because the trial was underpowered for overall survival.
+  D. Anti-VEGF therapy increases temozolomide efficacy but the benefit is offset by
+     unrelated toxicity.
+
+Return EXACTLY the following block. Do not omit the <EVAL_ANSWER> tags:
+
+<EVAL_ANSWER>
+{"effect_on_margin_drug_exposure": "<increases|decreases|unchanged>",
+ "effect_on_margin_cytotoxic_sensitivity": "<increases|decreases|no_effect>",
+ "recommended_endpoint_change": "<keep_enhancement_pfs|adopt_nonenhancing_inclusive_criteria|use_os_only|use_response_rate>",
+ "answer": "<letter>"}
+</EVAL_ANSWER>
+
+Provide a one-line rationale outside the answer tags.
