@@ -1,0 +1,163 @@
+========================================================================================
+TASK — bbb_label_implication_v1
+========================================================================================
+
+DATASET: https://github.com/bioinformatics-gao/CASE-BBB-prediction-Data
+
+----------------------------------------------------------------------------------------
+QUESTION (this is the prompt given to the model)
+----------------------------------------------------------------------------------------
+
+You are given two drug-level label tables from a published blood-brain barrier (BBB)
+permeability study. Both tables assign every drug a binary `BBB +/-` label.
+
+  * `1) Supplementary-data/TableS1-Drug-for-Train-and-Validation.xlsx` — columns: Drug
+    CID, Drug Name, BBB +/-, Reference. 213 drugs. Labels were taken from four source
+    publications (named per-row in the Reference column).
+  * `1) Supplementary-data/TableS3-Independent-Test-Data-Set-of-Drugs-Based-on-CNS-
+    Activity.xlsx` — columns: Drug ID, Drug Name, BBB +/-, MW, Volume, surface area,
+    %hydrophillic surf., logP, hydrophilic-lipophilic balance. 161 drugs.
+
+Some drugs appear in both tables. Characterise the relationship between the two label
+sets, then report your answer.
+
+Align the two tables on the drug CID. Do not merge, majority-vote, de-duplicate, or drop
+any drug before you have characterised the relationship. Build the full 2x2 contingency
+table of TableS1 label against TableS3 label over the drugs present in both tables.
+
+Write your answer as JSON to `eval_answer.json` with exactly these fields:
+
+  * `n_overlap` (integer) — number of drug CIDs present in both tables.
+  * `cell_YY` (integer) — drugs labelled Y in TableS1 and Y in TableS3.
+  * `cell_YN` (integer) — drugs labelled Y in TableS1 and N in TableS3.
+  * `cell_NY` (integer) — drugs labelled N in TableS1 and Y in TableS3.
+  * `cell_NN` (integer) — drugs labelled N in TableS1 and N in TableS3.
+  * `relation` (string) — exactly one of `implication` or `noisy_replicate`. Use
+    `implication` if one table's positive set is contained in the other's and the
+    containment is consistent with a logical entailment between the two labelling
+    criteria. Use `noisy_replicate` if the two tables are better described as two error-
+    prone measurements of the same underlying quantity.
+  * `correct_handling` (string) — exactly one of `merge_union`, `majority_vote`,
+    `prefer_recent_source`, `drop_conflicts`, or `stratify_by_source`. The single most
+    defensible way to use these two label sets together for supervised learning.
+
+Counts must be exact integers.
+
+----------------------------------------------------------------------------------------
+CORRECT ANSWER
+----------------------------------------------------------------------------------------
+
+  n_overlap         =  72
+  cell_YY           =  39
+  cell_YN           =  17
+  cell_NY           =  0
+  cell_NN           =  16
+  relation          =  implication
+  correct_handling  =  stratify_by_source
+
+  (grader: NumericTolerance; 7 fields; every tolerance is zero / exact match)
+
+----------------------------------------------------------------------------------------
+THE TRAP
+----------------------------------------------------------------------------------------
+
+The answer is the shape of the 2x2, not the amount of disagreement. Counting mismatches
+gives 17 of 72 (about 24%), which reads as label noise and leads to the wrong handling.
+Building the full contingency table gives 39/17/0/16, and the exact zero in the (N, Y)
+cell identifies the relationship as entailment. Both quantities are computed from the
+same data at the same cost; only the second is diagnostic. This is the trap.
+
+----------------------------------------------------------------------------------------
+WHY THIS IS HARD / DISTRACTORS
+----------------------------------------------------------------------------------------
+
+Four plausible wrong moves, all of which an agent that treats the disagreement as noise
+will take: take the union of the two positive sets; majority-vote across tables; prefer
+the more recent source; or drop the 17 conflicting drugs as unreliable. The last is the
+most costly, because those 17 drugs are the most informative rows in the dataset - they
+are precisely the drugs that cross the barrier without being CNS therapeutics (aspirin,
+ibuprofen, testosterone, progesterone, estradiol, verapamil, propranolol, and ten
+others). They are also distributed across all three major source publications (11 from
+Li 2005, 4 from Abraham 2006, 2 from Subramanian & Kitchen 2003), so the disagreement
+cannot be attributed to one bad source. A secondary difficulty: no quantitative
+permeability value survives anywhere in the repository. TableS1 carries only the binary
+label plus a citation, and every numeric column in TableS3 is a chemical descriptor, not
+a permeability measurement. The operative threshold is therefore unrecoverable from the
+data, which is why provenance has to be retained rather than reconciled.
+
+----------------------------------------------------------------------------------------
+WHAT THIS TESTS
+----------------------------------------------------------------------------------------
+
+Whether the agent distinguishes a conflicting label set from an entailed one. The two
+tables do not measure the same thing. TableS1 aggregates labels from logBB-style
+permeability datasets (does the molecule measurably cross?). TableS3 is the Doniger et
+al. 2002 set, labelled by CNS activity (is the drug active in the CNS?) - stated in the
+table's own filename and confirmed by its descriptor columns, which reproduce six of
+Doniger's nine physicochemical features. CNS activity entails BBB crossing, but not the
+converse. So the overlap must show a structural zero in the (N, Y) cell, and it does: 0
+of 72.
+
+----------------------------------------------------------------------------------------
+HOW THE GROUND TRUTH WAS DERIVED
+----------------------------------------------------------------------------------------
+
+scripts/1_task1_ground_truth.py in this project. Python 3 standard library only (zipfile
++ xml.etree); no pandas, no openpyxl, no third-party dependency, so the result is
+reproducible in any Python 3 environment. Deterministic integer counting throughout.
+Label source is TableS1/TableS3, the supplementary tables, NOT the Inter-Table4/Inter-
+Table5 feature matrices: Inter-Table5 records Bupropion as N while its own source table
+TableS3 records Y, which is a transcription error in the repository (bupropion is an
+antidepressant and therefore CNS-active, so Y is the defensible label). Using the Inter
+tables would yield 18 conflicts instead of 17 and would embed that error in the ground
+truth.
+
+----------------------------------------------------------------------------------------
+GRADING
+----------------------------------------------------------------------------------------
+
+NumericTolerance with all tolerances set to 0. Every numeric field is a deterministic
+integer count: there is no normalisation choice, no random seed, no threshold selection,
+and no library-version sensitivity anywhere in the derivation. This is deliberate —
+tolerance-setting is the documented failure mode of this benchmark family (see
+SpatialBench human verification, where one eval's expected correlation of 0.62 became
+0.85 under a different normalisation and the tolerance was too tight for the eval's
+purpose). This task has no such degree of freedom. The two categorical fields are exact
+string matches against a closed option set; if the harness requires a single grader type
+per eval, the five integer fields alone are sufficient to separate correct from
+incorrect solutions, and the categorical fields can be split into a companion
+MultipleChoiceGrader eval.
+
+----------------------------------------------------------------------------------------
+DATA / PLATFORM
+----------------------------------------------------------------------------------------
+
+Drug-level tabular data (xlsx). No sequencing data, no genome build, no randomness.
+Parsing requires reading xlsx cells by column letter, not by order of appearance,
+because empty cells are omitted from the file and positional parsing silently shifts
+columns.
+
+----------------------------------------------------------------------------------------
+LIMITATIONS AND KNOWN GAPS
+----------------------------------------------------------------------------------------
+
+The per-publication criterion for Li et al. 2005 (138 of 213 training rows) was not
+retrieved, and the exact logBB thresholds attributed to Subramanian & Kitchen 2003 come
+from secondary sources rather than the original paper. Neither gap affects the answer:
+the structural zero is explained by TableS3's criterion, which is independently
+documented. They affect only how fully the TableS1 side can be annotated.
+
+A partial shortcut exists in the task text and cannot be removed. TableS3's filename,
+which the task must give because the agent needs the path, is TableS3-Independent-Test-
+Data-Set-of-Drugs-Based-on-CNS-Activity.xlsx, and it names the labelling criterion
+outright. An agent that reads the filename attentively receives a direct hint towards
+`implication` without having to derive it from the structural zero. This is unlike a
+leak that an eval author introduces in prose: the filename is part of the published
+dataset, and concealing or aliasing it would make the task artificial and the data
+unreachable. The consequence for interpretation is that a correct `relation` answer is
+not by itself evidence that the agent found the zero. The five integer fields are
+unaffected, since they require the alignment and the contingency table to be computed,
+and they are the fields that establish whether the agent actually built the 2x2. When
+model results are reviewed, `relation` should be read together with those counts rather
+than on its own.
+

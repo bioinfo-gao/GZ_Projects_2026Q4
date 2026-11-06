@@ -1,0 +1,390 @@
+========================================================================================
+TASK 1 — bbb_label_implication_v1
+========================================================================================
+
+DATASET: https://github.com/bioinformatics-gao/CASE-BBB-prediction-Data
+
+----------------------------------------------------------------------------------------
+QUESTION (this is the prompt given to the model)
+----------------------------------------------------------------------------------------
+
+You are given two drug-level label tables from a published blood-brain barrier (BBB)
+permeability study. Both tables assign every drug a binary `BBB +/-` label.
+
+  * `1) Supplementary-data/TableS1-Drug-for-Train-and-Validation.xlsx` — columns: Drug
+    CID, Drug Name, BBB +/-, Reference. 213 drugs. Labels were taken from four source
+    publications (named per-row in the Reference column).
+  * `1) Supplementary-data/TableS3-Independent-Test-Data-Set-of-Drugs-Based-on-CNS-
+    Activity.xlsx` — columns: Drug ID, Drug Name, BBB +/-, MW, Volume, surface area,
+    %hydrophillic surf., logP, hydrophilic-lipophilic balance. 161 drugs.
+
+Some drugs appear in both tables. Characterise the relationship between the two label
+sets, then report your answer.
+
+Align the two tables on the drug CID. Do not merge, majority-vote, de-duplicate, or drop
+any drug before you have characterised the relationship. Build the full 2x2 contingency
+table of TableS1 label against TableS3 label over the drugs present in both tables.
+
+Write your answer as JSON to `eval_answer.json` with exactly these fields:
+
+  * `n_overlap` (integer) — number of drug CIDs present in both tables.
+  * `cell_YY` (integer) — drugs labelled Y in TableS1 and Y in TableS3.
+  * `cell_YN` (integer) — drugs labelled Y in TableS1 and N in TableS3.
+  * `cell_NY` (integer) — drugs labelled N in TableS1 and Y in TableS3.
+  * `cell_NN` (integer) — drugs labelled N in TableS1 and N in TableS3.
+  * `relation` (string) — exactly one of `implication` or `noisy_replicate`. Use
+    `implication` if one table's positive set is contained in the other's and the
+    containment is consistent with a logical entailment between the two labelling
+    criteria. Use `noisy_replicate` if the two tables are better described as two error-
+    prone measurements of the same underlying quantity.
+  * `correct_handling` (string) — exactly one of `merge_union`, `majority_vote`,
+    `prefer_recent_source`, `drop_conflicts`, or `stratify_by_source`. The single most
+    defensible way to use these two label sets together for supervised learning.
+
+Counts must be exact integers.
+
+----------------------------------------------------------------------------------------
+CORRECT ANSWER
+----------------------------------------------------------------------------------------
+
+  n_overlap         =  72
+  cell_YY           =  39
+  cell_YN           =  17
+  cell_NY           =  0
+  cell_NN           =  16
+  relation          =  implication
+  correct_handling  =  stratify_by_source
+
+  (grader: NumericTolerance; 7 fields; every tolerance is zero / exact match)
+
+----------------------------------------------------------------------------------------
+THE TRAP
+----------------------------------------------------------------------------------------
+
+The answer is the shape of the 2x2, not the amount of disagreement. Counting mismatches
+gives 17 of 72 (about 24%), which reads as label noise and leads to the wrong handling.
+Building the full contingency table gives 39/17/0/16, and the exact zero in the (N, Y)
+cell identifies the relationship as entailment. Both quantities are computed from the
+same data at the same cost; only the second is diagnostic. This is the trap.
+
+----------------------------------------------------------------------------------------
+WHY THIS IS HARD / DISTRACTORS
+----------------------------------------------------------------------------------------
+
+Four plausible wrong moves, all of which an agent that treats the disagreement as noise
+will take: take the union of the two positive sets; majority-vote across tables; prefer
+the more recent source; or drop the 17 conflicting drugs as unreliable. The last is the
+most costly, because those 17 drugs are the most informative rows in the dataset - they
+are precisely the drugs that cross the barrier without being CNS therapeutics (aspirin,
+ibuprofen, testosterone, progesterone, estradiol, verapamil, propranolol, and ten
+others). They are also distributed across all three major source publications (11 from
+Li 2005, 4 from Abraham 2006, 2 from Subramanian & Kitchen 2003), so the disagreement
+cannot be attributed to one bad source. A secondary difficulty: no quantitative
+permeability value survives anywhere in the repository. TableS1 carries only the binary
+label plus a citation, and every numeric column in TableS3 is a chemical descriptor, not
+a permeability measurement. The operative threshold is therefore unrecoverable from the
+data, which is why provenance has to be retained rather than reconciled.
+
+----------------------------------------------------------------------------------------
+WHAT THIS TESTS
+----------------------------------------------------------------------------------------
+
+Whether the agent distinguishes a conflicting label set from an entailed one. The two
+tables do not measure the same thing. TableS1 aggregates labels from logBB-style
+permeability datasets (does the molecule measurably cross?). TableS3 is the Doniger et
+al. 2002 set, labelled by CNS activity (is the drug active in the CNS?) - stated in the
+table's own filename and confirmed by its descriptor columns, which reproduce six of
+Doniger's nine physicochemical features. CNS activity entails BBB crossing, but not the
+converse. So the overlap must show a structural zero in the (N, Y) cell, and it does: 0
+of 72.
+
+----------------------------------------------------------------------------------------
+HOW THE GROUND TRUTH WAS DERIVED
+----------------------------------------------------------------------------------------
+
+scripts/1_task1_ground_truth.py in this project. Python 3 standard library only (zipfile
++ xml.etree); no pandas, no openpyxl, no third-party dependency, so the result is
+reproducible in any Python 3 environment. Deterministic integer counting throughout.
+Label source is TableS1/TableS3, the supplementary tables, NOT the Inter-Table4/Inter-
+Table5 feature matrices: Inter-Table5 records Bupropion as N while its own source table
+TableS3 records Y, which is a transcription error in the repository (bupropion is an
+antidepressant and therefore CNS-active, so Y is the defensible label). Using the Inter
+tables would yield 18 conflicts instead of 17 and would embed that error in the ground
+truth.
+
+----------------------------------------------------------------------------------------
+GRADING
+----------------------------------------------------------------------------------------
+
+NumericTolerance with all tolerances set to 0. Every numeric field is a deterministic
+integer count: there is no normalisation choice, no random seed, no threshold selection,
+and no library-version sensitivity anywhere in the derivation. This is deliberate —
+tolerance-setting is the documented failure mode of this benchmark family (see
+SpatialBench human verification, where one eval's expected correlation of 0.62 became
+0.85 under a different normalisation and the tolerance was too tight for the eval's
+purpose). This task has no such degree of freedom. The two categorical fields are exact
+string matches against a closed option set; if the harness requires a single grader type
+per eval, the five integer fields alone are sufficient to separate correct from
+incorrect solutions, and the categorical fields can be split into a companion
+MultipleChoiceGrader eval.
+
+----------------------------------------------------------------------------------------
+DATA / PLATFORM
+----------------------------------------------------------------------------------------
+
+Drug-level tabular data (xlsx). No sequencing data, no genome build, no randomness.
+Parsing requires reading xlsx cells by column letter, not by order of appearance,
+because empty cells are omitted from the file and positional parsing silently shifts
+columns.
+
+----------------------------------------------------------------------------------------
+LIMITATIONS AND KNOWN GAPS
+----------------------------------------------------------------------------------------
+
+The per-publication criterion for Li et al. 2005 (138 of 213 training rows) was not
+retrieved, and the exact logBB thresholds attributed to Subramanian & Kitchen 2003 come
+from secondary sources rather than the original paper. Neither gap affects the answer:
+the structural zero is explained by TableS3's criterion, which is independently
+documented. They affect only how fully the TableS1 side can be annotated.
+
+A partial shortcut exists in the task text and cannot be removed. TableS3's filename,
+which the task must give because the agent needs the path, is TableS3-Independent-Test-
+Data-Set-of-Drugs-Based-on-CNS-Activity.xlsx, and it names the labelling criterion
+outright. An agent that reads the filename attentively receives a direct hint towards
+`implication` without having to derive it from the structural zero. This is unlike a
+leak that an eval author introduces in prose: the filename is part of the published
+dataset, and concealing or aliasing it would make the task artificial and the data
+unreachable. The consequence for interpretation is that a correct `relation` answer is
+not by itself evidence that the agent found the zero. The five integer fields are
+unaffected, since they require the alignment and the contingency table to be computed,
+and they are the fields that establish whether the agent actually built the 2x2. When
+model results are reviewed, `relation` should be read together with those counts rather
+than on its own.
+
+========================================================================================
+TASK 2 — glioma_margin_rate_limit_v4
+========================================================================================
+
+DATASET: https://github.com/bioinformatics-gao/CASE-BBB-prediction-Data
+
+----------------------------------------------------------------------------------------
+QUESTION (this is the prompt given to the model)
+----------------------------------------------------------------------------------------
+
+A patient has recurrent glioblastoma. Three cytotoxic agents are under consideration.
+Their blood-brain barrier (BBB) permeability labels are recorded in the accompanying
+dataset (`1) Supplementary-data/TableS1-Drug-for-Train-and-Validation.xlsx`, column `BBB
++/-`):
+
+  * lomustine — dataset label `Y`
+  * methotrexate — dataset label `N`
+  * doxorubicin — dataset label `N`
+
+Bevacizumab (anti-VEGF) is under consideration in addition to cytotoxic therapy. Where a
+question concerns anti-VEGF therapy, answer for sustained therapy, beyond any transient
+vascular-normalisation window.
+
+Write your answer as JSON to `eval_answer.json` with exactly these fields:
+
+  * `primary_determinant_of_margin_response` (string) — one of
+    `bbb_permeability_of_the_agent`, `proliferative_state_of_the_target_cells`,
+    `interstitial_transport_beyond_the_vessel_wall`,
+    `agent_specific_dna_repair_capacity`, `immunosuppressive_microenvironment`. The
+    factor that primarily determines whether these agents reduce the cell population at
+    the infiltrating tumour margin.
+  * `agent_selection_by_bbb_label` (string) — one of
+    `lomustine_preferred_and_this_predicts_response`,
+    `lomustine_preferred_but_this_does_not_predict_response`,
+    `no_label_based_preference_exists`,
+    `methotrexate_preferred_and_this_predicts_response`. How the dataset `BBB +/-`
+    labels bear on the choice among the three agents for this patient.
+  * `antivegf_effect_on_margin_exposure` (string) — one of `increases`, `decreases`,
+    `unchanged`. The effect of sustained anti-VEGF therapy on cytotoxic drug exposure of
+    the infiltrating tumour margin.
+  * `antivegf_effect_on_margin_cytotoxic_sensitivity` (string) — one of `increases`,
+    `decreases`, `no_effect`. The effect of sustained anti-VEGF therapy on the intrinsic
+    sensitivity of the infiltrating margin cell population to these three agents,
+    setting aside any change in the amount of drug delivered.
+  * `relapse_pattern_after_antivegf` (string) — one of `enhancing_and_local`,
+    `non_enhancing_and_distant`, `unchanged_from_baseline_pattern`. The characteristic
+    radiographic pattern of relapse on sustained anti-VEGF therapy.
+
+All fields are categorical. Report exactly one option per field.
+
+----------------------------------------------------------------------------------------
+CORRECT ANSWER
+----------------------------------------------------------------------------------------
+
+  primary_determinant_of_margin_response           =  proliferative_state_of_the_target_cells
+  agent_selection_by_bbb_label                     =  lomustine_preferred_but_this_does_not_predict_response
+  antivegf_effect_on_margin_exposure               =  decreases
+  antivegf_effect_on_margin_cytotoxic_sensitivity  =  decreases
+  relapse_pattern_after_antivegf                   =  non_enhancing_and_distant
+
+  (grader: MultipleChoice; 5 fields; every tolerance is zero / exact match)
+
+----------------------------------------------------------------------------------------
+THE TRAP
+----------------------------------------------------------------------------------------
+
+The decisive pairing is `primary_determinant_of_margin_response` against
+`agent_selection_by_bbb_label`. An agent can read the table correctly - lomustine is the
+only `Y` - and still be wrong, because the question is whether that reading predicts
+response. The correct answer concedes the label-based preference and denies its
+predictive value, which is the one combination requiring both halves of the picture.
+`no_label_based_preference_exists` is wrong on the data: the labels do differ, and
+lomustine is the one that crosses an intact barrier.
+
+The reasoning behind the denial, none of which is stated in the task: the margin niche
+is hypoxic; hypoxia suppresses cycling there; and all three agents are replication-
+contingent, methotrexate as an S-phase-specific antifolate, doxorubicin because
+topoisomerase II-DNA complexes become lethal double-strand breaks during replication,
+and the nitrosourea because its crosslinks are converted into lethal lesions principally
+during replication. A cell that is not cycling therefore does not transduce any of these
+drug-target interactions into death, however much drug arrives.
+
+----------------------------------------------------------------------------------------
+WHY THIS IS HARD / DISTRACTORS
+----------------------------------------------------------------------------------------
+
+Four independent traps.
+
+First, the BBB decoy. The accompanying dataset is a BBB permeability dataset and the
+labels are the only agent-level information given, so an agent answering
+`bbb_permeability_of_the_agent` is not pattern-matching carelessly - it is reasoning
+from the only evidence in front of it. The option list offers no elimination path: all
+five options are properties of the tumour or of the delivery problem rather than of any
+one drug, so the shared-property shortcut that solved an earlier version of this task
+does not apply. `interstitial_transport_beyond_the_vessel_wall` and
+`immunosuppressive_microenvironment` are both real and heavily cited;
+`agent_specific_dna_repair_capacity` is the MGMT answer in general form, which is the
+single most-cited resistance mechanism in this disease.
+
+Second and third, the two anti-VEGF direction fields. The published rationale for adding
+anti-VEGF therapy to cytotoxics and radiation is that normalisation improves perfusion
+and oxygenation and thereby both delivery and sensitivity. Under sustained therapy the
+barrier is restored instead, which reduces access to the non-enhancing margin, and
+vessel pruning deepens margin hypoxia, which suppresses cycling further and so reduces
+sensitivity to three replication-contingent agents. Both correct answers are therefore
+the opposite of the dominant published frame, and both option sets are bare directions,
+so neither can be reached by recognising mechanism vocabulary.
+
+Fourth, `relapse_pattern_after_antivegf` is a coherence check. An agent that answered
+the two direction fields in the normalisation direction and then answers
+`non_enhancing_and_distant` here has stated a relapse pattern its own mechanism cannot
+produce. Scoring the fields jointly separates an agent that holds a mechanism from one
+that retrieves facts.
+
+----------------------------------------------------------------------------------------
+WHAT THIS TESTS
+----------------------------------------------------------------------------------------
+
+Whether the agent knows that the most salient variable in the data it is given is not
+the operative one, without being told so.
+
+The prompt supplies a BBB permeability dataset and nothing but BBB labels for the three
+agents, so every available cue points at BBB crossing as the decision variable. In
+glioblastoma it largely is not: the contrast-enhancing bulk has already disrupted its
+own barrier, so an agent's intact-BBB permeability does not determine exposure there,
+and at the infiltrating margin, where the barrier is relatively preserved, exposure
+still does not determine kill because the target cells are largely not cycling. Both
+halves of that are withheld from the prompt. An agent that does not hold them will
+reason correctly from the labels it was given and arrive at a confident, data-grounded,
+wrong recommendation: prefer lomustine, and expect the preference to translate into
+response.
+
+The second half tests whether the agent applies the glioblastoma observations for
+sustained anti-VEGF therapy or the direction asserted by the vascular-normalisation
+literature. These two bodies of work disagree, and which one an agent applies to this
+disease is the benchmark-relevant question.
+
+----------------------------------------------------------------------------------------
+HOW THE GROUND TRUTH WAS DERIVED
+----------------------------------------------------------------------------------------
+
+Each field traces to a documented statement rather than to a calculation. Dataset labels
+for the three agents were read directly from TableS1 (lomustine Y, methotrexate N,
+doxorubicin N; verified 2026-11-05). Barrier disruption in the contrast-enhancing bulk
+versus relative integrity at the non-enhancing infiltrating margin, and the margin as
+the origin of recurrence, are drawn from the glioblastoma drug-delivery literature.
+Replication dependence of alkylator cytotoxicity via the O6-methylguanine mismatch-
+repair futile cycle, and the requirement that lesions pass through a replication cycle
+to become lethal, are established mechanistically. Hypoxic maintenance of a non-cycling
+stem-like fraction and its association with therapeutic resistance and recurrence are
+likewise documented. Anti-VEGF restoration of barrier integrity with reduced
+enhancement, the characteristically non-enhancing and distant relapse pattern that
+follows, and vessel pruning with deepened tumour hypoxia under sustained therapy, are
+the reported glioblastoma observations. See docs/P48_research_plan_and_review_1105.md
+for the per-claim sourcing and for the claims deliberately not made.
+
+----------------------------------------------------------------------------------------
+GRADING
+----------------------------------------------------------------------------------------
+
+MultipleChoice across five closed option sets. No numeric field, therefore no tolerance
+to calibrate - the documented failure mode of numeric graders in this benchmark family
+is avoided by construction. Partial credit is informative: the first two fields test
+whether the agent knows which variable governs the outcome, the next two test whether it
+holds the direction of the anti-VEGF effect, and the last is a coherence check on the
+two direction fields.
+
+----------------------------------------------------------------------------------------
+DATA / PLATFORM
+----------------------------------------------------------------------------------------
+
+Reasoning task over drug-level tabular labels. No computation, no randomness, no
+reference genome. Shares its dataset with bbb_label_implication_v1, which is its
+deliberate counterpart: that task requires the BBB labels to be taken seriously as data,
+this one requires recognising that they do not govern the clinical outcome.
+
+----------------------------------------------------------------------------------------
+LIMITATIONS AND KNOWN GAPS
+----------------------------------------------------------------------------------------
+
+Four gaps. None changes an answer; all of them bound the claims.
+
+A transient vascular-normalisation window during which perfusion and oxygenation do
+improve is documented. The task is therefore explicitly scoped to sustained therapy
+beyond that window. Without that scoping, `increases` would be defensible on both
+direction fields and the item would be ambiguous rather than hard. The scoping sentence
+reveals that such a window exists, which is a deliberate cost paid for determinacy; it
+does not reveal the direction outside it.
+
+Deepened hypoxia under sustained anti-VEGF therapy rests more heavily on preclinical
+models than on direct human measurement at the infiltrating margin; the clinical
+inference runs through the relapse phenotype rather than through oxygen measurement in
+margin tissue. `decreases` is the defensible direction, but it is an inference, not a
+measurement.
+
+No retrieved source directly measured sparing of non-cycling glioma cells by these three
+specific agents. That step is an inference from the established replication requirement,
+which is why the reasoning is framed in terms of replication dependence rather than an
+asserted sparing fraction. One study in Xenopus extracts proposes a replication-
+independent component of alkylator action operating alongside the cell-cycle-dependent
+mode, which would attenuate but not reverse the conclusion.
+
+Because the agents' mechanisms are no longer stated, an agent that does not know that
+methotrexate is an S-phase-specific antifolate, or that doxorubicin's lethality requires
+replication, fails for want of standard pharmacology rather than for want of the
+intended insight. These three agents were chosen partly because that pharmacology is not
+obscure, but the failure mode is real and model results should be read with it in mind.
+
+Temozolomide is deliberately absent: it is the standard-of-care agent and the clearest
+example of replication-dependent cytotoxicity, but it is not present in the dataset, so
+including it would have meant asserting a BBB label the data does not carry.
+
+----------------------------------------------------------------------------------------
+SPECIFICATION PRINCIPLE
+----------------------------------------------------------------------------------------
+
+This task states what varies between patients and cannot be inferred - the diagnosis,
+which three agents are under consideration, their labels as the dataset records them,
+that anti-VEGF therapy is also under consideration, and the temporal scope of the anti-
+VEGF questions. It states no disease biology. Barrier disruption in the contrast-
+enhancing bulk, relative barrier integrity at the non-enhancing margin, the margin as
+the origin of recurrence, the hypoxic niche, and the mechanism of each of the three
+agents are all general properties of glioblastoma or standard pharmacology, and all of
+them are withheld, because supplying them is supplying the answer. The question is
+specified exhaustively; the biology is not. Earlier versions of this task conflated the
+two and stated the biology in the premises, which is the single error they share.
+
