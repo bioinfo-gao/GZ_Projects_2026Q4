@@ -1,0 +1,19 @@
+LatchBio AI Biologist -- Cancer
+Powered by HackerRank
+Hi Zhen Gao ,
+
+
+
+Here’s your LatchBio take-home. A few tips before you begin:
+
+Try the sample test first to get familiar with the platform. It doesn’t cover any science.
+The timer starts when you press “Continue.” Your link doesn’t expire until then.
+Once you start, finish in one sitting, and don’t refresh or use the back button.
+Tech issues? Reply to our LatchBio email right away.
+
+
+Good luck!
+
+Talent Team, LatchBio
+
+Duration: 90 min

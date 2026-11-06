@@ -1,0 +1,30 @@
+Saul Hernandez
+To:  me, Cc:  talent@latch.bio, and 1 other
+ · 
+Sun, Nov 1 at 2:36 AM
+
+Message Body
+Hi Zhen,
+ 
+Thanks for your interest in our AI Biologist - Cancer Biology (Applications) position. We’re excited to move you forward!
+ 
+The first step in our hiring process is a take-home project: building the ground-truth tests that frontier AI labs and pharma companies use to evaluate whether their models can do science, the same work you’d do here. Your HackerRank link will arrive in a separate email.
+ 
+Our work:
+benchmarks.bio: our public benchmarks
+SpatialBench paper: example tasks (Appendix A.2)
+GitHub: example tasks
+ 
+The Assessment (2–3 hours):
+Task creation (AI use welcome). Pick a public dataset you know well and design up to two tasks that challenge an LLM. The best have one clear answer and a trap only an expert would catch. Show your scientific depth, and feel free to test your tasks on real models.
+A short second section on some assessments: coding, a knowledge quiz, or problem-solving without AI.
+If you have tech issues? Reply to this email and we’ll help.
+ 
+From there, our process includes project review, a conversation with your potential manager, a culture call, and an offer. There’s no deadline for your project, but we do like to move fast: our whole process usually takes 8–12 days, and most hires submit within 2 days. Most questions about the role and how we work are answered on our careers page, but if anything else comes up, just reply to this thread and we’re happy to help.
+ 
+Looking forward to seeing what you build.
+ 
+Thanks,
+Saul
+Talent, LatchBio
+ 
