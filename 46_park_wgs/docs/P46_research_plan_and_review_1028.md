@@ -7,7 +7,11 @@
   （hTERT RPE-1，PPP1R2 双切 202 bp 单等位缺失 + 全基因组脱靶 + 载体整合筛查）
 - **客户表单**：`Sample_Registration_Form_Yeji Park.xlsx`（项目根目录）
 - **样本表（SSOT）**：`scripts/0_sample_table.csv`（本文不重复样本清单）
-- **当前状态（2026-10-28）**：只有表单，**无测序数据**；分析范围未定，**未开跑**；未建邮件草稿。
+- **当前状态（2026-11-06 21:50 复核）**：客户已交回问卷（`client_materials/wgs_questionary.docx`，2026-11-06 13:13
+  邮件附件），**§3 的 4 项待问已有 3 项得到答复**；**测序数据仍未到**（`/home/gao/Dropbox/` 下无
+  `Park_Yeji`/`Park, Yeji` 目录，`find -L /home/gao/Dropbox -maxdepth 2 -iname '*park*'` 返回 0 命中）；
+  深度已定 **45× raw**（客户 10-30 来信 "Please run 45X!" + Quote 10282602）；**未开跑**，本轮无授权关键词
+  （"自动"/"全流程"/"全过程"），故本文只到计划层。
 
 ## 更新记录
 
@@ -21,6 +25,12 @@
   靶点缺失、全基因组脱靶、CRISPR 造成的其他变化三项分析对 10 个样本**免费**。⇒ §5 中这三项对应的
   定制工时（约 15–22 h）不再向客户计费；载体筛查等未在信中承诺。原文与范围划界见
   `docs/P46_email_depth_quote_1029.md`「实发版」一节。
+
+- 2026-11-06 — 客户交回问卷 + 两封邮件（PI = Taekjip Ha；"controls are same cell line"；"more single
+  allele samples"；"both allele editing samples"）。新增 **§7 问卷解读与样本分组**、**§8 分析步骤设计**、
+  **§9 待确认事项（已收窄为 4 项）**；`scripts/0_sample_table.csv` 补入 `client_global_no`、
+  `expected_target_genotype`、`expected_del_alleles`、`prior_evidence`、`cell_line` 五列并改写 role 与 notes。
+  §3 的四项待问：第 1、2、3 项**已答**（见 §7），第 4 项（浓度）仍未答。
 
 ---
 
@@ -138,3 +148,225 @@
 - [ ] 开工即**按 stage 记录起止时间**（P31 round2 §6.2 已立此要求），为后续报价提供实测依据。
 - [ ] 若获 P31 最终开票小时数，补入 §4。
 - [ ] 数据到达后：填 `scripts/0_sample_table.csv` 的 R1/R2 GiB、read pairs、深度，并在本文记录总量。
+
+---
+
+## 7. 客户问卷解读（2026-11-06，源文件 `client_materials/wgs_questionary.docx`）
+
+读取方式：`python3 -I` 解包 `word/document.xml` 逐段提取（脚本在 scratchpad，非项目产物）。
+问卷正文为 P31 当初那份问卷的同一模板，客户在每问下方作答。
+
+### 7.1 客户给定的事实
+
+| 项 | 客户答复（原文要点） | 与 P31 的关系 |
+| :--- | :---: | :--- |
+| 分析目的 | **全基因组脱靶分析**；靶点 ~200 bp 缺失；并"analyze any further mutations by the CRISPR system" | 与 P31 一致，加"其他突变" |
+| 靶点 | PPP1R2，chr3；切点 **195,542,947 / 195,543,149**（间距 202 bp） | **与 P31 逐字相同** |
+| gRNA1 | `gacttcctctatggtggcgt` + `cgg` | 同 P31 |
+| gRNA2 | `gtttccgaggcagcagttg` + `cgg`（**仍写成 19 nt**） | 同 P31；19/20 nt 之问客户两轮都未正面答复 |
+| 细胞系 | hTERT RPE-1 (**ATCC**)；全部 **单克隆** RPE-1_53BP1-mCherry；传代均 < 20 | 同 P31 亲本 |
+| 外源序列 | **53BP1-FFR-mCherry（mCherry-BP1-2 pLPC-Puro）**，**逆转录病毒**包装递送，荧光分选后 3 cells/well 扩增 | **与 P31 同一载体**，图谱已在手（见 §7.3） |
+| CRISPR 形式 | **dual caged gRNA**：caging 基团阻断切割，**光照解笼**，以此选择性地只在单个等位基因或两个等位基因上诱导活性 | P31 已是同一体系（"spatially controlled CRISPR"） |
+| 对照 | Ctr_1–3 **含同一载体、同样经过 CRISPR 处理**，仅凝胶未见缺失；客户自述"not ideal as a control …… 但这是唯一的无单等位缺失单克隆" | **与 P31 同一处境** ⇒ P31 §6.5 的报价条件照样适用 |
+
+### 7.2 样本编号：问卷里有两套编号，已对齐（偏移 3）
+
+问卷中出现两种写法，**不矛盾**，相差一个常数 3：局部编号 `Sample 1–7` ↔ 全局编号 `4–10`
+（全局 1–3 = Ctr_1–3）。两处交叉验证一致：
+
+| 问卷出处 | 原文 | 解析 |
+| :--- | :---: | :--- |
+| Q1 / Q5 | 单等位 = Sample 1–4；双等位 = Sample 5–7 | 局部编号 |
+| Q2 | "~50% 和 100% 效率见 sample 4–10，sample 1–3 无显著 CRISPR 活性" | 全局编号 |
+| 末尾反问答复 | 单等位 = sample 4–7；双等位 = sample 8–10 | 全局编号 |
+
+⇒ **结论**：`Ctr_1–3` 对照（无缺失）；`Sample 1–4` 单等位 Δ202；`Sample 5–7` 双等位 Δ202。
+已写入 `scripts/0_sample_table.csv`（`client_global_no` 列即全局编号）。
+**该对齐是我方推断（依据是两套编号在 7 个样本上的一一对应），需在致客户信中用一句话确认，
+不得当成客户已确认的事实。**
+
+### 7.3 "attached plasmap" 在本项目目录里不存在，但 P31 有同一构建体
+
+- 本轮 `client_materials/` 实测只有 3 个文件（`Email.txt`、`Quote 10282602.pdf`、`wgs_questionary.docx`），
+  **无质粒图谱附件**。
+- P31 `client_materials/` 存有 **`mCherry-BP1-2 pLPC-Puro.dna`（57,736 B）**，构建体名与本轮问卷
+  逐字相同 ⇒ **可直接复用**，不必再要一次。
+- P31 另有 **`pMSCVpuro-Cas9-EGFP (2).dna`**。**本轮问卷未提 Cas9 载体**，只说细胞系"only contains
+  53BP1-FFR-mCherry" —— 那么 Cas9 蛋白这一轮是怎么进去的（RNP 电转？瞬时质粒？还是这些克隆本身
+  来自 P31 那个带整合 Cas9-EGFP 的系？）**没有答案**，这是 §9 第 1 项。
+
+### 7.4 相对 P31 的三个实质变化（决定本轮分析设计）
+
+| # | 变化 | 对分析的影响 |
+| :--- | :--- | :--- |
+| 1 | **深度 6.3× usable → 45× raw（约 27–30× usable）** | P31 大量"只能报有/无证据、不能报频率"的结论本轮可以定量；等位基因比例、杂合 indel、拷贝数都进入可判定区 |
+| 2 | **样本 2 个 → 10 个（7 处理 + 3 对照）** | 从 1v1 并列升级为 **7 vs 3 组间比较**；"仅见于处理组、3 个对照全阴"是 P31 做不到的证据等级 |
+| 3 | **新增双等位编辑组（Sample 5–7）** | 必须能区分「两个等位基因各自 Δ202」与「单等位 Δ202 + 另一等位更大范围丢失/LOH」——两者在凝胶上可能同样表现为单一条带 |
+
+---
+
+## 8. 分析步骤设计（Stage 0–5）
+
+> 设计原则：**P31 round2 已跑通的判据与脚本能复用的全部复用**（同 gRNA、同参考、同载体 ⇒ 候选表与
+> 屏蔽 mask 可直接继承），工时投在 P31 因深度/样本数做不到的部分。
+> ⚠ 按 §2A：每个 Stage 在开跑前必须先把下表的「证据单位 / 保留与去重规则 / 判定指标 / 允许的结论」
+> 落成脚本内的 decision table，并产出过滤前后计数的 audit 表；本节是该 decision table 的上层框架，
+> 不替代逐 Stage 的实现级审查。
+
+### 8.0 Stage 0 — 数据清点、比对、样本身份核查
+
+| 项 | 做法 |
+| :--- | :--- |
+| 清点 | 复用 P31 `scripts/4_inventory_raw_data.sh`（RAW 改指本客户 Dropbox 目录）：文件数、大小、`gzip -t`、R1/R2 配对。**产出必须写成「截至 YYYY-MM-DD HH:MM 目录内为 N 个文件」**（Dropbox 渐进同步）。多 lane 时按 lane 汇总 |
+| 不做 | **不跑 fastp/trimming** —— `Utilities/software_pitfalls/fastp.md` 记录的 1.3.3 数据驱动死锁；bwa-mem2 自带 soft-clip，接头不会伪造断点（假阴性方向，报告写明） |
+| 比对 | `bwa-mem2 mem -t 36 -K 100000000 -Y` → `samtools sort -@ 8` → **GATK MarkDuplicates（非 Spark 版）** → index；**样本间串行**（36+8 = 44 线程 ≤ 56 上限） |
+| 覆盖度 | **统一 mosdepth 默认模式**（含 mate-overlap 校正）`--by 1000`，全程不混用 `samtools depth`（配对重叠区可差 19%） |
+| 身份核查 | 10 个样本同属一个单克隆亲本 ⇒ 全基因组公共位点基因型应高度一致。用多样本 mpileup 算两两一致率，**用于抓样本标签互换/污染**；一致率矩阵必须进报告（P31 为 2 样本版，本轮扩到 10×10） |
+| 产物 | `analysis/stage0_<YYYYMMDD>/{bam,qc,cov,logs}`；回填 `scripts/0_sample_table.csv` 的 R1/R2 GiB、read pairs、raw/usable 深度 |
+
+**资源与磁盘（按 45× raw 外推，须在首样本跑完后用实测速度回填）**：
+
+| 量 | 估算 | 依据 |
+| :--- | :---: | :--- |
+| 单样本 raw | ~140 Gbp ≈ **45–55 GiB** gz FASTQ | 45 × 3.1 Gb 基因组；P31 10× 实测可按比例外推 |
+| 10 样本 FASTQ | **~0.5 TiB**（落在 `/Work_bio`，实测可用 5.7 T） | `df -h /home/gao/Dropbox` |
+| 单样本 markdup BAM | **~70 GiB** | P31 10× raw 实测 15.3 / 16.4 GB，线性外推 |
+| 10 样本 BAM + 索引 | **~0.7 TiB**（落在 `/mnt/ex_8T_SSD`，实测可用 2.6 T） | 同上 |
+| 临时 `sorted.bam` | 每样本额外 ~70 GiB（markdup 后即可删） | — |
+
+⚠ **临时 `sorted.bam` 的删除需用户逐次同意**（CLAUDE.md「删除/覆盖前必须先获得用户同意」，
+agent 无权自行判定"可再生中间产物"）。⇒ 计划里把它写成**显式请求项**：每样本 markdup + index 完成、
+`samtools quickcheck` 通过后，列出路径与大小向用户请求一次批量授权；未获授权则按 10 × 140 GiB
+预留磁盘（2.6 T 仍够，但会压缩其他项目空间）。
+
+### 8.1 Stage 1 — 靶点解剖（PPP1R2 Δ202，10 样本）
+
+- **复用**：P31 `scripts/with_client_info_20260825/2_stage9_ontarget.py` 的判据 ——
+  断端读段（比对恰好终止于 cut1 / 起始于 cut2 且最大 soft-clip ≥ 20 bp）+ 接头认定（clip 序列与对侧
+  下游参考一致度 ≥ 90%）。
+- **本轮新增（深度带来的）**：等位基因比例 = 接头读段 /（接头 + 跨切点连续读段），30× 下杂合期望
+  ~15 条接头读段 ⇒ **可以报比例，不只报有/无**。
+- **本轮新增（双等位组）**：对 Sample 5–7 必须同时检验三种可能，不能只验证客户的预期：
+  1. 两个等位基因各自 Δ202（期望：接头读段 ≈ 局部深度，跨切点连续读段 ≈ 0）；
+  2. 单等位 Δ202 + 另一等位更大范围丢失（期望：缺失区两侧深度下降、断点在 202 bp 之外）；
+  3. 单等位 Δ202 + 另一等位含切点处小 indel（凝胶分辨不出）。
+  判据写在脚本里：**Δ202 区间内的归一化深度**（对该样本全基因组中位深度）+ 两切点各自的 indel 谱 +
+  缺失区外 ±50 kb 的深度轮廓。
+- **其他结局**：倒位（切点间片段反向回插）、串联重复、两切点之间的复杂重排 —— 用 clip 方向与
+  mate 方向枚举，不预设只有缺失。
+- **内建阳性对照 / 定标**：客户凝胶 + Sanger 已给出 10 个样本各自的预期基因型（`prior_evidence` 列）。
+  **流程必须把 7 个处理样本判成缺失、3 个对照判成 WT**；任一不符 ⇒ 先怀疑流程或样本标签，
+  不直接改写客户的实验结论。这是整条流水线唯一的外部真值，必须在报告里当校准点写出来。
+- 产物：`analysis/stage1_ontarget_<YYYYMMDD>/`
+
+### 8.2 Stage 2 — 全基因组脱靶（客户主诉求）
+
+| 子步 | 做法 | 复用 |
+| :--- | :--- | :---: |
+| 2a 候选枚举 | 3 条 spacer 版本（gRNA1 20 nt、gRNA2 客户写的 19 nt、基因组补全的 20 nt `CGTTTCCGAGGCAGCAGTTG`）× 全基因组 ≤ 4 mismatch；**只用 spacer 搜，PAM 事后从参考实测**（不用 `seqkit locate -d`，避免 `-m`/`-d` 交互）；NGG 主表 + NAG 次表 | P31 `3_stage10_enumerate.sh`；**同 gRNA + 同参考 ⇒ 候选表可直接继承**，实测 `analysis/stage10_offtarget_20260825/tables/offtarget_candidates_with_evidence.tsv` 为 1,588 行（含表头）= **1,587 个候选位点**；继承前复核校验和并重跑一次定标断言（靶点必须被自己的流程检出），不重跑枚举 |
+| 2b 逐位点证据 | 10 样本 × 每位点：indel、soft-clip 聚集、归一化深度、读段支持数 | P31 `5_stage10_inspect.py`，样本数 2 → 10 |
+| 2c 成对切点脱靶 | 两条 gRNA 都够得着、间距 50–500 bp 的位点（P31 全基因组仅 6 个，全部是 PPP1R2 家族）；判据与 Stage 1 完全一致，**靶点本身是这一步的阳性对照** | P31 `13_stage10c_paired_cut_offtargets.py` |
+| 2d 组间判定 | **7 处理 vs 3 对照**的样本级存在/缺失表 + Fisher 精确检验；事先写明 n=7/3 的检验力（最小可检出：7 阳性 0 阴性 ⇒ p = 1/120 ≈ 0.0083） | **本轮新增**（P31 只能 1v1 并列） |
+
+**必须写进报告的边界**：
+- 只支持 **mismatch**，不支持 DNA/RNA bulge（需 cas-offinder，本机未装；§4 规定未经确认不装依赖）⇒
+  bulge 型脱靶属已知盲区；
+- **对照不是 CRISPR-naive**（§7.1）⇒ "仅见于处理组"只能表述为**与编辑共分离**，不等于因果；
+  同样地"处理组和对照组都有"不能一律判为背景 —— 对照也经过了 CRISPR 处理；
+- 枚举只覆盖"序列近似"这一类脱靶，不覆盖脱靶后再经修复产生的远端事件 ⇒ 由 Stage 4 兜。
+
+### 8.3 Stage 3 — 载体与递送物筛查
+
+- **复用 P31 refs**（2026-11-06 实测确认内容）：
+  `analysis/round2_refs_20260825/vectors.fa` —— **已含两条序列** `pLPC_mCherry_BP1_2` 与
+  `pMSCV_Cas9_EGFP`（含 bwa-mem2 索引，可直接用）；
+  `vector_human_mappable_mask.bed` —— **1 个屏蔽区间 `pLPC_mCherry_BP1_2:5550-7260`（1,711 bp）**，
+  即载体内与人基因组同源的 53BP1 cDNA 段（150 bp 瓦片回贴 GRCh38，MAPQ ≥ 20 即屏蔽）；
+  `vector_features.tsv` —— 载体注释（AmpR / ori / mCherry / EGFP 等），骨架阴性对照直接查这张表。
+  ⚠ **这个 mask 是必需的，不是优化**：P31 第一版把 3 个"整合位点"全判在 **TP53BP1**，实为载体里
+  53BP1 cDNA 与人基因组的同源假象（P31 round2 §5.2 坑 #8）。本轮载体相同 ⇒ 同一陷阱必然重现。
+- 每样本：候选读段（unmapped / mate-unmapped / clip ≥ 20 bp）回贴载体 → 覆盖度 → 拷贝数；
+  嵌合读段 → 整合接头位点（P31 坑 #6/#7：载体环状而参考线性，**clip 必须回贴载体而不是基因组**）。
+- **内建对照**：P31 已实测两个整合接头位点（FADS1/FADS2 与 EMCN 附近），两样本断点完全相同 ⇒
+  来自共同转导亲本。本轮 10 个克隆若同源于同一转导群体，**这两个位点应在 10 个样本中全部出现** ⇒
+  当阳性对照用；出现**仅部分样本有**的新接头位点，才是克隆间差异。
+- 骨架（AmpR / ori）出现即需解释（逆转录病毒转导不应整合骨架）——阴性对照。
+- Cas9-EGFP 载体**已在** P31 的 `vectors.fa` 里 ⇒ 不论 §9 第 1 项如何答复，本轮都把它一起查：
+  有信号则回答"Cas9 载体是否整合"，无信号则是一个干净的阴性结果。**但若本轮用的是另一个 Cas9
+  构建体（而非 P31 那个 pMSCVpuro-Cas9-EGFP），则必须拿到新图谱**，否则该问题存在系统性盲区。
+- ⚠ **计费边界**：载体筛查**不在**用户 10-29 实发邮件承诺的三项免费范围内
+  （见 `docs/P46_email_depth_quote_1029.md`），但它是"CRISPR 造成的其他变化"的判读前提。
+  是否计费由用户/Jing 决定，**分析侧照做并记录工时**。
+
+### 8.4 Stage 4 — "CRISPR 造成的其他变化"（客户 Q1 末句）
+
+这是本轮**设计上最需要先定口径**的一步（§2A）。10 个样本全部是**各自独立的单克隆扩增系**，
+每个克隆在培养与扩增中会各自积累私有变异 ⇒ **逐个变异归因于 CRISPR 是不成立的**。
+可成立的设计是把 3 个对照当作「同样处理、同样单克隆扩增、但无靶点缺失」的**本底率估计**：
+
+| 要素 | 本 Stage 的口径 |
+| :--- | :--- |
+| 研究问题 | 编辑成功的克隆是否比未编辑的克隆携带**更多**的新发变异？若有，集中在哪类（SNV/indel/SV/CNV）、哪些位置？ |
+| 证据单位 | **样本私有变异**（该样本有、其余 9 个样本均无），不是单个读段 |
+| 保留与去重规则 | 按 read-name/fragment 去重计独立分子数；**但 primary / secondary / supplementary alignment 分开记录**（SV、融合、整合位点判读依赖 secondary/supplementary，不得因"不是独立分子"而丢弃 alignment context） |
+| 判定指标 | ① 每样本私有变异计数的组间分布（7 vs 3，非参数检验 + 逐样本列出，不只报 p）；② 私有 SV/CNV 断点与 Stage 2 脱靶候选、Stage 3 整合位点的重合情况 |
+| 允许的结论 | "处理组私有变异负荷高于/不高于对照组"；"某私有事件落在脱靶候选位点 ⇒ 有机制上的解释"。**不允许**把任一私有变异单独写成"由 CRISPR 造成" |
+| 过滤审计 | 每条过滤给出过滤前后的 record / read-name / 候选数，保留 machine-readable excluded 表 |
+
+- 工具：germline SNV/indel 用 10 样本联合 call（GATK HaplotypeCaller + GenotypeGVCFs，或
+  DeepVariant 逐样本 + GLnexus，**开跑前查 `Utilities/software_pitfalls/INDEX.md`**）；
+  SV 用 manta/delly；CNV 由 mosdepth 1 kb 窗 → 分段（复用 P31 `scripts/8a_cnv_segment.R`）。
+- **缓存命名带样本数**（P41 教训）：联合 call 产物写成 `joint_n10.vcf.gz`，防止样本追加后静默误用旧缓存。
+- 另：P31 第一轮的 16 个 SV 候选重解释 stage（P31 stage12）在本轮对应为「私有 SV 与脱靶/整合清单
+  逐一比对」，已并入本 Stage，不单列。
+
+### 8.5 Stage 5 — 交付
+
+- 目录 `custom_research_report_<交付日>/`；报告结构沿用 P31
+  `custom_research_report_20260828/Dual_Cut_Project_WGS_0828.md` 的 §1–§9（Objectives / Core
+  Conclusions / Key Findings / Sample Information / Analysis Rationale / Methods / Results /
+  Conclusions+Limitations / Deliverable Files）。
+- 机械化自审：复用 P31 `11_check_report.py`（149 项）+ `12_key_metrics.py`，
+  并按本轮新增内容扩项（10 样本的每样本数字必须对得上源文件；组间检验的 n 与 p 必须可复算）。
+- 图件 PDF only；配色按 `scientific-figure-making` skill；交付前逐张人眼看图（P31 坑 #9–#13 全是
+  只有人眼能发现的静默失效）。
+- **交付物只准备、不发送**（CLAUDE.md「对外交付与署名」）。
+
+### 8.6 执行纪律（开跑时必须照做）
+
+| 项 | 要求 |
+| :--- | :--- |
+| 工时 | **按 stage 记起止时间**（P31 round2 §6.2 已立此要求，P31 本身没做到）⇒ 本轮是第一份可引用的实测工时 |
+| tmux | 每个长 stage 一个 session，`tmux new-session -d -s <name> '... 2>&1 \| tee log.txt'`；用 `capture-pane` / tail 看，不交互式 attach |
+| 总控 | 每轮**重新从 `scripts/0_sample_table.csv` 枚举**待处理样本，靠 `.done` 跳过；不在启动时 `ls` 一次定样本集合（Dropbox 渐进同步，P41 I-3 死锁教训） |
+| 冒烟 | **每个消费脚本、每个样本类别都要冒烟**（P41 I-2/I-6）：本轮"样本类别"= 对照 / 单等位 / 双等位三类各取一个 |
+| 早失败 | 启动后按 `watchdog` skill 做 Phase-1 早失败检测 |
+| 归档 | 任何结果目录不 `rm -rf`；修正前旧版进 `superseded_for_comparison/<产物类型>/v<N>_<日期>_<缺陷>/` 并附 README |
+| 开跑前 | 扫 `/home/gao/Utilities/software_pitfalls/INDEX.md`，覆盖本轮全部工具（bwa-mem2 / samtools / GATK / mosdepth / seqkit / manta / delly / DeepVariant），不只扫记得出过问题的 |
+
+---
+
+## 9. 待确认事项（§3 四项已收窄为 4 项，其中 3 项是新增）
+
+| # | 问题 | 对象 | 为什么影响结果 | 若无答复的默认处理 |
+| :--- | :--- | :---: | :--- | :--- |
+| 1 | **本轮 Cas9 是怎么递送的？**（caged gRNA + Cas9 蛋白 RNP？瞬时质粒？还是这些克隆本身带整合的 Cas9-EGFP？）若涉及新载体，请给图谱 | 客户 | 决定 Stage 3 的 `vectors.fa` 组成与"骨架整合"阴性对照是否成立；若有 Cas9 载体而我方没纳入，整合筛查会有系统性盲区 | **必须问**。暂按"仅 53BP1-FFR-mCherry"建 refs，并把 P31 的 Cas9-EGFP 载体一并纳入作探查（有则报，无则为阴性对照），报告标注递送方式未确认 |
+| 2 | **样本编号对齐确认**：Ctr_1–3 = 对照；Sample 1–4 = 单等位；Sample 5–7 = 双等位（§7.2） | 客户 | 判错组别 ⇒ Stage 2d/4 的组间比较整条失效 | 一句话确认即可；**不停等**，按 §7.2 的解析先跑（猜错只需改分组列、不必重跑比对） |
+| 3 | **浓度 `total 200ng/ul`**：200 ng/µL × 20 µL = 4 µg，还是总量 200 ng（≈10 ng/µL）？ | **Jing / 实验端，非客户** | 后者低于表单要求的 2–10 µg，影响建库方式与可用深度 | 转 Jing；按 Kuo-Chan 10-27 来信，建库已在进行 ⇒ 很可能已有实测定量，直接要实测值 |
+| 4 | **是否要与 P31 两样本合并分析**（12 样本一起看） | 用户（商务边界） | P31 深度仅 6.3×，与本轮 45× 混在一起会使"检出/未检出"不可比；且**合并分析不在 10-29 实发邮件承诺的免费三项内** | **不主动做**。本轮按 10 样本独立成篇；仅在报告里引用 P31 的阴性结论作背景 |
+
+**已不必再问的两项**（§3 原第 1、2 项）：分析目的（Q1 已答）、对照性质（Q4 已答，确认为非 naive）。
+**不再追问 gRNA2 的 19 vs 20 nt**：两轮未答，两版都做的成本很低（P31 已有脚本），
+报告里并列呈现即可。
+
+### 9.1 §5 工时估算的修订方向（不改数字，记录依据）
+
+§5 的 26–38 h 是按 P31 范围 + 10 样本推的，当时未知的三件事现在已知，**全部指向上浮**：
+
+| 已知事实 | 对工时的方向 |
+| :--- | :--- |
+| 深度 45× raw（而非 6×） | Stage 0 机器时间显著上升（人工时不一定），但**结论从"有/无"升级为定量 ⇒ 报告与校核工作量上升** |
+| 对照仍非 CRISPR-naive | P31 §6.1 的五项额外工作照样发生（P31 事后认定 6 h，样本数 2 → 10） |
+| 新增双等位组 + 组间统计设计 | Stage 1 的三态判别与 Stage 4 的 7 vs 3 统计口径都是 P31 没有的新设计 |
+
+⇒ **待 §9 第 1、3 项答复后一次性重估**，本轮按 stage 实测记时，使下一次报价有实测依据（§8.6）。

@@ -1,11 +1,11 @@
-sample_name,role,service_type,sample_type,nucleic_acid_type,species,storage_reagent,conc_as_written,volume_uL,total_ug,shipping_condition,post_project_handling,analysis_required,R1_GiB,R2_GiB,raw_read_pairs,raw_depth_x,notes
-Ctr_1,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Control role inferred from 'Ctr_' prefix only; whether CRISPR-naive parental is not stated"
-Ctr_2,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Form name carries trailing space ('Ctr_2 ') in both A30 and A43"
-Ctr_3,control (name only; B19 not filled),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 1,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Identity (clone / gRNA / vector) not stated"
-Sample 2,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 3,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 4,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 5,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 6,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
-Sample 7,test (assumed),WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+sample_name,client_global_no,role,expected_target_genotype,expected_del_alleles,prior_evidence,cell_line,service_type,sample_type,nucleic_acid_type,species,storage_reagent,conc_as_written,volume_uL,total_ug,shipping_condition,post_project_handling,analysis_required,R1_GiB,R2_GiB,raw_read_pairs,raw_depth_x,notes
+Ctr_1,1,control (CRISPR-treated; no deletion detected),WT/WT,0,gel + Sanger: no deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"NOT CRISPR-naive: same cell line and same spatially controlled CRISPR treatment as test samples, only without detectable deletion (client questionary 1106 Q4)"
+Ctr_2,2,control (CRISPR-treated; no deletion detected),WT/WT,0,gel + Sanger: no deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Form name carries trailing space ('Ctr_2 ') in both A30 and A43"
+Ctr_3,3,control (CRISPR-treated; no deletion detected),WT/WT,0,gel + Sanger: no deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 1,4,test,del202/WT,1,gel + Sanger: single-allelic deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,"Same gRNA pair and same construct as P31; Cas9 delivery route for this round not stated"
+Sample 2,5,test,del202/WT,1,gel + Sanger: single-allelic deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 3,6,test,del202/WT,1,gel + Sanger: single-allelic deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 4,7,test,del202/WT,1,gel + Sanger: single-allelic deletion,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 5,8,test,del202/del202,2,gel + Sanger: both alleles deleted,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 6,9,test,del202/del202,2,gel + Sanger: both alleles deleted,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
+Sample 7,10,test,del202/del202,2,gel + Sanger: both alleles deleted,RPE-1_53BP1-FFR-mCherry monoclonal,WGS,Nucleic Acid,DNA,Human,Water,total 200ng/ul,20,UNRESOLVED,Dry Ice,Discard,Yes,,,,,
