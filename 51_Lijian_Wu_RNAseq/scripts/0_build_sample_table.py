@@ -19,6 +19,12 @@ Client name -> FASTQ token mapping (assumption, recorded in docs/P51_research_pl
   form "control-adenosine-N"           <-> FASTQ "Control_Ad_N"
   form "Crtc2-*"                       <-> FASTQ "Crtc2_*" (same pattern)
   replicate N in the form <-> replicate N in the FASTQ name.
+
+FASTQ sources (2026-11-08): the local Dropbox client stalled at 22:51 on 11-07 with 21 files
+still missing locally, so 0b_direct_download_dropbox.sh fetched them via the Dropbox API into
+raw_fastq_direct_dropbox_20261108/. Per mate: the Dropbox-synced copy is used if present; else the
+direct copy, ONLY if 0c_verify_direct_download.py marked it content_hash=ok. r1_path/r2_path
+are absolute; fastq_source records which copy each sample uses.
 """
 import csv
 import datetime as dt
@@ -33,7 +39,23 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJ_DIR = os.path.dirname(SCRIPT_DIR)
 FORM = os.path.join(PROJ_DIR, "docs", "Sample_Registration_Form.xlsx")
 FASTQ_DIR = "/Work_bio/dropbox/Dropbox_Data/Quote_09292601"
+DIRECT_DIR = os.path.join(PROJ_DIR, "raw_fastq_direct_dropbox_20261108")
+VERIFIED = os.path.join(PROJ_DIR, "logs", "direct_download_verified.tsv")
 OUT = os.path.join(SCRIPT_DIR, "0_sample_table.csv")
+direct_ok = set()
+if os.path.exists(VERIFIED):
+    with open(VERIFIED) as fh:
+        direct_ok = {l.split("\t")[0] for l in fh if l.split("\t")[3:4] == ["ok"]}
+
+
+def find_mate(pattern):
+    """Dropbox-synced copy first; else hash-verified direct copy. Returns (path, source)."""
+    hit = glob.glob(os.path.join(FASTQ_DIR, pattern))
+    if hit:
+        return hit, "dropbox_sync"
+    hit = [h for h in glob.glob(os.path.join(DIRECT_DIR, pattern))
+           if os.path.basename(h) in direct_ok]
+    return hit, ("direct_api_20261108" if hit else "")
 
 # treatment token in the client's sample names -> (analysis label, FASTQ token)
 TREAT = {
@@ -69,8 +91,8 @@ for v in form_rows:
     group = f"{geno}-{treat}"
     sample_id = f"{group}-{rep}"
     token = f"{geno_tok}{treat_tok}_{rep}"
-    r1 = glob.glob(os.path.join(FASTQ_DIR, f"*_{token}_S*_L*_R1_001.fastq.gz"))
-    r2 = glob.glob(os.path.join(FASTQ_DIR, f"*_{token}_S*_L*_R2_001.fastq.gz"))
+    r1, src1 = find_mate(f"*_{token}_S*_L*_R1_001.fastq.gz")
+    r2, src2 = find_mate(f"*_{token}_S*_L*_R2_001.fastq.gz")
     if len(r1) > 1 or len(r2) > 1:
         problems.append(f"{sample_id}: >1 file per mate for token {token} — multi-lane not expected")
     r1 = r1[0] if r1 else ""
@@ -92,10 +114,13 @@ for v in form_rows:
         "paired_on_disk": "yes" if (r1 and r2) else "no",
         "r1_file": os.path.basename(r1),
         "r2_file": os.path.basename(r2),
+        "r1_path": r1,
+        "r2_path": r2,
+        "fastq_source": src1 if src1 == src2 else "+".join(x for x in (src1, src2) if x),
         "R1_GiB": gib(r1),
         "R2_GiB": gib(r2),
         "raw_read_pairs": "",          # filled from pipeline FastQC after the run
-        "fastq_dir": FASTQ_DIR,
+        "fastq_dir": FASTQ_DIR,              # client folder (form + data); see fastq_source
         "measured_at": now,
     })
 
@@ -127,6 +152,7 @@ for d in rows:
 claimed = {d["r1_file"] for d in rows} | {d["r2_file"] for d in rows}
 orphans = [os.path.basename(f) for f in glob.glob(os.path.join(FASTQ_DIR, "*.fastq.gz"))
            if os.path.basename(f) not in claimed]
+orphans += [n for n in direct_ok if n not in claimed]
 if orphans:
     problems.append(f"{len(orphans)} FASTQ not matched to any form sample: {orphans}")
 assert len(rows) == 24, f"expected 24 form samples, got {len(rows)}"

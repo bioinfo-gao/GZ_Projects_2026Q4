@@ -56,7 +56,7 @@ paths = []
 for s in samples:
     if s["paired_on_disk"] == "yes":
         for col in ("r1_file", "r2_file"):
-            paths.append(os.path.join(s["fastq_dir"], s[col]))
+            paths.append(s[col.replace("file", "path")])
 
 with ThreadPoolExecutor(max_workers=8) as ex:
     results = dict(ex.map(gz_ok, paths))
@@ -72,8 +72,8 @@ for s in samples:
     if s["paired_on_disk"] != "yes":
         skipped.append(f"{sid}: not paired on disk yet")
         continue
-    r1 = os.path.join(s["fastq_dir"], s["r1_file"])
-    r2 = os.path.join(s["fastq_dir"], s["r2_file"])
+    r1 = s["r1_path"]
+    r2 = s["r2_path"]
     bad = [os.path.basename(p) for p in (r1, r2) if status.get(p) != "ok"]
     if bad:
         skipped.append(f"{sid}: gzip -t FAILED {bad}")
