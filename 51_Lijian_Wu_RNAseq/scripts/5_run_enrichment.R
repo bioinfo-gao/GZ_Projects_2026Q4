@@ -93,10 +93,13 @@ for (cname in names(res_list)) {
       file.path(kegg_dir, sprintf("KEGG_%s_dotplot.pdf", dl)),
       sprintf("%s - KEGG (%s)", cname, dl), length(g))
   }
-  rank_df <- df2 %>% filter(!is.na(pvalue), !is.na(log2FoldChange)) %>%
-    mutate(stat_rank = sign(log2FoldChange) * (-log10(pvalue))) %>%
-    mutate(stat_rank = ifelse(is.finite(stat_rank), stat_rank,
-                              sign(log2FoldChange) * 330)) %>%       # p underflow -> cap, keep gene
+  # GSEA rank = DESeq2 Wald statistic (user directive 2026-11-08). The house metric
+  # sign(LFC) x -log10(p) is so heavy-tailed here (up to 871 genes with |value| > 50) that the
+  # weighted ES is dominated by a few extreme genes: Crtc2-PGE2 vs control-PGE2 gave 0 GO:BP terms
+  # (min padj 0.063) vs 479 with the Wald stat, same top terms. v3 signlogp version archived.
+  stopifnot("Wald stat missing from res_list (rerun 4_run_DE_PCA.R)" = "stat" %in% names(df2))
+  rank_df <- df2 %>% filter(!is.na(stat), is.finite(stat)) %>%
+    mutate(stat_rank = stat) %>%
     group_by(ENTREZID) %>% slice_max(abs(stat_rank), n = 1, with_ties = FALSE) %>% ungroup()
   gl <- sort(setNames(rank_df$stat_rank, rank_df$ENTREZID), decreasing = TRUE)
   gs <- rank_df %>% group_by(gene_name) %>% slice_max(abs(stat_rank), n = 1, with_ties = FALSE) %>% ungroup()

@@ -218,7 +218,9 @@ for (cname in names(CONTRASTS)) {
   cat("\n=== Contrast:", cname, "===\n")
   # explicit per-contrast filter => independentFiltering = FALSE, BH within eligible genes
   res <- results(dds, contrast = c("Group", num, den), alpha = PADJ_CUT, independentFiltering = FALSE)
+  wald_stat <- res$stat          # unshrunk Wald statistic = GSEA rank metric (user directive 2026-11-08)
   res <- lfcShrink(dds, contrast = c("Group", num, den), res = res, type = "ashr")
+  res$stat <- wald_stat
   stopifnot(identical(rownames(res), rownames(eligible)))
   res <- res[eligible[, cname], ]
   res$padj <- p.adjust(res$pvalue, method = "BH")
@@ -227,7 +229,7 @@ for (cname in names(CONTRASTS)) {
   colnames(ncnt) <- paste0("normcount_", smp)
   df <- as.data.frame(res) %>% rownames_to_column("gene_id") %>%
     mutate(gene_name = unname(id2name[gene_id])) %>%
-    select(gene_id, gene_name, baseMean, log2FoldChange, lfcSE, pvalue, padj) %>%
+    select(gene_id, gene_name, baseMean, log2FoldChange, lfcSE, stat, pvalue, padj) %>%
     left_join(as.data.frame(ncnt) %>% rownames_to_column("gene_id"), by = "gene_id") %>%
     arrange(padj, desc(abs(log2FoldChange)))
   df$significant <- !is.na(df$padj) & df$padj <= PADJ_CUT & abs(df$log2FoldChange) >= LFC_CUT
