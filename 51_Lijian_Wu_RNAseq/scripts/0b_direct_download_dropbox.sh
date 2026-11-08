@@ -12,7 +12,8 @@ mkdir -p "$OUT"
 while IFS=$'\t' read -r name size hash url; do
   (
     if [ -f "$OUT/$name" ] && [ "$(stat -c%s "$OUT/$name")" = "$size" ]; then echo "SKIP $name"; exit 0; fi
-    curl -sS --fail -L -o "$OUT/$name.part" "$url"; rc=$?
+    # resume from an existing .part (Range request): links drop each connection at ~60 min
+    curl -sS --fail -L -C - -o "$OUT/$name.part" "$url"; rc=$?
     got=$(stat -c%s "$OUT/$name.part" 2>/dev/null || echo 0)
     if [ $rc -eq 0 ] && [ "$got" = "$size" ]; then mv "$OUT/$name.part" "$OUT/$name"; echo "$(date '+%F %T') DONE $name"
     else echo "$(date '+%F %T') FAIL $name rc=$rc got=$got want=$size"; fi
