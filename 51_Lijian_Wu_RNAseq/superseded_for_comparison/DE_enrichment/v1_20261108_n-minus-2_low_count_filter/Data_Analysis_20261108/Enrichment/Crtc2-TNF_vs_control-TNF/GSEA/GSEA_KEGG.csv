@@ -1,0 +1,2 @@
+ID,Description,setSize,enrichmentScore,NES,pvalue,p.adjust,qvalue,rank,leading_edge,core_enrichment
+mmu05150,Staphylococcus aureus infection,25,0.881634667442769,1.6994936316296727,1.2029728433540572e-4,0.040179292968025505,0.037482101224505356,314,"tags=40%, list=3%, signal=39%",H2-DMa/H2-Aa/H2-DMb2/Itgb2/H2-Ob/H2-DMb1/H2-Eb1/Itgal/H2-Ab1/Cfh

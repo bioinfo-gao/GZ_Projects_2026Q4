@@ -102,14 +102,42 @@ gene_pc   <- gene_info[regex_filter, ]
 
 # ---- 2b. Step B — low-expression filter ------------------------------------
 n_samples <- nrow(meta)
-keep <- rowSums(counts_pc >= 10) >= (n_samples - 2)
+# Rule v3 (user directive 2026-11-08: "只要比对的两组出现3个样，或者总样品中30%中出现即可"):
+#   a gene is testable in a contrast if >=10 counts in >=3 of that contrast's 6 samples
+#   (DESeq2 vignette "smallest group size" rule applied to the compared pair; Love's per-contrast
+#   advice on support.bioconductor.org/p/109669) OR >=10 counts in >=30% of ALL samples (cf. GTEx
+#   20%-of-samples rule). Global pre-filter = union over contrasts; per-contrast restriction +
+#   BH happen in section 5. The house n-2 rule (>=22/24) removed condition-specific genes incl.
+#   Cxcl1/Cxcl2/Cxcl10/Ccl2/Il6 -> archived as v1 in superseded_for_comparison/DE_enrichment/.
+MIN_CNT <- 10L; PAIR_MIN <- 3L; GLOBAL_PROP <- 0.30
+grp_of <- as.character(meta$Group[match(colnames(counts_pc), meta$sample_id)])
+stopifnot(!anyNA(grp_of), length(grp_of) == n_samples)
+global_ok <- rowSums(counts_pc >= MIN_CNT) >= ceiling(GLOBAL_PROP * n_samples)
+pair_ok <- sapply(CONTRASTS, function(cc)
+  rowSums(counts_pc[, grp_of %in% cc, drop = FALSE] >= MIN_CNT) >= PAIR_MIN)
+stopifnot(all(sapply(CONTRASTS, function(cc) sum(grp_of %in% cc)) == 6))
+eligible <- pair_ok | global_ok                      # genes x contrasts, used in section 5
+keep <- rowSums(eligible) > 0
+keep_n2 <- rowSums(counts_pc >= MIN_CNT) >= (n_samples - 2)       # old rule, audit only
+stopifnot(all(keep[keep_n2]))
 counts_filt <- counts_pc[keep, , drop = FALSE]
 gene_filt   <- gene_pc[keep, ]
-cat("Step B:", nrow(counts_pc), "->", nrow(counts_filt), "\n")
+eligible <- eligible[keep, , drop = FALSE]
+cat("Step B (pair>=3 OR >=30% samples):", nrow(counts_pc), "->", nrow(counts_filt),
+    "| old n-2 rule would keep", sum(keep_n2), "\n")
+# filter-impact audit (§2A): genes kept now but excluded by the old rule, with groups passing
+audit <- data.frame(gene_id = rownames(counts_pc)[keep & !keep_n2],
+                    gene_name = gene_pc$gene_name[keep & !keep_n2],
+                    contrasts_eligible = apply(eligible[!keep_n2[keep], , drop = FALSE], 1,
+                                           function(z) paste(colnames(eligible)[z], collapse = ";")))
+write.csv(audit, file.path(RDS_DIR, "filter_audit_added_vs_n-2.csv"), row.names = FALSE)
 saveRDS(list(n_original = nrow(counts_mat), n_after_regex = sum(regex_filter),
              n_ribo_removed = sum(is_ribo), n_final = nrow(counts_filt),
              n_samples = n_samples, low_count_min = 10L,
-             low_count_min_samples = n_samples - 2L),
+             filter_rule = ">=10 counts in >=3 of the 6 samples of the compared pair OR in >=30% of all samples",
+             global_prop_min_samples = ceiling(GLOBAL_PROP * n_samples),
+             n_eligible_per_contrast = colSums(eligible),
+             n_kept_old_n2_rule = sum(keep_n2), n_added_vs_n2 = nrow(audit)),
         file.path(RDS_DIR, "filter_stats.rds"))
 id2name <- setNames(gene_filt$gene_name, gene_filt$gene_id)
 
@@ -188,8 +216,12 @@ res_list <- list(); deg_counts <- list()
 for (cname in names(CONTRASTS)) {
   num <- CONTRASTS[[cname]][1]; den <- CONTRASTS[[cname]][2]
   cat("\n=== Contrast:", cname, "===\n")
-  res <- results(dds, contrast = c("Group", num, den), alpha = PADJ_CUT)
+  # explicit per-contrast filter => independentFiltering = FALSE, BH within eligible genes
+  res <- results(dds, contrast = c("Group", num, den), alpha = PADJ_CUT, independentFiltering = FALSE)
   res <- lfcShrink(dds, contrast = c("Group", num, den), res = res, type = "ashr")
+  stopifnot(identical(rownames(res), rownames(eligible)))
+  res <- res[eligible[, cname], ]
+  res$padj <- p.adjust(res$pvalue, method = "BH")
   smp <- c(meta$sample_id[meta$Group == num], meta$sample_id[meta$Group == den])
   ncnt <- counts(dds, normalized = TRUE)[, smp, drop = FALSE]
   colnames(ncnt) <- paste0("normcount_", smp)

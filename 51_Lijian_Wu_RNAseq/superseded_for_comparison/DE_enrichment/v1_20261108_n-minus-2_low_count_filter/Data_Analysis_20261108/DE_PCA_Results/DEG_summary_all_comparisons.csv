@@ -1,0 +1,7 @@
+Comparison,Numerator,Baseline,Up,Down,Total,Up_lfc1,Down_lfc1,Genes_tested
+Crtc2-un_vs_control-un,Crtc2-un,control-un,412,551,963,37,116,10826
+Crtc2-TNF_vs_control-TNF,Crtc2-TNF,control-TNF,2590,2737,5327,465,487,10826
+Crtc2-PGE2_vs_control-PGE2,Crtc2-PGE2,control-PGE2,714,1076,1790,66,254,10826
+Crtc2-adenosine_vs_control-adenosine,Crtc2-adenosine,control-adenosine,449,684,1133,35,164,10826
+control-PGE2_vs_control-un,control-PGE2,control-un,1068,817,1885,256,155,10826
+control-adenosine_vs_control-un,control-adenosine,control-un,144,78,222,3,0,10826
