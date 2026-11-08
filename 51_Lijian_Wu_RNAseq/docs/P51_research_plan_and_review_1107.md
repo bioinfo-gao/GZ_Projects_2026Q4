@@ -8,6 +8,8 @@
 ## 更新记录
 - 2026-11-07 — 创建；上游 partial 阶段（13/24）已在 tmux `p51_rnaseq` 启动，`p51_watch` 守候到齐后自动跑 full。
 - 2026-11-08 01:2x — **本地 Dropbox 客户端停滞**：`dropbox status` 报 "Downloading 78 files"，实测网络接收 ≈0.002 MB/s、目录自 11-07 22:51 起无新文件（27/48 落地，云端 48/48；云端全部文件 `modified_time` = 2026-11-08T00:14Z，目录现显示为独立 namespace，推测该时刻被共享/移动后客户端重协调卡住——**推断，未证实**）。守护进程未动（`kill` 被权限拦，按规则不绕过）。改用连接器一次性直链 + curl 把缺失的 21 个文件（65.9 GiB）下载到 `raw_fastq_direct_dropbox_20261108/`（`scripts/0b_direct_download_dropbox.sh`，tmux `p51_dl`，≈11 MB/s）；`scripts/0c_verify_direct_download.py` 按 Dropbox `content_hash`（4 MiB 分块 SHA-256 再 SHA-256）逐个校验，函数先用本地已同步文件 Control_TNFA_2 R1 做阳性对照、哈希一致。脚本 0 改为每个 mate 优先用 Dropbox 同步副本、否则仅用 hash=ok 的直下副本，新增列 `r1_path`/`r2_path`/`fastq_source`；脚本 1 改读绝对路径。已验证现有 13 样本的 samplesheet 与修改前逐字节相同（`-resume` 缓存不受影响）。**两份副本并存**：Dropbox 后续同步完成后同名文件会出现两份（内容相同，hash 可证），SSOT 里 `fastq_source` 记录实际用的是哪份。
+- 2026-11-08 03:14 — 21 个直下 FASTQ 全部 `content_hash=ok`（两次被 Dropbox 链接 ~60 min 断连，`curl -C -` 续传）；24/24。full 04:08–07:07 一次成功（447 cached 复用 / 382 新提交，0 ERROR；日志在 `logs/watch_20261107.log`——watcher 内调用时 `$TMUX` 已设，`2_nextflow.sh` 不走 tee 分支，故无单独 `nextflow_full_*.log`）。09:49 本地 Dropbox 已自行恢复，47/48 落地。
+- 2026-11-08 09:3x — **低表达过滤口径变更（§2A filter-impact audit）**：house n−2 规则（≥22/24）在 8 组设计中删掉条件特异基因，含 Cxcl2/Cxcl10/Il6（StepA 后 1,280 个"某组 3 重复均 ≥10"的基因被删，其中 377 个只在 TNF 组表达）。用户裁定「样品数量巨大，不能用 n-2 规则」并给出规则：**本对比两组中 ≥3 个样本 ≥10 counts，或全体 ≥30% 样本 ≥10**。v1(n−2)、v2(某组 3 重复全 ≥10) 原样归档于 `superseded_for_comparison/DE_enrichment/`（README 写明）；v3 = 用户规则，每对比单独检验集合 + `independentFiltering=FALSE` + 集合内 BH，全局并集 12,327 基因。Cxcl1/Ccl2 在全部样本 ≤17 counts，属真实低表达、非过滤误删。
 
 ## 1. 客户送样单要点（原文照录，出处 `docs/Sample_Registration_Form.xlsx`）
 
@@ -70,7 +72,7 @@
 | 2 nf-core/rnaseq 3.15.1 | `2_nextflow.sh partial\|full`（GRCm39/M35；STAR `--twopassMode None --outFilterMultimapNmax 3`；strandedness auto） | partial 运行中 |
 | 3 守候/接续 | `3_wait_and_launch.sh`（tmux `p51_watch`） | 运行中 |
 | 4a 读数回填 | `4a_fill_read_pairs.py` | 待 full |
-| 4 DESeq2/PCA | `4_run_DE_PCA.R` | 待 full |
+| 4 DESeq2/PCA | `4_run_DE_PCA.R`（Step B = v3 用户规则，见更新记录 11-08） | v3 完成 |
 | 5 富集 | `5_run_enrichment.R`（GO/KEGG ORA UP/DOWN/ALL + GSEA GO/KEGG/Hallmark；失败记 ERROR 不静默） | 待 full |
 | 6 报告 / 8 自审 / 9 交付 | 读结果后编写 | 待 READY_FOR_REPORT |
 
