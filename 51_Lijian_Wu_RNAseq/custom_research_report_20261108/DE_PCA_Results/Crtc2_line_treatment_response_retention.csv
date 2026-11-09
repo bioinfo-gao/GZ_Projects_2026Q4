@@ -1,0 +1,4 @@
+Treatment,Gene_set_basis,N_genes,Slope_Crtc2_vs_control_response,Correlation,Fraction_genes_below_half_response
+PGE2,DEGs of control-PGE2 vs control-un,2174,0.5847370752281998,0.8569783847485082,0.33072677092916286
+adenosine,DEGs of control-adenosine vs control-un,254,0.32298951897329076,0.46487685147177493,0.547244094488189
+TNF,"genes with >=2-fold difference in group means, control-TNF vs control-un (descriptive; not a tested comparison)",3950,0.7421512208041032,0.9201695995233984,0.3278481012658228
