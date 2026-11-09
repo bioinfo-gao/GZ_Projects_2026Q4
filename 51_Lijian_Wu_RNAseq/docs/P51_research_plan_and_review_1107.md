@@ -1,87 +1,236 @@
-# P51 研究计划与审阅记录 — Lijian Wu 小鼠 bulk RNA-seq（control vs Crtc2 × 4 处理）
+# P51 分析 — Lijian Wu 小鼠细胞系 bulk RNA-seq：control vs Crtc2 line × 4 处理
 
-- **Plan Date（创建）**：2026-11-07（文件名 MMDD 永不改；修订记在下方更新记录）
-- **项目根目录**：`/home/gao/projects_2026Q4/51_Lijian_Wu_RNAseq`（实体 `/mnt/ex_8T_SSD/projects_2026Q4/51_Lijian_Wu_RNAseq`）
-- **授权**：用户 2026-11-07 原话「请按照 …Sample_Registration_Form.xlsx 分析项目51 RNAseq，数据还不全，能分析的先开始，自动完成全过程」⇒ 含「自动」「全过程」，全流程（分析 + 交付目录）授权；**不授权对外发送**。
-- **样本表 SSOT**：[`scripts/0_sample_table.csv`](../scripts/0_sample_table.csv)（由 `0_build_sample_table.py` 从送样单 + 磁盘实测生成；本文不复制样本表）
+- **物种 / 材料**：Mus musculus；客户未提供名称的已建立小鼠细胞系（GRCm39 / GENCODE M35）
+- **设计**：2 个细胞系（control、Crtc2 line）× 4 种处理（un、TNF、PGE2、adenosine）× 3 个生物学重复 = 24 样本；样本表 SSOT = [`scripts/0_sample_table.csv`](../scripts/0_sample_table.csv)
+- **当前结果目录**：[`Data_Analysis_20261108/`](../Data_Analysis_20261108/)；交付目录 [`custom_research_report_20261108/`](../custom_research_report_20261108/)（**内部审阅中、未发送**）
+- 旧版文档（含过程记录）已归档：[`superseded_for_comparison/docs/v1_20261108_process_log_with_data_issues/`](../superseded_for_comparison/docs/v1_20261108_process_log_with_data_issues/)
 
-## 更新记录
-- 2026-11-07 — 创建；上游 partial 阶段（13/24）已在 tmux `p51_rnaseq` 启动，`p51_watch` 守候到齐后自动跑 full。
-- 2026-11-08 01:2x — **本地 Dropbox 客户端停滞**：`dropbox status` 报 "Downloading 78 files"，实测网络接收 ≈0.002 MB/s、目录自 11-07 22:51 起无新文件（27/48 落地，云端 48/48；云端全部文件 `modified_time` = 2026-11-08T00:14Z，目录现显示为独立 namespace，推测该时刻被共享/移动后客户端重协调卡住——**推断，未证实**）。守护进程未动（`kill` 被权限拦，按规则不绕过）。改用连接器一次性直链 + curl 把缺失的 21 个文件（65.9 GiB）下载到 `raw_fastq_direct_dropbox_20261108/`（`scripts/0b_direct_download_dropbox.sh`，tmux `p51_dl`，≈11 MB/s）；`scripts/0c_verify_direct_download.py` 按 Dropbox `content_hash`（4 MiB 分块 SHA-256 再 SHA-256）逐个校验，函数先用本地已同步文件 Control_TNFA_2 R1 做阳性对照、哈希一致。脚本 0 改为每个 mate 优先用 Dropbox 同步副本、否则仅用 hash=ok 的直下副本，新增列 `r1_path`/`r2_path`/`fastq_source`；脚本 1 改读绝对路径。已验证现有 13 样本的 samplesheet 与修改前逐字节相同（`-resume` 缓存不受影响）。**两份副本并存**：Dropbox 后续同步完成后同名文件会出现两份（内容相同，hash 可证），SSOT 里 `fastq_source` 记录实际用的是哪份。
-- 2026-11-08 03:14 — 21 个直下 FASTQ 全部 `content_hash=ok`（两次被 Dropbox 链接 ~60 min 断连，`curl -C -` 续传）；24/24。full 04:08–07:07 一次成功（447 cached 复用 / 382 新提交，0 ERROR；日志在 `logs/watch_20261107.log`——watcher 内调用时 `$TMUX` 已设，`2_nextflow.sh` 不走 tee 分支，故无单独 `nextflow_full_*.log`）。09:49 本地 Dropbox 已自行恢复，47/48 落地。
-- 2026-11-08 09:3x — **低表达过滤口径变更（§2A filter-impact audit）**：house n−2 规则（≥22/24）在 8 组设计中删掉条件特异基因，含 Cxcl2/Cxcl10/Il6（StepA 后 1,280 个"某组 3 重复均 ≥10"的基因被删，其中 377 个只在 TNF 组表达）。用户裁定「样品数量巨大，不能用 n-2 规则」并给出规则：**本对比两组中 ≥3 个样本 ≥10 counts，或全体 ≥30% 样本 ≥10**。v1(n−2)、v2(某组 3 重复全 ≥10) 原样归档于 `superseded_for_comparison/DE_enrichment/`（README 写明）；v3 = 用户规则，每对比单独检验集合 + `independentFiltering=FALSE` + 集合内 BH，全局并集 12,327 基因。Cxcl1/Ccl2 在全部样本 ≤17 counts，属真实低表达、非过滤误删。
-- 2026-11-08 10:1x — **GSEA 排序值变更**：house 排序 sign(LFC)×−log10 p 在 4 个 Crtc2 vs control 对比 GO:BP GSEA ≈0（ORA 数百条）；探索性对照：Crtc2-PGE2 vs control-PGE2 用 Wald stat 得 479 条（min padj 8.7e-08）、top 条目与原排序一致。用户裁定改用 DESeq2 未收缩 Wald `stat`；v3 归档 `superseded_for_comparison/DE_enrichment/v3_..._gsea_signlogp/`；v4 DE 与 v3 逐字节相同（仅结果表加 `stat` 列）。
-- 2026-11-08 11:xx — 报告/自审/交付完成：`scripts/6_generate_research_report.R`（9 节；Crtc2 只称 "Crtc2 line"、报告实测 mRNA 0.53–0.67×）、`scripts/8_pre_delivery_audit.R`（149 项；含**独立互证**：用交付 count 矩阵重推每对比检验集合、表内重做 BH——首跑抓出报告措辞未写明"取整后 estimated counts"，已改）、`scripts/9_build_delivery.sh`（无 rm；旧日期报告移入 `superseded_for_comparison/report/`）。交付目录 `custom_research_report_20261108/`（532 文件/132 MB），**内部审阅中、未发送**。描述性"应答保留比例"（PGE2 58%/adenosine 32%/TNF 74%）不是交互检验，报告 §8.3/8.4 写明可按需加做 genotype×treatment interaction。
+---
 
-## 1. 客户送样单要点（原文照录，出处 `docs/Sample_Registration_Form.xlsx`）
+## 1. 核心结论
 
-| 项 | 送样单内容 | 位置 |
+1. **Crtc2 line 的 Crtc2 mRNA 在 4 种条件下都下降，但没有消失**：降到 control 的 0.53–0.67 倍（log2FC −0.58 ~ −0.93）。修饰性质（KO / KD / 其它）客户未说明，所以只称 "Crtc2 line"。
+2. **Crtc2 line 的主要表型是 CREB/cAMP 应答减弱**：经典 CREB/CRTC 靶基因（Nr4a2、Crem、Pde4b、Pde4d、Sik1）在 4 种条件下都显著更低。未处理时细胞系之间的差异与 PGE2 应答方向相反：同时属于两组 DEG 的 740 个基因里有 91% 方向相反。
+3. **PGE2 应答的缺失最清楚**：control 对 PGE2 有强应答（2,174 DEG）；Crtc2 line 只保留约 58% 的应答幅度。PGE2 条件下两系差异的 2,105 个 DEG 中，66% 是 control 的 PGE2 应答基因，其中 97% 方向相反。也就是说，这一对比测到的主要是"Crtc2 line 没有做出的那部分 PGE2 应答"。
+4. **TNF 条件下两系差异最大（5,905 DEG）**：Crtc2 line 仍对 TNF 有应答，但幅度较小（约 74%）。TNF 诱导的炎症基因明显更低，例如 Il6 −3.37、Ptgs2 −2.48、Cxcl10 −1.54。
+5. **adenosine 在 control 中的作用很弱（254 DEG，|log2FC| ≥ 1 的只有 13 个），在 Crtc2 line 中几乎没有作用**：Crtc2-adenosine 与 Crtc2-un 的 PCA 质心距离为 0.34，与重复之间的距离相当。Crtc2-adenosine vs control-adenosine 的 DEG 主要来自两系本身的差异，其中 68% 也是未处理条件下的 DEG，且方向 100% 相同。
+6. **通路层面，两系的差异在所有条件下方向一致**：Crtc2 line 的 TNF/NF-κB、inflammatory response、IFN-γ 程序更低，E2F/G2M 细胞周期程序更高（TNF 条件下细胞周期一项不显著）。这与 control 对 PGE2/adenosine 的应答方向正好相反。
+
+---
+
+## 2. 对比与方法
+
+**对比**：只做客户送样单 3G 列出的 6 个（后者为 baseline）。
+
+| # | 对比 | 回答的问题 |
 | :--- | :---: | :---: |
-| 服务类型 | Section 4 每行 `RNA-Seq (mRNA)`；3A 的勾选框**全部未勾** | A100–A123 / A25–A44 |
-| 物种 | Section 4 `Species = Mouse`；3B 勾选框**未勾** | D100–D123 |
-| 材料 | `☑ Cell line (established)`；`☑ Normal only`；`☑ Snap-frozen`；Sample Type = `Cell`；0.1 million cells | A55/A63/A65, C/F 列 |
-| 细胞系名称/细胞类型 | **未提供** ⇒ 报告写 `Cell type: established mouse cell line (name not specified by client)` | — |
-| Crtc2 组的性质 | **未说明**是 KO / KD / 过表达 ⇒ 交付物一律只称 "Crtc2 line"，不写 KO | — |
-| 特殊设计 | 3D/3E/Sheet 6 全部未勾 ⇒ 标准两组比较 | A69–A73 |
-| 阈值 | 3H：padj 0.05、log2FC 1.0、BH 均写 "Use default" | A87–A90 |
-| 生物安全 / 患者来源 | 均未勾 | A94–A95 |
+| 1 | Crtc2-un vs control-un | 未处理时两系的差异 |
+| 2 | Crtc2-TNF vs control-TNF | TNF 下两系的差异 |
+| 3 | Crtc2-PGE2 vs control-PGE2 | PGE2 下两系的差异 |
+| 4 | Crtc2-adenosine vs control-adenosine | adenosine 下两系的差异 |
+| 5 | control-PGE2 vs control-un | control 的 PGE2 应答 |
+| 6 | control-adenosine vs control-un | control 的 adenosine 应答 |
 
-**对比（3G，原文，B 为 baseline）**：
-1. crtc2-un vs control-un
-2. crtc2-tnf vs control-tnf
-3. crtc2-pge2 vs control-pge2
-4. crtc2-adenosine vs control-adenosine
-5. control-pge2 vs control-un
-6. control-adenosine vs control-un
+没做的对比：control-TNF vs control-un、Crtc2 各处理 vs Crtc2-un（客户未列）。下文涉及 TNF 应答的结论只基于 PCA 和组均值，属于描述性结果。
 
-严格只做这 6 个（同客户 proj19 的用户裁定：「严格按客户标注，不额外添加」）。**未列出** control-TNF vs control-un、Crtc2 各处理 vs Crtc2-un —— 不做；若客户后续要，按增量补充轮处理。
+**方法**：
 
-## 2. 命名、缩写与映射的判定（假设，须可回溯）
+| 步骤 | 选择 |
+| :--- | :---: |
+| 上游 | nf-core/rnaseq 3.15.1，STAR（`--outFilterMultimapNmax 3`）+ Salmon gene-level estimated counts；strandedness 自动推断（24/24 为 reverse） |
+| 基因类型过滤 | 去核糖体蛋白 / 线粒体 / 非编码与预测基因：57,132 → 26,584 |
+| 低表达过滤 | 每个对比单独决定检验集合：本对比 6 个样本中 ≥3 个 ≥10 counts，或全体 ≥30% 样本 ≥10 counts；`independentFiltering=FALSE`，在集合内做 BH。全局并集 12,327 个基因，每个对比检验 11,823–12,172 个 |
+| 模型 | 一个 DESeq2 `~ Group`（8 水平）模型，6 个对比都从中提取；Wald test；`lfcShrink(type="ashr")` |
+| DEG 阈值 | padj ≤ 0.05 且 \|log2FC\| ≥ 0.263（1.2 倍）；同时报告 \|log2FC\| ≥ 1 的计数 |
+| ORA | clusterProfiler GO BP/MF/CC + KEGG；UP / DOWN / ALL 分开做；背景 = 该对比的检验集合 |
+| GSEA | 排序值 = DESeq2 未收缩的 Wald `stat`；GO BP、KEGG、MSigDB Hallmark（小鼠同源） |
 
-| 项 | 读法 | 判定依据 | 已排除的读法 |
-| :--- | :---: | :--- | :--- |
-| `PEG2`（Section 4 样本名） | = **PGE2**（prostaglandin E2） | 3G 同一客户写 `pge2`；FASTQ 名 `Control_PGE_*`；与 TNF、adenosine 同属细胞外信号刺激 | PEG = polyethylene glycol（无对应语境） |
-| 分析 ID | `control-PGE2-1` 等 | 交付物用规范拼写 + 样本表/报告 Sample Information 并列客户原名 `client_sample_name` | 直接沿用 `PEG2`（会把笔误带进全部交付文件名） |
-| FASTQ ↔ 样本 | `Control_N`=control-un-N；`Control_Ad_N`=adenosine；`Control_PGE_N`=PGE2；`Control_TNFA_N`=TNF；Crtc2 同理；重复号一一对应 | 8 组 × 3 名称结构一致；Illumina S 号连续成组（S1–3 un、S4–6 Ad、S7–9 PGE、S10–12 TNFA、S13–24 Crtc2 同序） | 无其它可配方式 |
-| `un` | untreated | 与三种处理并列 | — |
-| `TNF` | TNF（FASTQ 写 TNFA = TNF-α） | — | — |
+阈值用 1.2 倍的理由：Crtc2 本身只变化约 −0.6 log2FC，大量方向一致的 CREB 靶基因变化也小于 2 倍，用 2 倍阈值会漏掉这一层主要信号。
 
-⚠ 3H 的 log2FC "Use default (1.0)"：送样单模板默认值是 1.0，而本公司 RNA-seq 标准流程（`/rnaseq` skill、本客户 proj19 交付）用 |log2FC| ≥ 0.263（1.2 倍）。**采用我方标准 0.263**（阈值属我方决定），报告 Methods 写明；并在 DEG 汇总里**同时给出 |log2FC| ≥ 1 的计数**，让客户看到模板默认口径下的数字。
+---
 
-## 3. 数据（截至 2026-11-07 22:49 实测）
+## 3. 结果
 
-- 目录：`/Work_bio/dropbox/Dropbox_Data/Quote_09292601/`（Dropbox 渐进同步中）
-- **截至 2026-11-07 22:49 本地为 27 个 FASTQ / 69.9 GiB，13/24 样本 R1+R2 成对**；同时刻 Dropbox 云端该文件夹为 **48 个文件**（24 样本 × R1/R2，list_folder `has_more=false`）⇒ 缺口是同步滞后，不是客户漏传，不需要联系客户。
-- 单 lane（flowcell `2533TCLT4` lane 3），PE，每样本单对文件；每样本 GiB 见样本表 `R1_GiB/R2_GiB`；`raw_read_pairs` 在上游跑完后由 `4a_fill_read_pairs.py` 从 FastQC 回填。
+### 3.1 PCA：PC1 = TNF 轴，PC2 = 细胞系轴
 
-## 4. 证据模型 decision table（§2A）
+- PC1 解释 93% 的方差，PC2 解释 4%。组内平均距离 0.62，组间平均距离 20.58，比值 33.2。
+- **PC1 由 TNF 驱动**：TNF 组的 PC1 均值为 27.9，其余组在 −12.1 到 −5.0 之间。
+- **PC2 完全按细胞系分开**：所有 Crtc2 line 样本的 PC2 都在 0.1–6.4，所有 control 样本都在 −5.5 到 −1.7，两系没有重叠。
+- **最近邻检查**：23/24 个样本的最近邻是同组重复。唯一的例外是 Crtc2-un-1 → Crtc2-adenosine-3，这两组本来就分不开（见下表），因此这不代表样本错标。
 
-| 研究问题 | 观察单位 | 保留/过滤规则（为什么） | 判定指标 | 允许的结论 |
-| :--- | :--- | :--- | :--- | :--- |
-| 同一处理下 Crtc2 line 与 control 的转录差异（对比 1–4） | 基因（Salmon gene-level estimated counts） | ① 核糖体 + 非编码/预测基因 regex（排除 Rps6k/Rps19bp1/Rps23rg1 look-alike）—— 防 PCA 被核糖体主导、去掉无 Entrez 的 Gm 基因；② ≥10 counts in ≥22/24 样本 —— 去掉检测不到的基因以免稀释多重检验。**删掉会遗漏**：低表达、细胞类型特异的转录因子（记录过滤前后基因数） | DESeq2 Wald + ashr shrink；padj ≤ 0.05 & \|log2FC\| ≥ 0.263 | 该细胞系、该处理下的基因层面差异；**不能**推断 Crtc2 的 KO/OE 性质（客户未提供），只报告 Crtc2 本身的表达测量 |
-| control line 对 PGE2 / adenosine 的应答（对比 5–6） | 同上 | 同上 | 同上 | 该细胞系对处理的转录应答 |
-| 数据质量 / 样本身份 | 样本 | 不剔除任何样本，除非有错标证据（PCA 最近邻跨组 + 独立证据） | PCA 组内/组间距离比、最近邻同组率、Crtc2 表达是否与基因型一致 | 是否存在错标/离群；若有，报告里给独立判断 |
+处理造成的位移（PCA 质心距离）：
 
-- **模型**：24 样本同一 run、同一 lane ⇒ 一个 `~Group`（8 水平）模型，6 个对比都从中提取（与 proj19 相同）。不加交互项（3E 未勾 factorial；客户只要两两比较）。
-- **Data universe**：全部 24 样本 / 全部 GENCODE M35 基因进入定量；过滤只发生在 DE 前，数目入 `filter_stats.rds` 并写进报告 §5。
+| 处理 | control（处理 vs un） | Crtc2 line（处理 vs un） | Crtc2 / control |
+| :--- | :---: | :---: | :---: |
+| TNF | 47.36 | 32.96 | 0.70 |
+| PGE2 | 10.55 | 4.64 | 0.44 |
+| adenosine | 2.45 | 0.34 | 0.14 |
 
-## 5. 流程与脚本（`scripts/`）
+两系之间的距离：un 5.42，TNF 19.82，PGE2 10.63，adenosine 6.98。另外，Crtc2-PGE2 与 control-un 只相距 2.58，比 Crtc2-PGE2 与 Crtc2-un 的距离（4.64）还近。
 
-| 步骤 | 脚本 | 状态 |
-| :--- | :--- | :---: |
-| 0 样本表 | `0_build_sample_table.py` | 已跑（每 10 min 由 watcher 刷新） |
-| 1 samplesheet + gzip -t | `1_produce_nf-core_Samplesheet.py` | 由 2 调用 |
-| 2 nf-core/rnaseq 3.15.1 | `2_nextflow.sh partial\|full`（GRCm39/M35；STAR `--twopassMode None --outFilterMultimapNmax 3`；strandedness auto） | partial 运行中 |
-| 3 守候/接续 | `3_wait_and_launch.sh`（tmux `p51_watch`） | 运行中 |
-| 4a 读数回填 | `4a_fill_read_pairs.py` | 待 full |
-| 4 DESeq2/PCA | `4_run_DE_PCA.R`（Step B = v3 用户规则，见更新记录 11-08） | v3 完成 |
-| 5 富集 | `5_run_enrichment.R`（GO/KEGG ORA UP/DOWN/ALL + GSEA GO/KEGG/Hallmark；失败记 ERROR 不静默） | 待 full |
-| 6 报告 / 8 自审 / 9 交付 | 读结果后编写 | 待 READY_FOR_REPORT |
+### 3.2 DEG 数
 
-- **资源**：独占整机（启动时 load 0.3），executor 56 线程 / 108 GB；STAR 18 cpu × 3。
-- **打断安全性**：所有输出写 `output_results/`、`work/`、新日期 `Data_Analysis_YYYYMMDD/`；中途打断可 `-resume`；不触碰任何其它项目。
+| 对比 | 检验基因 | Up | Down | DEG 总数 | 占检验基因比例 | \|log2FC\| ≥ 1 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Crtc2-un vs control-un | 11,883 | 461 | 690 | **1,151** | 9.7% | 246（56 / 190） |
+| Crtc2-TNF vs control-TNF | 12,172 | 2,804 | 3,101 | **5,905** | 48.5% | 1,353（556 / 797） |
+| Crtc2-PGE2 vs control-PGE2 | 11,878 | 798 | 1,307 | **2,105** | 17.7% | 539（102 / 437） |
+| Crtc2-adenosine vs control-adenosine | 11,823 | 495 | 809 | **1,304** | 11.0% | 305（53 / 252） |
+| control-PGE2 vs control-un | 11,937 | 1,278 | 896 | **2,174** | 18.2% | 625（436 / 189） |
+| control-adenosine vs control-un | 11,872 | 170 | 84 | **254** | 2.1% | 13（11 / 2） |
 
-## 6. 待办 / 风险
-- partial 阶段与 full 阶段共享 `work/`，full 用 `-resume` 复用 per-sample 任务；需在 full 日志里核对 cached 任务数 > 0（确认复用真的发生）。
-- Crtc2 表达方向需在 DE 后核对（proj19 教训：KO 不一定在 mRNA 层面可见）；结果写入 §7。
-- README 提到"初始误建版本保留于 superseded_for_comparison/"——**实测本项目内不存在该目录**（2026-11-07 23:5x 检查），未见其它位置；不影响分析，记录备查。
+- 4 个 Crtc2 vs control 对比都以下调为主（下调占 52–62%）；放到 2 倍阈值后，下调占比升到 59–83%。
+- **4 个 Crtc2 vs control 对比共享 656 个 DEG，其中 612 个方向一致**（404 个都下调，208 个都上调）。这是不随处理改变的细胞系核心差异。
+- 未处理条件下差异最大的基因：下调方向有 Edil3 −2.90、Ramp3 −2.85、Aif1l −2.76、Wnt10b −2.65、Tmem119 −2.54、Rgs9 −2.50；上调方向有 Adrb2 +3.04、Lag3 +2.38、Plpp1 +1.87。
+
+### 3.3 Crtc2 本身
+
+DESeq2 normalized counts，3 个重复的均值：
+
+| 条件 | control | Crtc2 line | Crtc2 / control | log2FC（对比 1–4） |
+| :--- | :---: | :---: | :---: | :---: |
+| un | 1,377 | 920 | 0.67 | −0.58* |
+| TNF | 4,078 | 2,141 | 0.53 | −0.93* |
+| PGE2 | 1,817 | 1,195 | 0.66 | −0.60* |
+| adenosine | 1,433 | 943 | 0.66 | −0.59* |
+
+- TNF 会上调 Crtc2 本身（组均值：control 3.0 倍，Crtc2 line 2.3 倍；TNF vs un 未做检验）。
+- PGE2 在 control 中也上调 Crtc2（+0.38*）；adenosine 不改变 Crtc2（+0.01）。
+
+### 3.4 标志基因面板
+
+数值为 log2FC，`*` 表示显著，`n.t.` 表示表达太低、不在该对比的检验集合中。
+
+| 基因 | 1 un | 2 TNF | 3 PGE2 | 4 adenosine | 5 control PGE2 应答 | 6 control adenosine 应答 |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Crtc2 | −0.58* | −0.93* | −0.60* | −0.59* | +0.38* | +0.01 |
+| Nr4a2 | −0.40* | −1.04* | −0.85* | −0.80* | +0.85* | −0.03 |
+| Crem | −0.67* | −1.42* | −0.57* | −0.73* | +0.19 | −0.10 |
+| Pde4b | −0.59* | −1.88* | −1.29* | −0.68* | +1.00* | −0.00 |
+| Pde4d | −1.19* | −2.55* | −2.22* | −1.87* | +2.17* | +0.08 |
+| Sik1 | −0.66* | −1.08* | −0.91* | −0.60* | +0.37* | −0.01 |
+| Il6 | −0.24 | −3.37* | −2.37* | −0.54* | +2.69* | +0.01 |
+| Ptgs2 | n.t. | −2.48* | −2.06* | n.t. | +2.33* | n.t. |
+| Cxcl2 | n.t. | −0.63* | −0.98* | n.t. | +2.14* | n.t. |
+| Cxcl10 | −0.70* | −1.54* | −1.46* | −0.19 | +0.58* | −0.01 |
+| Ccl5 | −0.87* | −1.52* | −1.83* | −1.43* | +2.24* | +0.95* |
+| Nfkbia | +0.10 | −1.17* | −0.39* | −0.05 | +0.67* | +0.27* |
+| Tnfaip3 | +0.02 | −0.76* | −0.41* | −0.10 | +0.48* | +0.04 |
+| Fos | +1.59* | +2.34* | +0.16 | +1.56* | +0.19 | +0.06 |
+| Fosb | +1.35* | +3.00* | +0.39* | +1.75* | +0.05 | +0.01 |
+
+如何读这张表：
+
+- **CREB 靶基因**（Nr4a2 / Crem / Pde4b / Pde4d / Sik1）在 4 种条件下都显著更低。差距在 TNF 和 PGE2 下最大，与"PGE2 → cAMP → CREB/CRTC"这条通路受损一致。Pde4d 的变化最大且最稳定：PGE2 在 control 中把它上调 +2.17，而 Crtc2 line 在 PGE2 下比 control 低 −2.22。
+- **炎症基因**（Il6 / Ptgs2 / Cxcl2）在 control 中受 PGE2 诱导，在 Crtc2 line 中 PGE2 和 TNF 条件下都明显更低。这些基因在未处理时差别不大，说明受损的是诱导应答，基础表达基本不变。
+- **NF-κB 反馈基因**（Nfkbia / Tnfaip3）只在 TNF 下降低（−1.17 / −0.76），这与 Crtc2 line 的 TNF 应答幅度较小一致。
+- **Fos / Fosb 方向相反**：在 un、TNF、adenosine 下都在 Crtc2 line 中更高，在 PGE2 下差别很小。这是面板里唯一与 CREB 靶基因方向相反的一组即刻早期基因（见 §4 推断 3）。
+
+### 3.5 Crtc2 line 保留了多少处理应答（描述性）
+
+方法：取 control 中有应答的基因，比较 Crtc2 line 的应答幅度（处理 vs un 的组均值 log2 比）与 control 的应答幅度，看两者之间的斜率。斜率 = 1 表示与 control 一样，0 表示完全没有应答。
+
+| 处理 | 基因集 | 基因数 | 斜率（保留比例） | 相关系数 | 应答不足一半的基因占比 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| PGE2 | 对比 5 的 DEG | 2,174 | 58% | 0.86 | 33% |
+| adenosine | 对比 6 的 DEG | 254 | 32% | 0.46 | 55% |
+| TNF | control-TNF vs control-un 组均值差 ≥2 倍（未做检验） | 3,950 | 74% | 0.92 | 33% |
+
+这张表与 PCA 位移比（TNF 0.70、PGE2 0.44、adenosine 0.14）给出相同的排序：TNF 保留得最多，adenosine 几乎全部丢失。
+
+### 3.6 两系差异与处理应答的关系
+
+| 交叉比较 | 两组都显著的基因 | 方向相反的比例 | 全基因 log2FC 相关 |
+| :--- | :---: | :---: | :---: |
+| 对比 1（un 下两系差异） × 对比 5（PGE2 应答） | 740 | 91% | −0.45 |
+| 对比 1 × 对比 6（adenosine 应答） | 146 | 90% | −0.09 |
+| 对比 3（PGE2 下两系差异） × 对比 5 | 1,384 | 97% | −0.77 |
+
+- 对比 3 的 DEG 中 66% 属于对比 5 的 DEG ⇒ PGE2 下两系的差异，主要就是 Crtc2 line 没有做出的那部分 PGE2 应答。
+- 对比 4 的 DEG 中 68% 也是对比 1 的 DEG，方向 100% 相同 ⇒ adenosine 下两系的差异基本等同于两系的基础差异，adenosine 本身几乎没有贡献。
+
+### 3.7 通路
+
+Hallmark GSEA 的 NES（正值表示在前一组更高；n.s. 表示不显著）：
+
+| 对比 | TNFA_SIGNALING_VIA_NFKB | INFLAMMATORY_RESPONSE | INTERFERON_GAMMA_RESPONSE | E2F_TARGETS | G2M_CHECKPOINT |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Crtc2-un vs control-un | −1.56 | −2.15 | −1.65 | +2.00 | +1.86 |
+| Crtc2-TNF vs control-TNF | −2.10 | −1.62 | −1.96 | n.s. | n.s. |
+| Crtc2-PGE2 vs control-PGE2 | −2.21 | −2.22 | −2.12 | +2.10 | +1.97 |
+| Crtc2-adenosine vs control-adenosine | −1.81 | −2.24 | −1.98 | +2.36 | +2.39 |
+| control-PGE2 vs control-un | +2.59 | +2.19 | +2.35 | −3.31 | −3.15 |
+| control-adenosine vs control-un | +2.75 | +2.17 | +2.46 | −3.79 | −3.53 |
+
+ORA GO BP 每个方向的前几条：
+
+| 对比 | 前一组更高 | 前一组更低 |
+| :--- | :---: | :---: |
+| Crtc2-un vs control-un | GPCR signaling; leukocyte / mononuclear cell migration | GPCR signaling; regulation of immune effector process; positive regulation of cell adhesion |
+| Crtc2-TNF vs control-TNF | monocarboxylic acid / fatty acid metabolism; lipid biosynthesis | cytokine-mediated signaling; response to bacterium; regulation of immune effector process |
+| Crtc2-PGE2 vs control-PGE2 | chromosome segregation; nuclear division | immune effector process; response to bacterium |
+| Crtc2-adenosine vs control-adenosine | chromosome segregation; nuclear division | adaptive immune response; immune effector process |
+| control-PGE2 vs control-un | immune effector process; cytokine-mediated signaling | chromosome segregation; nuclear division |
+| control-adenosine vs control-un | T cell activation; cytokine-mediated signaling | chromosome segregation; sister chromatid segregation |
+
+显著条目数（FDR < 0.05）：
+
+| 对比 | GO BP up | GO BP down | KEGG up | KEGG down | GSEA GO BP | GSEA KEGG | GSEA Hallmark |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Crtc2-un vs control-un | 113 | 533 | 6 | 17 | 266 | 10 | 15 |
+| Crtc2-TNF vs control-TNF | 137 | 516 | 14 | 18 | 75 | 24 | 14 |
+| Crtc2-PGE2 vs control-PGE2 | 177 | 1,067 | 12 | 38 | 479 | 32 | 18 |
+| Crtc2-adenosine vs control-adenosine | 186 | 604 | 26 | 28 | 465 | 4 | 18 |
+| control-PGE2 vs control-un | 1,024 | 253 | 43 | 12 | 1,190 | 102 | 28 |
+| control-adenosine vs control-un | 273 | 203 | 20 | 4 | 1,008 | 100 | 25 |
+
+读法：
+- control 的 PGE2 应答与 adenosine 应答在通路层面是同一个模式（炎症/IFN 程序上调，细胞周期下调），只是强度不同：基因层面 adenosine 的 DEG 少，GSEA 上却同样强。
+- 这个模式在 Crtc2 line 中整体反转。TNF 下细胞周期一项不显著，原因可能是 TNF 本身对增殖的影响掩盖了两系差异（这是推断）。
+- adenosine 应答 254 个 DEG，GSEA GO BP 却有 1,008 条：说明 adenosine 的作用是很多基因的小幅协同变化，单个基因很少过阈值。
+
+---
+
+## 4. 解读：实测事实与推断分开
+
+**实测事实**（对应文件见 §6）：§1–§3 中的所有数字。
+
+**我的推断**（下面均为假设，需要实验证实）：
+
+1. **Crtc2 line 的表型符合 CRTC2 功能部分丧失**：Crtc2 mRNA 只降到 ~0.6 倍，但 CREB 靶基因与 PGE2（cAMP 上游）应答一起减弱，PGE2 应答受损（58%）远比 TNF（74%）严重。对一个只降低 mRNA 的细胞系来说，这样的表型强度提示：要么蛋白层面的损失比 mRNA 更彻底，要么是剪接或截短等改变造成的功能丧失。**RNA-seq 区分不了这两种情况**。
+2. **adenosine 在 Crtc2 line 中几乎没有应答**：这与 adenosine 经 A2A/A2B → Gs → cAMP → CREB/CRTC 通路发挥作用相符。由于 control 本身的应答也很弱（254 DEG），"丢失 68%"这一数值的不确定性最大。
+3. **Fos / Fosb 方向相反**：两者同样受 CREB 调控，却在 Crtc2 line 中更高。可能是 CRTC2 依赖性靶基因（Nr4a/Pde4/Sik1）与即刻早期基因的 CREB 依赖程度不同，或者是负反馈（Sik1、Pde4 降低 → cAMP/CREB 磷酸化代偿性升高）。这是推断，数据无法区分。
+4. **TNF 应答减弱**：CRTC2 与 NF-κB 在炎症基因启动子上存在协同（Il6、Ptgs2 都是 CREB + NF-κB 双重调控的基因）。这可以解释 TNF 下差异最大的原因，但本数据不能证明直接作用。
+
+**结论的边界**：
+- §3.5 的保留比例是基于组均值的描述性统计，不是 genotype × treatment 交互检验；如需正式检验，可以在同一数据上增加 `~ line + treatment + line:treatment` 模型（客户未要求，属可选增量）。
+- 通路名称只说明主题，不说明机制；mRNA 的变化也不等同于蛋白或功能的变化。
+- n = 3：没进 DEG 列表不代表没有变化。
+
+---
+
+## 5. 建议的后续验证（写进报告 §8.4）
+
+| 待回答的问题 | 实验 |
+| :--- | :---: |
+| CRTC2 蛋白是否缺失 | Western blot（control vs Crtc2 line） |
+| 关键基因变化能否在独立实验中重现 | qPCR：Pde4d、Nr4a2、Il6、Crtc2（un / PGE2 / TNF） |
+| Crtc2 line 对各处理的应答是否显著减弱 | 同一数据上做 genotype × treatment 交互检验（可选增量） |
+| 通路差异是否有功能后果 | 增殖实验；IL-6 ELISA |
+
+---
+
+## 6. 文件索引（均在 `Data_Analysis_20261108/` 下）
+
+| 内容 | 路径 |
+| :--- | :---: |
+| DEG 汇总 | [`DE_PCA_Results/DEG_summary_all_comparisons.csv`](../Data_Analysis_20261108/DE_PCA_Results/DEG_summary_all_comparisons.csv) |
+| 每个对比的全表 / 显著表 / 火山图 / top50 热图 | `DE_PCA_Results/<comparison>/`（6 个） |
+| PCA 与样本距离 | [`DE_PCA_Results/PCA_AllSamples_Overview.pdf`](../Data_Analysis_20261108/DE_PCA_Results/PCA_AllSamples_Overview.pdf)、`PCA_coordinates_overview.csv`、`SampleDistance_Heatmap.pdf` |
+| 应答保留比例（§3.5） | [`DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`](../Data_Analysis_20261108/DE_PCA_Results/Crtc2_line_treatment_response_retention.csv) |
+| 标志基因面板（§3.4） | [`DE_PCA_Results/CREB_CRTC_target_and_inflammatory_marker_panel.csv`](../Data_Analysis_20261108/DE_PCA_Results/CREB_CRTC_target_and_inflammatory_marker_panel.csv) |
+| 富集汇总 | [`Enrichment/Enrichment_summary_all_comparisons.csv`](../Data_Analysis_20261108/Enrichment/Enrichment_summary_all_comparisons.csv)；明细在 `Enrichment/<comparison>/{GO,KEGG,GSEA}/` |
+| 客户报告（英文，审阅中） | [`Crtc2_Line_Treatment_RNAseq_Report_1108.md`](../Data_Analysis_20261108/Crtc2_Line_Treatment_RNAseq_Report_1108.md) |
+| 脚本 | `scripts/4_run_DE_PCA.R`、`5_run_enrichment.R`、`6_generate_research_report.R`、`8_pre_delivery_audit.R`、`9_build_delivery.sh` |
+
+§3.2 的 656 / 612 共享核心 DEG，以及 §3.6 的交叉比较数字，由 `*_ALL_genes.csv` 独立重算（2026-11-08），与报告数值一致。

@@ -23,3 +23,11 @@ DEG 数并排见各版 `Data_Analysis_20261108/DE_PCA_Results/DEG_summary_all_co
 `v1_*/explore_group_aware_filter_vs_n-2.csv` 是做决定前在 scratchpad 跑的探索性对比（v2 规则）。
 
 v3 的脚本快照取自 git `HEAD`（baa3970，原文件）；`explore_gsea_rank_metric_test.R` 是排序指标的探索性对照测试。
+
+## docs/ — 研究计划与审阅文档
+
+| 版本 | 内容 | 被取代原因 |
+| :--- | :---: | :--- |
+| v1_20261108_process_log_with_data_issues/P51_research_plan_and_review_1107.md | 原文件 `mv` 过来，未改动。内容为送样单要点、命名判定（PEG2=PGE2 等缩写的读法与依据）、Dropbox 停滞与直下校验、过滤规则与 GSEA 排序的变更记录、流程状态 | 2026-11-08 用户要求：重写成只讲分析本身的清晰文档，数据问题不进正文。**当前有效版 = `docs/P51_research_plan_and_review_1107.md`（同名，内容已重写）** |
+
+对照：`diff superseded_for_comparison/docs/v1_*/P51_research_plan_and_review_1107.md docs/P51_research_plan_and_review_1107.md`。
