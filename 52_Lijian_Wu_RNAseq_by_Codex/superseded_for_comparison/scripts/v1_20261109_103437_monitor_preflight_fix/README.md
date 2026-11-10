@@ -1,0 +1,1 @@
+原始脚本快照；修正预处理尚无Nextflow日志导致的STALLED误报，显式指定canonical mailer；Nextflow日志写项目根；下游显式fail函数投递告警。分析程序未重启。
