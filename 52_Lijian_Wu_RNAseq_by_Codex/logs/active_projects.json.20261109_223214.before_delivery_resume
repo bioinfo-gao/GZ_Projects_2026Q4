@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "projects": [
+    {
+      "id": "P42_fullcohort_repeat_resolve",
+      "project_root": "/home/gao/projects_2026Q4/42_Vedita_18_wgs_advanced_analysis",
+      "status": "running",
+      "current_stage": "2026-10-24 final Figure 12 correction: remove the residual retrospective numeric depth gate from the visual summary, preserve the prior image internally, and revalidate the complete one-folder client package.",
+      "next_stage": "In tmux p42_final_figure_validation_20261024, rerun the complete client-package audit including 18 BAM checks, 90 VCF header checks, 14-figure inventory, Figure 12 PDF-text assertions, and client-boundary scan; then archive obsolete top-level supplementary work records and mark complete.",
+      "expected_tmux_session": "p42_final_figure_validation_20261024",
+      "blocked_reason": "",
+      "blocking_question": "",
+      "last_verified_at": "2026-10-24T22:51:00-04:00",
+      "completion_definition": "P41 Section 7.3 follow-up is complete only when the in-silico C2/C1/C3/C4 assay audit and a client-question completion supplement (Manta/DELLY concordance, C2 read-end structure, rescue impact, DLD1 criteria and source-file availability) have been self-audited in a new incremental package. Physical PCR, new sequencing, raw-FISH quantification and a provenance-qualified project-wide SNV/indel VCF remain explicitly external or unavailable unless their required inputs exist. User review precedes any external sending.",
+      "agent": "codex"
+    },
+    {
+      "id": "P44_chr11_junction_read_rescue_S01_S10",
+      "project_root": "/home/gao/projects_2026Q4/44_wgs_advanced_analysis_from_P41_by_cc",
+      "status": "complete",
+      "current_stage": "Round 2 delivery rebuilt (W +/-50 kb, P1-P7); 13_self_audit OK; check_report OK",
+      "next_stage": "User review; no external sending by agent",
+      "expected_tmux_session": "",
+      "blocked_reason": "",
+      "blocking_question": "",
+      "last_verified_at": "2026-10-25T14:25:00-04:00",
+      "completion_definition": "Delivery custom_research_report_supplementary_20261025 rebuilt from RUN 20261025 (W +/-50 kb) with P1-P6 additions, old version archived in superseded_for_comparison, 13_self_audit OK; user review precedes sending.",
+      "agent": "claude_code"
+    },
+    {
+      "id": "P45_chr11_junction_combined_P42_P44",
+      "project_root": "/home/gao/projects_2026Q4/45_Vedita_18_wgs_combined_Advanced",
+      "status": "complete",
+      "current_stage": "Complete: custom_research_report_20261025 (212 files) built; 13_self_audit OK; check_report OK",
+      "next_stage": "User review of the delivery package (not sent)",
+      "expected_tmux_session": "",
+      "blocked_reason": "",
+      "blocking_question": "",
+      "last_verified_at": "2026-10-25T16:42:50-04:00",
+      "completion_definition": "Single complete delivery custom_research_report_YYYYMMDD/ built per P45 plan sections 5/7/9 (incl. G1 genome-wide SNV/indel and G2 genome-wide clone-specific TSV), 13_self_audit and check_report pass, client_request_coverage covers every request line; user review precedes any sending.",
+      "agent": "claude_code"
+    },
+    {
+      "id": "P51_Lijian_Wu_Crtc2_RNAseq",
+      "project_root": "/home/gao/projects_2026Q4/51_Lijian_Wu_RNAseq",
+      "status": "complete",
+      "current_stage": "delivery folder custom_research_report_20261108 built; audit 149/149; awaiting user review (not sent)",
+      "next_stage": "user review; on review completion re-stamp via scripts/9_build_delivery.sh <date>",
+      "expected_tmux_session": "p51_watch",
+      "blocked_reason": null,
+      "blocking_question": null,
+      "last_verified_at": "2026-11-08T10:57:21-05:00",
+      "completion_definition": "custom_research_report_YYYYMMDD/ built from all 24 samples (8 groups x 3) with the 6 client contrasts from form 3G, counts+TPM matrices, multiqc, PCA, DEG tables, enrichment, report; pre-delivery audit passes; user review precedes any sending.",
+      "agent": "claude_code"
+    },
+    {
+      "id": "P52_Lijian_Wu_RNAseq",
+      "project_root": "/home/gao/projects_2026Q4/52_Lijian_Wu_RNAseq_by_Codex",
+      "agent": "codex",
+      "status": "running",
+      "current_stage": "All 48 FASTQ integrity checks passed; nf-core/rnaseq running FastQC, TrimGalore and strandedness subsampling in p52_full",
+      "next_stage": "automatic STAR/Salmon alignment and quantification, then DESeq2 six contrasts and enrichment",
+      "expected_tmux_session": "p52_full",
+      "last_verified_at": "2026-11-09T12:16:52.382915-05:00",
+      "blocked_reason": "",
+      "blocking_question": "",
+      "completion_definition": "24 samples; six confirmed contrasts; counts and TPM, QC, PCA, DE, GO/KEGG ORA and GSEA, English report, audited custom_research_report_YYYYMMDD; internal review only, no sending"
+    }
+  ]
+}
