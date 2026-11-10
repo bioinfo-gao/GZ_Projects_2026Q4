@@ -382,3 +382,9 @@ custom_research_report_*/**/*_pathabundance.tsv
 *off 
 *.csi
 *.bcf
+
+# Runtime logs at any project depth
+logs/
+
+# R analysis runtime caches at any project depth
+rds_cache/
