@@ -198,8 +198,8 @@ add("")
 add("## 2. Core Conclusions")
 add("")
 add("This section gives the answer for each part of the experiment in plain language. Section 3 lists ",
-    "what was measured topic by topic; Section 8.2 gives **more detail on each conclusion below and names ",
-    "the section and delivered file that supports it**; Section 8.3 states what these data cannot tell you; ",
+    "what was measured topic by topic; Section 8.2 **names the section and delivered file ",
+    "behind each conclusion below**; Section 8.3 states what these data cannot tell you; ",
     "Section 8.4 lists the experiment that would settle each open question.")
 add("")
 CC <- c(
@@ -353,10 +353,14 @@ add("Each comparison folder in `DE_PCA_Results/` holds the full table of tested 
 add("")
 add("**Crtc2 mRNA** (DESeq2-normalised counts, mean of three replicates):")
 add("")
-add("| Treatment | control | Crtc2 line | Crtc2 line / control |")
-add("| :--- | :---: | :---: | :---: |")
+add("| Treatment | control | Crtc2 line | Crtc2 line / control | log2FC | padj |")
+add("| :--- | :---: | :---: | :---: | :---: | :---: |")
+crtc2_padj <- sapply(names(res_list)[1:4], function(k) { d <- res_list[[k]]; d$padj[d$gene_name == "Crtc2"] })
+names(crtc2_lfc) <- names(crtc2_padj) <- c("un", "TNF", "PGE2", "adenosine")   # res_list[1:4] = Crtc2-<tr> vs control-<tr>
+stopifnot(grepl("^Crtc2-un_vs", names(res_list)[1]), grepl("^Crtc2-adenosine_vs", names(res_list)[4]))
 for (tr in c("un", "TNF", "PGE2", "adenosine")) { r <- cr_g[cr_g$treatment == tr, ]
-  add("| ", TREAT_LONG[tr], " | ", fmt(round(r$control)), " | ", fmt(round(r$Crtc2)), " | ", f2(r$ratio), " |") }
+  add("| ", TREAT_LONG[tr], " | ", fmt(round(r$control)), " | ", fmt(round(r$Crtc2)), " | ", f2(r$ratio),
+      " | ", sprintf("%+.2f", crtc2_lfc[tr]), " | ", sprintf("%.1e", crtc2_padj[tr]), " |") }
 add("")
 add(sprintf("Crtc2 mRNA is higher with TNF in both lines (group means %s-fold in control, %s-fold in the Crtc2 line). In every condition the Crtc2 line carries %s less Crtc2 mRNA than control.", f1(CR_TNF_FOLD["control"]), f1(CR_TNF_FOLD["Crtc2"]), CR_LESS))
 add("")
@@ -447,17 +451,20 @@ for (i in seq_len(nrow(deg))) add("| ", cmp(deg$Comparison[i]), " | ", fmt(deg$T
 add("")
 add("### 8.2 Practical reading")
 add("")
-add("The seven points of Section 2, each with the section and delivered file that supports it.")
+add("Where the evidence for each point of Section 2 is found.")
 add("")
-EV <- c("Sections 3 and 7.1; `QC/multiqc/`, `DE_PCA_Results/PCA_AllSamples_Overview.pdf`",
-        "Section 7.2 Crtc2 table; `DE_PCA_Results/<comparison>/*_ALL_genes.csv`, row Crtc2",
-        "Sections 7.3 and 7.4; `DE_PCA_Results/Crtc2-un_vs_control-un/`, `CREB_CRTC_target_and_inflammatory_marker_panel.csv`",
-        "Sections 7.1 and 7.4; `DE_PCA_Results/control-PGE2_vs_control-un/`, `Crtc2_line_treatment_response_retention.csv`",
-        "Section 7.1 (centroid distances) and 7.4; `DE_PCA_Results/control-adenosine_vs_control-un/`",
-        "Sections 7.1 and 7.4; `DE_PCA_Results/Crtc2-TNF_vs_control-TNF/`, `Enrichment/Crtc2-TNF_vs_control-TNF/GSEA/`",
-        "Section 8.4")
-stopifnot(length(EV) == length(CC))
-for (k in seq_along(CC)) { add("- ", CC[k], " *(Evidence: ", EV[k], ")*"); add("") }
+EV <- rbind(c("Data quality and sample labels", "3, 7.1", "`QC/multiqc/`; `DE_PCA_Results/PCA_AllSamples_Overview.pdf`"),
+            c("Crtc2 mRNA is lower", "7.2", "`DE_PCA_Results/<comparison>/*_ALL_genes.csv`, row Crtc2"),
+            c("Untreated difference, opposite to PGE2", "7.3, 7.4", "`DE_PCA_Results/Crtc2-un_vs_control-un/`; `DE_PCA_Results/CREB_CRTC_target_and_inflammatory_marker_panel.csv`"),
+            c("PGE2 response reduced", "7.1, 7.4", "`DE_PCA_Results/control-PGE2_vs_control-un/`; `DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`"),
+            c("Adenosine effect mild", "7.1, 7.4", "`DE_PCA_Results/control-adenosine_vs_control-un/`"),
+            c("TNF difference largest", "7.1, 7.4", "`DE_PCA_Results/Crtc2-TNF_vs_control-TNF/`; `Enrichment/Crtc2-TNF_vs_control-TNF/GSEA/`"),
+            c("Suggested next steps", "8.4", "—"))
+stopifnot(nrow(EV) == length(CC))
+add("| Point in Section 2 | Section | Delivered file |")
+add("| :--- | :---: | :---: |")
+for (k in seq_len(nrow(EV))) add("| ", EV[k, 1], " | ", EV[k, 2], " | ", EV[k, 3], " |")
+add("")
 add("### 8.3 Limitations")
 add("")
 add("- **The nature of the Crtc2 modification is not stated.** The data show reduced Crtc2 mRNA; they cannot show whether CRTC2 protein is absent or reduced.")
