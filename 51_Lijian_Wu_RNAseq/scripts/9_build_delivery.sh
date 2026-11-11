@@ -2,10 +2,10 @@
 # =============================================================================
 # P51 — build / re-stamp the client delivery folder (adapted from proj30 9_build_delivery.sh).
 #
-# DATES (house rule 2026-08-09): first build = today; while review is running DO NOT re-date;
-# once the user says the review is complete, re-run with that date: folder name, report filename
-# and "Report Date:" are re-stamped together, by RENAMING the one existing folder (never a copy).
-# No `rm` anywhere: a report carrying an older date is MOVED to superseded_for_comparison/report/.
+# VERSIONS (user directive 2026-10-27 in P45, reaffirmed 2026-11-10): each new version gets its OWN
+# folder custom_research_report_<YYYYMMDD>/ and its own dated report; earlier folders and earlier-dated
+# reports in Data_Analysis_* are never moved, renamed or overwritten, so versions compare at a glance.
+# The folder of the version the user finally signs off is the submission folder. No `rm` anywhere.
 #
 # Usage: bash scripts/9_build_delivery.sh [YYYY-MM-DD]
 # =============================================================================
@@ -25,31 +25,18 @@ mapfile -t SRCS < <(ls -d "${PROJ_DIR}"/Data_Analysis_[0-9]* 2>/dev/null)
 SRC="${SRCS[0]}"
 echo "Source: $(basename "$SRC") | Delivery date: ${ISO} | Target: $(basename "$DEST")"
 
-# ---- older-dated reports in the source folder -> archive (one live report only) ----
-for f in "${SRC}"/Crtc2_Line_Treatment_RNAseq_Report_*.md; do
-  [ -e "$f" ] || continue
-  [ "$(basename "$f")" = "$REPORT_NAME" ] && continue
-  mkdir -p "$ARCH"; mv "$f" "${ARCH}/$(basename "$f" .md)_from_Data_Analysis_moved$(date +%Y%m%d%H%M).md"
-  echo "ARCHIVED older source report: $(basename "$f")"
-done
+# ---- earlier-dated reports in Data_Analysis_* stay where they are (one per version) ----
+[ ! -e "${SRC}/${REPORT_NAME}" ] || [ -d "$DEST" ] || { echo "ABORT: ${REPORT_NAME} already exists but ${DEST##*/} does not; use a new date"; exit 1; }
 
 # ---- the date has ONE source: regenerate the report with it ----
 DELIVERY_DATE="$ISO" "$RSCRIPT" "${SCRIPT_DIR}/6_generate_research_report.R" > "${PROJ_DIR}/logs/report_${YMD}.log" 2>&1 \
   || { echo "ABORT: report generation failed (logs/report_${YMD}.log)"; tail -20 "${PROJ_DIR}/logs/report_${YMD}.log"; exit 1; }
 [ -s "${SRC}/${REPORT_NAME}" ] || { echo "ABORT: report not produced"; exit 1; }
 
-# ---- audit the source before copying ----
-"$RSCRIPT" "${SCRIPT_DIR}/8_pre_delivery_audit.R" > "${PROJ_DIR}/logs/audit_source_${YMD}.log" 2>&1 \
-  || { echo "ABORT: source audit failed"; grep -v PASS "${PROJ_DIR}/logs/audit_source_${YMD}.log" | tail -20; exit 1; }
-
-# ---- one delivery folder only: re-stamp in place ----
-mapfile -t EXISTING < <(ls -d "${PROJ_DIR}"/custom_research_report_[0-9]* 2>/dev/null)
-[ "${#EXISTING[@]}" -le 1 ] || { echo "ABORT: more than one delivery folder:"; printf '  %s\n' "${EXISTING[@]}"; exit 1; }
-if [ "${#EXISTING[@]}" -eq 1 ] && [ "${EXISTING[0]}" != "$DEST" ]; then
-  echo "RE-STAMP: $(basename "${EXISTING[0]}") -> $(basename "$DEST") (rename in place)"
-  mv "${EXISTING[0]}" "$DEST" || { echo "ABORT: rename failed"; exit 1; }
-elif [ "${#EXISTING[@]}" -eq 0 ]; then
-  echo "FIRST BUILD: $(basename "$DEST")"
+# ---- new version = new folder; earlier custom_research_report_* folders are never touched ----
+# (Data_Analysis_* may hold several dated reports, so the audit runs on the delivery folder only, below.)
+if [ ! -d "$DEST" ]; then
+  echo "NEW VERSION FOLDER: $(basename "$DEST")"
   mkdir -p "$DEST"
   for d in QC Reads DE_PCA_Results Enrichment; do cp -r "${SRC}/${d}" "${DEST}/${d}"; done
   cp "${SRC}"/mouse_Gene_annotation_*.xlsx "${DEST}/"
