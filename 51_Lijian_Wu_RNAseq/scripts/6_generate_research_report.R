@@ -216,7 +216,7 @@ CC <- c(
           fmt(dg(K_CA)$Total), fmt(dg(K_CA)$Up_lfc1 + dg(K_CA)$Down_lfc1), pc_(rr("adenosine", "Slope_Crtc2_vs_control_response"))),
   sprintf("**TNF is the strongest stimulus in the experiment, and the largest Crtc2-line difference is seen under TNF (%s genes).** The Crtc2 line still responds to TNF, but less (about %s of the control response), and TNF-induced inflammatory genes such as Il6 (%s log2 fold change) and Cxcl10 are clearly lower than in control.",
           fmt(dg(K_TNF)$Total), pc_(rr("TNF", "Slope_Crtc2_vs_control_response")), sprintf("%+.1f", lf("Il6", K_TNF))),
-  "**What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures. If you want a formal statistical test of whether the Crtc2 line responds less to each treatment (a genotype x treatment interaction test), it can be run on these same data (Section 8.4)."
+  "**What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures."
 )
 for (x in CC) { add("- ", x); add("") }
 
@@ -474,7 +474,6 @@ add("| Open question | Experiment that would settle it |")
 add("| :--- | :---: |")
 add("| Is CRTC2 protein lost in the Crtc2 line? | Western blot for CRTC2 in control and Crtc2 cells |")
 add("| Are the key gene changes reproducible? | qPCR of Pde4d, Nr4a2, Il6 (and Crtc2) in independent cultures, untreated and with PGE2 and TNF |")
-add("| Does the Crtc2 line respond significantly less to each treatment? | A genotype x treatment interaction test on these same data; can be added on request (additional analysis cost may apply) |")
 add("| Are the pathway differences functional? | A functional read-out for the main themes, for example a proliferation assay and cytokine secretion (for example IL-6 by enzyme-linked immunosorbent assay, ELISA) |")
 add("")
 

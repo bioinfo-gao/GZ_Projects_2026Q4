@@ -40,7 +40,7 @@ This section gives the answer for each part of the experiment in plain language.
 
 - **TNF is the strongest stimulus in the experiment, and the largest Crtc2-line difference is seen under TNF (5,905 genes).** The Crtc2 line still responds to TNF, but less (about 74% of the control response), and TNF-induced inflammatory genes such as Il6 (-3.4 log2 fold change) and Cxcl10 are clearly lower than in control.
 
-- **What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures. If you want a formal statistical test of whether the Crtc2 line responds less to each treatment (a genotype x treatment interaction test), it can be run on these same data (Section 8.4).
+- **What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures.
 
 ## 3. Key Findings
 
@@ -289,7 +289,7 @@ The seven points of Section 2, each with the section and delivered file that sup
 
 - **TNF is the strongest stimulus in the experiment, and the largest Crtc2-line difference is seen under TNF (5,905 genes).** The Crtc2 line still responds to TNF, but less (about 74% of the control response), and TNF-induced inflammatory genes such as Il6 (-3.4 log2 fold change) and Cxcl10 are clearly lower than in control. *(Evidence: Sections 7.1 and 7.4; `DE_PCA_Results/Crtc2-TNF_vs_control-TNF/`, `Enrichment/Crtc2-TNF_vs_control-TNF/GSEA/`)*
 
-- **What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures. If you want a formal statistical test of whether the Crtc2 line responds less to each treatment (a genotype x treatment interaction test), it can be run on these same data (Section 8.4). *(Evidence: Section 8.4)*
+- **What we suggest next.** Confirm CRTC2 protein loss by Western blot, and confirm a small panel of the key genes (Pde4d, Nr4a2, Il6) by qPCR (quantitative PCR) in independent cultures. *(Evidence: Section 8.4)*
 
 ### 8.3 Limitations
 
@@ -306,7 +306,6 @@ The seven points of Section 2, each with the section and delivered file that sup
 | :--- | :---: |
 | Is CRTC2 protein lost in the Crtc2 line? | Western blot for CRTC2 in control and Crtc2 cells |
 | Are the key gene changes reproducible? | qPCR of Pde4d, Nr4a2, Il6 (and Crtc2) in independent cultures, untreated and with PGE2 and TNF |
-| Does the Crtc2 line respond significantly less to each treatment? | A genotype x treatment interaction test on these same data; can be added on request (additional analysis cost may apply) |
 | Are the pathway differences functional? | A functional read-out for the main themes, for example a proliferation assay and cytokine secretion (for example IL-6 by enzyme-linked immunosorbent assay, ELISA) |
 
 ## 9. Deliverable Files
