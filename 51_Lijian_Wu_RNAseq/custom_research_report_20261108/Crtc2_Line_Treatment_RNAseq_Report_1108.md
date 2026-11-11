@@ -238,7 +238,7 @@ Genes used: for PGE2 and adenosine, the DEGs of comparisons 5 and 6. TNF vs untr
 
 The Crtc2-line differences also point in a consistent direction relative to the treatments. Without treatment, of the 740 genes that differ both between the cell lines and with PGE2 in control cells, 91% change in opposite directions (genome-wide correlation of the two sets of fold changes -0.45); for adenosine the corresponding figures are 90% of 146 genes (correlation -0.09). Under PGE2, 97% of the 1,384 genes significant in both comparison 3 and comparison 5 move in opposite directions (correlation -0.77): the difference between the lines under PGE2 is, for the most part, the PGE2 response that the Crtc2 line does not make.
 
-**Selected genes** (log2FC of the first group named in each column header relative to the second: negative = lower in the first group, positive = higher; for example -0.58 means 2^-0.58 = 0.67 times the level of the second group. * = DEG, that is padj of 0.05 or less and at least 1.2-fold; n.t. = not tested in that comparison because expression is too low). Nr4a2, Crem, Pde4b, Pde4d and Sik1 are classical CREB/CRTC target genes; Il6, Ptgs2, Cxcl2, Cxcl10 and Ccl5 are inflammatory genes.
+**Selected genes** (log2FC, first group relative to the second; * = DEG; n.t. = not tested, expression too low). Nr4a2, Crem, Pde4b, Pde4d and Sik1 are classical CREB/CRTC target genes; Il6, Ptgs2, Cxcl2, Cxcl10 and Ccl5 are inflammatory genes.
 
 | Gene | Crtc2-un vs control-un | Crtc2-TNF vs control-TNF | Crtc2-PGE2 vs control-PGE2 | Crtc2-adenosine vs control-adenosine | control-PGE2 vs control-un | control-adenosine vs control-un |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |

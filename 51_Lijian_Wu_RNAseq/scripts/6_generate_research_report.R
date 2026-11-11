@@ -417,7 +417,7 @@ add(sprintf("The Crtc2-line differences also point in a consistent direction rel
             fmt(O_UN_PGE2$n), pc_(O_UN_PGE2$opp), f2(O_UN_PGE2$r), pc_(O_UN_ADO$opp), fmt(O_UN_ADO$n), f2(O_UN_ADO$r),
             pc_(O_PGE2$opp), fmt(O_PGE2$n), f2(O_PGE2$r)))
 add("")
-add("**Selected genes** (log2FC of the first group named in each column header relative to the second: negative = lower in the first group, positive = higher; for example -0.58 means 2^-0.58 = 0.67 times the level of the second group. * = DEG, that is padj of 0.05 or less and at least 1.2-fold; n.t. = not tested in that comparison because expression is too low). ",
+add("**Selected genes** (log2FC, first group relative to the second; * = DEG; n.t. = not tested, expression too low). ",
     "Nr4a2, Crem, Pde4b, Pde4d and Sik1 are classical CREB/CRTC target genes; Il6, Ptgs2, Cxcl2, Cxcl10 and Ccl5 are inflammatory genes.")
 add("")
 add("| Gene | ", paste(sapply(names(res_list), cmp), collapse = " | "), " |")
