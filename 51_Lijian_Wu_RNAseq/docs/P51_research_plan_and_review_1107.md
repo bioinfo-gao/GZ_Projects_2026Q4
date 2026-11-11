@@ -2,7 +2,7 @@
 
 - **物种 / 材料**：Mus musculus；客户未提供名称的已建立小鼠细胞系（GRCm39 / GENCODE M35）
 - **设计**：2 个细胞系（control、Crtc2 line）× 4 种处理（un、TNF、PGE2、adenosine）× 3 个生物学重复 = 24 样本；样本表 SSOT = [`scripts/0_sample_table.csv`](../scripts/0_sample_table.csv)
-- **当前结果目录**：[`Data_Analysis_20261108/`](../Data_Analysis_20261108/)；交付目录 [`custom_research_report_20261108/`](../custom_research_report_20261108/)（**内部审阅中、未发送**）
+- **当前结果目录**：[`Data_Analysis_20261108/`](../Data_Analysis_20261108/)；**提交目录 [`custom_research_report_20261110/`](../custom_research_report_20261110/)（2026-11-10 用户「审阅完毕」，最终版，待用户本人发出）**；[`custom_research_report_20261108/`](../custom_research_report_20261108/) 为 1108 原稿，保留对照
 - 旧版文档（含过程记录）已归档：[`superseded_for_comparison/docs/v1_20261108_process_log_with_data_issues/`](../superseded_for_comparison/docs/v1_20261108_process_log_with_data_issues/)
 
 ---
@@ -230,7 +230,7 @@ ORA GO BP 每个方向的前几条：
 | 应答保留比例（§3.5） | [`DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`](../Data_Analysis_20261108/DE_PCA_Results/Crtc2_line_treatment_response_retention.csv) |
 | 标志基因面板（§3.4） | [`DE_PCA_Results/CREB_CRTC_target_and_inflammatory_marker_panel.csv`](../Data_Analysis_20261108/DE_PCA_Results/CREB_CRTC_target_and_inflammatory_marker_panel.csv) |
 | 富集汇总 | [`Enrichment/Enrichment_summary_all_comparisons.csv`](../Data_Analysis_20261108/Enrichment/Enrichment_summary_all_comparisons.csv)；明细在 `Enrichment/<comparison>/{GO,KEGG,GSEA}/` |
-| 客户报告（英文，审阅中） | [`Crtc2_Line_Treatment_RNAseq_Report_1108.md`](../Data_Analysis_20261108/Crtc2_Line_Treatment_RNAseq_Report_1108.md) |
+| 客户报告（英文，最终版 1110） | [`Crtc2_Line_Treatment_RNAseq_Report_1110.md`](../custom_research_report_20261110/Crtc2_Line_Treatment_RNAseq_Report_1110.md) |
 | 脚本 | `scripts/4_run_DE_PCA.R`、`5_run_enrichment.R`、`6_generate_research_report.R`、`8_pre_delivery_audit.R`、`9_build_delivery.sh` |
 
 §3.2 的 656 / 612 共享核心 DEG，以及 §3.6 的交叉比较数字，由 `*_ALL_genes.csv` 独立重算（2026-11-08），与报告数值一致。
