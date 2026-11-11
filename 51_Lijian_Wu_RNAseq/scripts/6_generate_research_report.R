@@ -358,7 +358,7 @@ add("| :--- | :---: | :---: | :---: |")
 for (tr in c("un", "TNF", "PGE2", "adenosine")) { r <- cr_g[cr_g$treatment == tr, ]
   add("| ", TREAT_LONG[tr], " | ", fmt(round(r$control)), " | ", fmt(round(r$Crtc2)), " | ", f2(r$ratio), " |") }
 add("")
-add(sprintf("Crtc2 mRNA is higher with TNF in both lines (group means %s-fold in control, %s-fold in the Crtc2 line; TNF vs untreated was not a tested comparison). In every condition the Crtc2 line carries %s less Crtc2 mRNA than control.", f1(CR_TNF_FOLD["control"]), f1(CR_TNF_FOLD["Crtc2"]), CR_LESS))
+add(sprintf("Crtc2 mRNA is higher with TNF in both lines (group means %s-fold in control, %s-fold in the Crtc2 line). In every condition the Crtc2 line carries %s less Crtc2 mRNA than control.", f1(CR_TNF_FOLD["control"]), f1(CR_TNF_FOLD["Crtc2"]), CR_LESS))
 add("")
 
 add("### 7.3 Pathway Enrichment")
@@ -409,8 +409,7 @@ add("| :--- | :---: | :---: | :---: | :---: |")
 for (tr in c("PGE2", "adenosine", "TNF")) add("| ", tr, " | ", fmt(rr(tr, "N_genes")), " | ", pc_(rr(tr, "Slope_Crtc2_vs_control_response")),
   " | ", f2(rr(tr, "Correlation")), " | ", pc_(rr(tr, "Fraction_genes_below_half_response")), " |")
 add("")
-add("Genes used: for PGE2 and adenosine, the DEGs of comparisons 5 and 6. TNF vs untreated was not among the requested ",
-    "comparisons and was not tested, so for TNF the genes are those whose mean expression differs at least 2-fold between ",
+add("Genes used: for PGE2 and adenosine, the DEGs of comparisons 5 and 6. For TNF, the genes are those whose mean expression differs at least 2-fold between ",
     "control-TNF and control-un. Values: `DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`.")
 add("")
 add(sprintf("The Crtc2-line differences also point in a consistent direction relative to the treatments. Without treatment, of the %s genes that differ both between the cell lines and with PGE2 in control cells, %s change in opposite directions (genome-wide correlation of the two sets of fold changes %s); for adenosine the corresponding figures are %s of %s genes (correlation %s). Under PGE2, %s of the %s genes significant in both comparison 3 and comparison 5 move in opposite directions (correlation %s): the difference between the lines under PGE2 is, for the most part, the PGE2 response that the Crtc2 line does not make.",
@@ -463,7 +462,7 @@ add("### 8.3 Limitations")
 add("")
 add("- **The nature of the Crtc2 modification is not stated.** The data show reduced Crtc2 mRNA; they cannot show whether CRTC2 protein is absent or reduced.")
 add("- **The response fractions in Section 7.4 are descriptive.** They summarise group means and are not a statistical test.")
-add("- **TNF vs untreated was not a requested comparison**, so no TNF-response DEG list is delivered; the TNF statements rest on the PCA and on comparison 2.")
+add("- **The TNF response within each line is descriptive.** It is based on the PCA and group means; the statistical test for TNF is comparison 2 (Crtc2 line vs control under TNF).")
 add("- **Three replicates per condition.** Consistent changes are detected well; small or variable effects can be missed, so a gene absent from a DEG list is not shown to be unchanged.")
 add("- **Some chemokines are barely expressed in these cells** (for example Cxcl1 and Ccl2 have fewer than 20 reads in every sample) and could not be tested.")
 add("- **RNA level only.** Transcript changes do not establish protein or functional changes; pathway terms name a theme, not a demonstrated mechanism.")

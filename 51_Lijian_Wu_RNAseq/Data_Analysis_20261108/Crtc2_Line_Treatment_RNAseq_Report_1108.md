@@ -183,7 +183,7 @@ Each comparison folder in `DE_PCA_Results/` holds the full table of tested genes
 | PGE2 | 1,817 | 1,195 | 0.66 |
 | adenosine | 1,433 | 943 | 0.66 |
 
-Crtc2 mRNA is higher with TNF in both lines (group means 3.0-fold in control, 2.3-fold in the Crtc2 line; TNF vs untreated was not a tested comparison). In every condition the Crtc2 line carries 33–47% less Crtc2 mRNA than control.
+Crtc2 mRNA is higher with TNF in both lines (group means 3.0-fold in control, 2.3-fold in the Crtc2 line). In every condition the Crtc2 line carries 33–47% less Crtc2 mRNA than control.
 
 ### 7.3 Pathway Enrichment
 
@@ -234,7 +234,7 @@ The client's comparisons test the Crtc2 line against control within each treatme
 | adenosine | 254 | 32% | 0.46 | 55% |
 | TNF | 3,950 | 74% | 0.92 | 33% |
 
-Genes used: for PGE2 and adenosine, the DEGs of comparisons 5 and 6. TNF vs untreated was not among the requested comparisons and was not tested, so for TNF the genes are those whose mean expression differs at least 2-fold between control-TNF and control-un. Values: `DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`.
+Genes used: for PGE2 and adenosine, the DEGs of comparisons 5 and 6. For TNF, the genes are those whose mean expression differs at least 2-fold between control-TNF and control-un. Values: `DE_PCA_Results/Crtc2_line_treatment_response_retention.csv`.
 
 The Crtc2-line differences also point in a consistent direction relative to the treatments. Without treatment, of the 740 genes that differ both between the cell lines and with PGE2 in control cells, 91% change in opposite directions (genome-wide correlation of the two sets of fold changes -0.45); for adenosine the corresponding figures are 90% of 146 genes (correlation -0.09). Under PGE2, 97% of the 1,384 genes significant in both comparison 3 and comparison 5 move in opposite directions (correlation -0.77): the difference between the lines under PGE2 is, for the most part, the PGE2 response that the Crtc2 line does not make.
 
@@ -295,7 +295,7 @@ The seven points of Section 2, each with the section and delivered file that sup
 
 - **The nature of the Crtc2 modification is not stated.** The data show reduced Crtc2 mRNA; they cannot show whether CRTC2 protein is absent or reduced.
 - **The response fractions in Section 7.4 are descriptive.** They summarise group means and are not a statistical test.
-- **TNF vs untreated was not a requested comparison**, so no TNF-response DEG list is delivered; the TNF statements rest on the PCA and on comparison 2.
+- **The TNF response within each line is descriptive.** It is based on the PCA and group means; the statistical test for TNF is comparison 2 (Crtc2 line vs control under TNF).
 - **Three replicates per condition.** Consistent changes are detected well; small or variable effects can be missed, so a gene absent from a DEG list is not shown to be unchanged.
 - **Some chemokines are barely expressed in these cells** (for example Cxcl1 and Ccl2 have fewer than 20 reads in every sample) and could not be tested.
 - **RNA level only.** Transcript changes do not establish protein or functional changes; pathway terms name a theme, not a demonstrated mechanism.
