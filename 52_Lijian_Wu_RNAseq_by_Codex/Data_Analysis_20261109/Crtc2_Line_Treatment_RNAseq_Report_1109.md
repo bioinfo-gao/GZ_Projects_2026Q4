@@ -1,24 +1,24 @@
 # Bioinformatics Analysis Report: Control and Crtc2 Cell Lines under TNF, PGE2 and Adenosine
 
-**Report Date:** 2026-11-09  
-**Prepared by:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics  
-**Species:** Mus musculus (mouse; GRCm39, GENCODE M35)  
-**Tissue / Cell:** Established mouse cell line (cell line name not specified by client)  
-**Assay:** Bulk RNA sequencing (RNA-seq), 24 samples  
-**Analysis Platform:** Linux HPC server  
+**Report Date:** 2026-11-09\
+**Prepared by:** Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics\
+**Species:** Mus musculus (mouse; GRCm39, GENCODE M35)\
+**Tissue / Cell:** Established mouse cell line (cell line name not specified by client)\
+**Assay:** Bulk RNA sequencing (RNA-seq), 24 samples\
+**Analysis Platform:** Linux HPC server
 
 ## 1. Objectives
 
 Compare the client-labelled control and Crtc2 cell lines under untreated (un), tumor necrosis factor (TNF), prostaglandin E2 (PGE2) and adenosine conditions, with three biological replicates per condition. CRTC2 denotes CREB-regulated transcription coactivator 2; CREB is cyclic adenosine monophosphate response element-binding protein. The modification in the Crtc2 line was not specified. The six requested comparisons use the second named group as baseline.
 
-| Comparison | Numerator | Baseline |
-| :--- | :---: | :---: |
-| Crtc2-un vs control-un | Crtc2-un | control-un |
-| Crtc2-TNF vs control-TNF | Crtc2-TNF | control-TNF |
-| Crtc2-PGE2 vs control-PGE2 | Crtc2-PGE2 | control-PGE2 |
-| Crtc2-adenosine vs control-adenosine | Crtc2-adenosine | control-adenosine |
-| control-PGE2 vs control-un | control-PGE2 | control-un |
-| control-adenosine vs control-un | control-adenosine | control-un |
+| Comparison                           |     Numerator     |     Baseline      |
+|:--------------------|:------------------------:|:------------------------:|
+| Crtc2-un vs control-un               |     Crtc2-un      |    control-un     |
+| Crtc2-TNF vs control-TNF             |     Crtc2-TNF     |    control-TNF    |
+| Crtc2-PGE2 vs control-PGE2           |    Crtc2-PGE2     |   control-PGE2    |
+| Crtc2-adenosine vs control-adenosine |  Crtc2-adenosine  | control-adenosine |
+| control-PGE2 vs control-un           |   control-PGE2    |    control-un     |
+| control-adenosine vs control-un      | control-adenosine |    control-un     |
 
 ## 2. Core Conclusions
 
@@ -41,7 +41,7 @@ This section explains the practical interpretation by experimental question. Sec
 Differentially expressed genes (DEGs) are summarised below; log2FC denotes log2 fold change.
 
 | Comparison | Up | Down | Total DEGs | DEGs with absolute log2FC ≥ 1 |
-| :--- | :---: | :---: | :---: | :---: |
+|:---|:--:|:--:|:--:|:--:|
 | Crtc2-un vs control-un | 461 | 690 | 1,151 | 246 |
 | Crtc2-TNF vs control-TNF | 2,804 | 3,102 | 5,906 | 1,353 |
 | Crtc2-PGE2 vs control-PGE2 | 799 | 1,307 | 2,106 | 539 |
@@ -58,7 +58,7 @@ Gene-level and pathway-level significance answer different questions: a treatmen
 ## 4. Sample Information
 
 | Sample ID | Client sample name | Cell line | Treatment | Replicate | Raw read pairs | Estimated gene counts (rounded sum) | Detected genes |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|:--------|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
 | Control_1 | control-un-1 | control | un | 1 | 54,023,721 | 26,849,347 | 20,146 |
 | Control_2 | control-un-2 | control | un | 2 | 50,135,520 | 26,113,022 | 20,167 |
 | Control_3 | control-un-3 | control | un | 3 | 46,518,361 | 22,112,982 | 19,733 |
@@ -89,11 +89,11 @@ Client sample names retain the form spelling PEG2; PGE2 is used for analysis lab
 ## 5. Analysis Rationale and Decision Criteria
 
 | Step | Criterion | Reason and scope |
-| :--- | :---: | :---: |
+|:--------------------|:------------------------:|:------------------------:|
 | Reference | GRCm39 primary assembly; GENCODE M35 | Matches the stated species and the reference used for quantification. |
 | Gene-name filter | 57,132 → 26,584 genes | Exclude ribosomal-protein names and specified mitochondrial/noncoding/predicted-name patterns. This is a name-based restriction, not a complete biotype classification; excluded loci remain in the supplied unfiltered matrices. |
 | Low-expression filter | 26,584 → 12,327 genes in the model union | For each comparison, ≥10 rounded estimated counts in ≥3 of the 6 compared samples OR ≥8 of all 24 samples. This retains condition-restricted expression without requiring expression in most groups. |
-| Model | One DESeq2 ~ Group model, eight levels | Six predefined contrasts share the fitted model. Biological samples, not reads, are the replicate units; no samples were removed. |
+| Model | One DESeq2 \~ Group model, eight levels | Six predefined contrasts share the fitted model. Biological samples, not reads, are the replicate units; no samples were removed. |
 | Multiplicity | independentFiltering=FALSE; BH within the eligible set | Each comparison uses its own explicitly defined testable genes. |
 | Effect size | ashr shrinkage; absolute log2FC ≥ 0.263 | Stabilise effect estimates and apply the confirmed effect-size threshold alongside padj. |
 | Over-representation analysis (ORA) | UP / DOWN / ALL; comparison-specific mapped background | Compare the selected gene set with genes that were testable and could be mapped to identifiers. |
@@ -102,11 +102,11 @@ Client sample names retain the form spelling PEG2; PGE2 is used for analysis lab
 ## 6. Methods
 
 | Step | Software / reference | Parameters |
-| :--- | :---: | :---: |
+|:--------------------|:------------------------:|:------------------------:|
 | Pipeline | nf-core/rnaseq 3.15.1 | STAR alignment with Salmon quantification; paired-end reads; strandedness inferred automatically |
 | Alignment | STAR; GRCm39 / GENCODE M35 | --twopassMode None --outFilterMultimapNmax 3 |
 | Preprocessing and QC | Trim Galore!, FastQC, RSeQC, Qualimap, Picard, MultiQC | Pipeline-generated trimming, alignment and library QC summaries |
-| Differential expression | DESeq2 1.50.2; ashr 2.2.63 | Wald test; ~ Group; explicit per-comparison eligibility and BH correction; shrunken log2FC |
+| Differential expression | DESeq2 1.50.2; ashr 2.2.63 | Wald test; \~ Group; explicit per-comparison eligibility and BH correction; shrunken log2FC |
 | ORA / GSEA | clusterProfiler 4.18.4; fgsea 1.36.2 | Gene Ontology (GO) biological process (BP), molecular function (MF), cellular component (CC); Kyoto Encyclopedia of Genes and Genomes (KEGG); Molecular Signatures Database (MSigDB) Hallmark |
 | Mouse identifier mapping | org.Mm.eg.db 3.22.0 | Entrez identifier mapping; GSEA duplicate identifiers represented by the largest absolute Wald statistic |
 
@@ -118,16 +118,16 @@ The supplied count matrix contains unrounded Salmon gene-level estimated counts.
 
 The first principal component (PC1) explains 93% of the variance and PC2 explains 4%. PCA uses variance-stabilised expression of the top 500 variable model genes. The overview includes 24 points and 24 sample labels. Mean within-group distance is 0.62 and mean between-group distance is 20.60 in PC1–PC2 space (ratio 33.2). Coordinates are in `DE_PCA_Results/PCA_coordinates_overview.csv`; the figure is `DE_PCA_Results/PCA_AllSamples_Overview.pdf`.
 
-| Group | Mean PC1 | Mean PC2 |
-| :--- | :---: | :---: |
-| Crtc2-PGE2 | -9.53 | 0.31 |
-| Crtc2-TNF | 19.06 | 6.32 |
-| Crtc2-adenosine | -13.51 | 2.61 |
-| Crtc2-un | -13.72 | 2.34 |
-| control-PGE2 | -0.48 | -5.29 |
-| control-TNF | 36.86 | -2.42 |
-| control-adenosine | -8.11 | -1.81 |
-| control-un | -10.56 | -2.06 |
+| Group             | Mean PC1 | Mean PC2 |
+|:------------------|:--------:|:--------:|
+| Crtc2-PGE2        |  -9.53   |   0.31   |
+| Crtc2-TNF         |  19.06   |   6.32   |
+| Crtc2-adenosine   |  -13.51  |   2.61   |
+| Crtc2-un          |  -13.72  |   2.34   |
+| control-PGE2      |  -0.48   |  -5.29   |
+| control-TNF       |  36.86   |  -2.42   |
+| control-adenosine |  -8.11   |  -1.81   |
+| control-un        |  -10.56  |  -2.06   |
 
 TNF groups occupy the high-PC1 region, making treatment the dominant separation in this view. PC2 separates the two cell lines. These patterns support broad biological structure but do not substitute for a sample-identity assay.
 
@@ -136,7 +136,7 @@ Nearest-neighbour checks found 1 sample outside its own group: Crtc2_1 → Crtc2
 ### 7.2 Differential Expression
 
 | Comparison | Genes tested | DEGs | DEGs / tested | Crtc2 log2FC | Crtc2 padj |
-| :--- | :---: | :---: | :---: | :---: | :---: |
+|:-----------|:----------:|:----------:|:----------:|:----------:|:----------:|
 | Crtc2-un vs control-un | 11,883 | 1,151 | 9.7% | -0.58 | 1.24e-25 |
 | Crtc2-TNF vs control-TNF | 12,172 | 5,906 | 48.5% | -0.93 | 4.81e-83 |
 | Crtc2-PGE2 vs control-PGE2 | 11,878 | 2,106 | 17.7% | -0.60 | 1.11e-29 |
@@ -147,7 +147,7 @@ Nearest-neighbour checks found 1 sample outside its own group: Crtc2_1 → Crtc2
 The TNF line comparison has the largest DEG count. The two control-treatment comparisons show a much larger threshold-crossing response to PGE2 than to adenosine. These counts quantify the six specified comparisons; comparing DEG totals does not itself test an interaction.
 
 | Condition | Control mean Crtc2 normalised count | Crtc2-line mean | Crtc2 line / control |
-| :--- | :---: | :---: | :---: |
+|:-----------------|:----------------:|:----------------:|:----------------:|
 | un | 1376.6 | 919.9 | 0.67 |
 | TNF | 4078.1 | 2141.4 | 0.53 |
 | PGE2 | 1816.7 | 1195.1 | 0.66 |
@@ -155,14 +155,14 @@ The TNF line comparison has the largest DEG count. The two control-treatment com
 
 These target-gene group means use library-size normalisation estimated from the full count matrix, as provided in `Reads/Crtc2_expression_per_sample.csv`. The DE log2FC values above use the filtered DESeq2 model and shrinkage, so the two summaries need not be algebraically identical.
 
-Every comparison supplies a full tested-gene table, significant subset, full-range volcano plot, and top-50 DEG heatmap. Two adenosine comparisons also include a volcano_zoom.pdf companion with |log2FC| ≤ 3; the caption states the number of points outside the view, and the full tables and original plots retain those genes. Genes outside a comparison’s eligible set were not tested there, rather than demonstrated unchanged.
+Every comparison supplies a full tested-gene table, significant subset, full-range volcano plot, and top-50 DEG heatmap. Two adenosine comparisons also include a volcano_zoom.pdf companion with \|log2FC\| ≤ 3; the caption states the number of points outside the view, and the full tables and original plots retain those genes. Genes outside a comparison’s eligible set were not tested there, rather than demonstrated unchanged.
 
 ### 7.3 Pathway Enrichment
 
-Hallmark normalised enrichment score (NES): positive means enrichment toward the numerator; negative toward the baseline. “n.s.” means the gene set did not appear among the significant outputs (padj < 0.05), not absence of the process.
+Hallmark normalised enrichment score (NES): positive means enrichment toward the numerator; negative toward the baseline. “n.s.” means the gene set did not appear among the significant outputs (padj \< 0.05), not absence of the process.
 
 | Comparison | TNFA SIGNALING VIA NFKB | INFLAMMATORY RESPONSE | INTERFERON GAMMA RESPONSE | E2F TARGETS | G2M CHECKPOINT |
-| :--- | :---: | :---: | :---: | :---: | :---: |
+|:-----------|:----------:|:----------:|:----------:|:----------:|:----------:|
 | Crtc2-un vs control-un | -1.57 | -2.15 | -1.65 | +2.00 | +1.86 |
 | Crtc2-TNF vs control-TNF | -2.10 | -1.62 | -1.96 | n.s. | n.s. |
 | Crtc2-PGE2 vs control-PGE2 | -2.21 | -2.22 | -2.12 | +2.10 | +1.97 |
@@ -173,7 +173,7 @@ Hallmark normalised enrichment score (NES): positive means enrichment toward the
 Inflammatory and interferon-related signatures are lower in the Crtc2 line in the four matched-condition comparisons. Higher cell-cycle signatures are seen in the untreated, PGE2 and adenosine line comparisons; the TNF condition does not show the same significant E2F/G2M pattern. In control cells, both PGE2 and adenosine show the opposite direction for these themes. These results motivate functional follow-up but do not prove direct CRTC2 regulation, pathway activity, or cell proliferation.
 
 | Comparison | GO_BP_UP | GO_BP_DOWN | KEGG_UP | KEGG_DOWN | GSEA_GO_BP | GSEA_KEGG | GSEA_Hallmark |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|:--------|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|:-------:|
 | Crtc2-un vs control-un | 113 | 538 | 8 | 17 | 295 | 12 | 16 |
 | Crtc2-TNF vs control-TNF | 137 | 516 | 14 | 17 | 73 | 23 | 14 |
 | Crtc2-PGE2 vs control-PGE2 | 177 | 1067 | 12 | 38 | 476 | 32 | 19 |
@@ -181,14 +181,14 @@ Inflammatory and interferon-related signatures are lower in the Crtc2 line in th
 | control-PGE2 vs control-un | 1024 | 253 | 43 | 12 | 1172 | 107 | 28 |
 | control-adenosine vs control-un | 273 | 203 | 20 | 4 | 1033 | 101 | 25 |
 
-Counts are significant terms at adjusted p-value < 0.05; overlapping terms are not independent biological discoveries. The Hallmark display above is a selected thematic view; all returned terms and the full 90-analysis summary are provided in `Enrichment/`. ORA UP / DOWN / ALL are separate tests, with the mapped testable genes as background.
+Counts are significant terms at adjusted p-value \< 0.05; overlapping terms are not independent biological discoveries. The Hallmark display above is a selected thematic view; all returned terms and the full 90-analysis summary are provided in `Enrichment/`. ORA UP / DOWN / ALL are separate tests, with the mapped testable genes as background.
 
 ## 8. Conclusions, Limitations and Next Steps
 
 ### 8.1 Per-comparison interpretation
 
 | Comparison | Meaning | Boundary |
-| :--- | :---: | :---: |
+|:--------------------|:------------------------:|:------------------------:|
 | Crtc2-un vs control-un | Baseline differences include inflammatory and cell-cycle expression themes. | Expression association within this comparison; no formal interaction test. |
 | Crtc2-TNF vs control-TNF | Largest matched-condition line difference; lower inflammatory and interferon signatures in Crtc2. | Expression association within this comparison; no formal interaction test. |
 | Crtc2-PGE2 vs control-PGE2 | Line difference under PGE2; it does not alone establish a difference in PGE2 responsiveness. | Expression association within this comparison; no formal interaction test. |
@@ -201,9 +201,9 @@ Counts are significant terms at adjusted p-value < 0.05; overlapping terms are n
 The following evidence map gives the data location and inference boundary for each conclusion in Section 2.
 
 | Question | Measured evidence / delivered source | Interpretation and assumptions |
-| :--- | :---: | :---: |
+|:--------------------|:------------------------:|:------------------------:|
 | Quality and grouping | Section 7.1; QC/multiqc/; DE_PCA_Results/PCA_coordinates_overview.csv | None; no identity assay was performed. |
-| Crtc2 transcript | Section 7.2; DE_PCA_Results/<comparison>/<comparison>_ALL_genes.csv; row Crtc2 | Protein and functional effects require independent confirmation. |
+| Crtc2 transcript | Section 7.2; DE_PCA_Results/<comparison>/<comparison>\_ALL_genes.csv; row Crtc2 | Protein and functional effects require independent confirmation. |
 | Untreated line difference | Section 7.2 and 7.3; DE_PCA_Results/Crtc2-un_vs_control-un/; Enrichment/Crtc2-un_vs_control-un/GSEA/ | An association with line identity; not proof of direct CRTC2 regulation. |
 | TNF condition | Section 7.2 and 7.3; DE_PCA_Results/Crtc2-TNF_vs_control-TNF/; Enrichment/Crtc2-TNF_vs_control-TNF/GSEA/ | A line-by-treatment interaction was not tested. |
 | PGE2 and adenosine | Section 7.2 and 7.3; DE_PCA_Results/control-PGE2_vs_control-un/; DE_PCA_Results/control-adenosine_vs_control-un/; Enrichment/ | Pathway enrichment does not measure pathway activity or establish equivalent effect sizes. |
@@ -221,7 +221,7 @@ The following evidence map gives the data location and inference boundary for ea
 ### 8.4 Suggested confirmation
 
 | Open question | Follow-up |
-| :--- | :---: |
+|:-------------------------------|:--------------------------------------:|
 | Is CRTC2 protein reduced? | Western blot comparing control and Crtc2 cells under matched conditions. |
 | Do the transcript changes replicate? | Quantitative polymerase chain reaction (qPCR) for Crtc2 and selected DEGs in independent cultures. |
 | Does treatment responsiveness differ between lines? | A prespecified line-by-treatment interaction analysis on the existing samples; this would be an additional statistical analysis, not independent biological validation. |
@@ -230,7 +230,7 @@ The following evidence map gives the data location and inference boundary for ea
 ## 9. Deliverable Files
 
 | Path | Content |
-| :--- | :---: |
+|:-------------------------------|:--------------------------------------:|
 | `Reads/All_sample_gene_counts.tsv` | Unfiltered Salmon gene-level estimated counts, 24 samples |
 | `Reads/All_sample_gene_tpm.tsv` | Unfiltered gene-level TPM, 24 samples |
 | `Reads/library_metrics_per_sample.csv` | Raw read pairs, estimated-count sums and detected genes |
@@ -249,6 +249,6 @@ The following evidence map gives the data location and inference boundary for ea
 | `mouse_Gene_annotation_20260628.xlsx` | Gene annotation reference |
 | `Crtc2_Line_Treatment_RNAseq_Report_1109.md` | Report and reading entry point |
 
----
+------------------------------------------------------------------------
 
 *Zhen Gao, PhD, Principal Bioinformatics Scientist, Athenomics*
