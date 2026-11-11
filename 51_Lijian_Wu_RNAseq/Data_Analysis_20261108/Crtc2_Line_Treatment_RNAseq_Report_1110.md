@@ -69,7 +69,7 @@ A DEG is a gene with adjusted p-value (padj; Benjamini-Hochberg false discovery 
 | adenosine | 254 | 32% |
 | TNF | 3,950 | 74% |
 
-**Pathway themes.** In control cells, PGE2 and adenosine both raise inflammatory and interferon gene programmes and lower cell-cycle programmes. In the Crtc2 line the same programmes move the opposite way: inflammatory and interferon genes are lower and cell-cycle genes higher than in control, at baseline and under every treatment (Section 7.3).
+**Pathway themes.** In control cells, PGE2 and adenosine both raise inflammatory and interferon gene programmes and lower cell-cycle programmes. In the Crtc2 line the same programmes move the opposite way: inflammatory and interferon genes are lower than in control at baseline and under every treatment, and cell-cycle genes are higher at baseline and under PGE2 and adenosine (not significant under TNF) (Section 7.3).
 
 **Data quality.** 28.5–65.1 million read pairs per sample (paired-end, 150 bp), 96.0–97.1% of reads aligned, 87.4–88.8% uniquely aligned, rRNA (ribosomal RNA) 0.03–0.06%. Library strandedness was inferred from the data as reverse for all 24 samples.
 
@@ -145,7 +145,7 @@ Among the non-TNF groups the same pattern holds for PGE2 and adenosine. PGE2 mov
 
 **PC2 is the cell-line axis.** Every Crtc2-line sample has a higher PC2 value (0.1 to 6.4) than every control sample (-5.5 to -1.7), in all four conditions: the second-largest source of variation in the data set is the difference between the two lines.
 
-Each sample's nearest neighbour in the PCA was checked. 1 of 24 samples sits closest to a sample of another condition (Crtc2-un-1 -> Crtc2-adenosine-3). This involves only the Crtc2-un and Crtc2-adenosine groups, which are indistinguishable because adenosine has no measurable effect on the Crtc2 line (above); it is not a sign of a sample mix-up. Every other sample sits closest to a replicate of its own condition.
+Each sample's nearest neighbour in the PCA was checked. 1 of 24 samples sits closest to a sample of another condition (Crtc2-un-1 -> Crtc2-adenosine-3). This involves only the Crtc2-un and Crtc2-adenosine groups, which overlap in the PCA because adenosine has almost no effect on the Crtc2 line (above); it is not a sign of a sample mix-up. Every other sample sits closest to a replicate of its own condition.
 
 | Pair of conditions | PCA centroid distance |
 | :--- | :---: |

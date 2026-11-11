@@ -249,8 +249,8 @@ for (tr in c("PGE2", "adenosine", "TNF")) add("| ", tr, " | ", fmt(rr(tr, "N_gen
 add("")
 add("**Pathway themes.** In control cells, PGE2 and adenosine both raise inflammatory and interferon gene ",
     "programmes and lower cell-cycle programmes. In the Crtc2 line the same programmes move the opposite way: ",
-    "inflammatory and interferon genes are lower and cell-cycle genes higher than in control, at baseline and ",
-    "under every treatment (Section 7.3).")
+    "inflammatory and interferon genes are lower than in control at baseline and under every treatment, and cell-cycle genes are higher ",
+    "at baseline and under PGE2 and adenosine (not significant under TNF) (Section 7.3).")
 add("")
 add(sprintf("**Data quality.** %s–%s million read pairs per sample (paired-end, %s bp), %s–%s%% of reads aligned, %s–%s%% uniquely aligned, rRNA (ribosomal RNA) %s–%s%%. Library strandedness was inferred from the data as %s for all 24 samples.",
             f1(RP[1] / 1e6), f1(RP[2] / 1e6), paste(Q_LEN, collapse = "/"), f1(Q_MAP[1]), f1(Q_MAP[2]),
@@ -329,7 +329,7 @@ add("Each sample's nearest neighbour in the PCA was checked. ",
     if (nrow(nn_bad) == 0) "Every sample sits closest to a replicate of its own condition." else
       paste0(nrow(nn_bad), " of 24 samples ", if (nrow(nn_bad) == 1) "sits" else "sit", " closest to a sample of another condition (",
              paste(nn_bad$sample_id, "->", nn_bad$nearest, collapse = "; "),
-             "). This involves only the Crtc2-un and Crtc2-adenosine groups, which are indistinguishable because adenosine has no measurable effect on the Crtc2 line (above); it is not a sign of a sample mix-up. Every other sample sits closest to a replicate of its own condition."))
+             "). This involves only the Crtc2-un and Crtc2-adenosine groups, which overlap in the PCA because adenosine has almost no effect on the Crtc2 line (above); it is not a sign of a sample mix-up. Every other sample sits closest to a replicate of its own condition."))
 add("")
 add("| Pair of conditions | PCA centroid distance |")
 add("| :--- | :---: |")
