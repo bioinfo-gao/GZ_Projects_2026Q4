@@ -294,7 +294,7 @@ The seven points of Section 2, each with the section and delivered file that sup
 ### 8.3 Limitations
 
 - **The nature of the Crtc2 modification is not stated.** The data show reduced Crtc2 mRNA; they cannot show whether CRTC2 protein is absent or reduced.
-- **The response fractions in Section 7.4 are descriptive.** A formal genotype x treatment interaction test was not part of the requested comparisons (the factorial-design box on the form was not ticked). The figures summarise group means and are not p-values.
+- **The response fractions in Section 7.4 are descriptive.** They summarise group means and are not a statistical test.
 - **TNF vs untreated was not a requested comparison**, so no TNF-response DEG list is delivered; the TNF statements rest on the PCA and on comparison 2.
 - **Three replicates per condition.** Consistent changes are detected well; small or variable effects can be missed, so a gene absent from a DEG list is not shown to be unchanged.
 - **Some chemokines are barely expressed in these cells** (for example Cxcl1 and Ccl2 have fewer than 20 reads in every sample) and could not be tested.
