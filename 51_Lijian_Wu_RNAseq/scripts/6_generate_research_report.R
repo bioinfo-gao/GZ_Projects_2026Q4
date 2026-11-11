@@ -285,7 +285,7 @@ add("| Low-expression filter | ", fmt(fs$n_after_regex), " -> ", fmt(fs$n_final)
 add("| Significance | padj of 0.05 or less and at least 1.2-fold change | False-discovery control plus a minimum effect size; counts at the 2-fold cut-off are also reported |")
 add("| Fold-change shrinkage | `ashr` | Stabilises fold changes of low-count genes |")
 add("| Over-representation analysis | Up- and down-regulated genes tested separately | Testing both directions together loses power when many genes respond |")
-add("| GSEA ranking | DESeq2 Wald statistic | Uses every tested gene without a cut-off; the Wald statistic weights genes evenly enough that a few extreme genes cannot dominate the result |")
+add("| GSEA ranking | DESeq2 Wald statistic | Uses every tested gene without a cut-off; the Wald statistic weights genes evenly enough that a few extreme genes are less able to dominate the result |")
 add("")
 
 # ================================ 6. METHODS ===================================
