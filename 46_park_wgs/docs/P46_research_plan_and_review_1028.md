@@ -7,11 +7,13 @@
   （hTERT RPE-1，PPP1R2 双切 202 bp 单等位缺失 + 全基因组脱靶 + 载体整合筛查）
 - **客户表单**：`Sample_Registration_Form_Yeji Park.xlsx`（项目根目录）
 - **样本表（SSOT）**：`scripts/0_sample_table.csv`（本文不重复样本清单）
-- **当前状态（2026-11-06 21:50 复核）**：客户已交回问卷（`client_materials/wgs_questionary.docx`，2026-11-06 13:13
-  邮件附件），**§3 的 4 项待问已有 3 项得到答复**；**测序数据仍未到**（`/home/gao/Dropbox/` 下无
-  `Park_Yeji`/`Park, Yeji` 目录，`find -L /home/gao/Dropbox -maxdepth 2 -iname '*park*'` 返回 0 命中）；
-  深度已定 **45× raw**（客户 10-30 来信 "Please run 45X!" + Quote 10282602）；**未开跑**，本轮无授权关键词
-  （"自动"/"全流程"/"全过程"），故本文只到计划层。
+- **当前状态（2026-11-21 15:15 复核）**：**数据已到、已开跑**。用户 2026-11-21 以"全过程自动化分析"
+  授权全流程；Stage 0（比对 + 去重 + QC）已在 tmux 运行，看门狗常驻。**§9 两项待确认已全部由客户
+  2026-11-09 邮件答复关闭**（Cas9 = RNP；分组确认）。数据实测见 §10.1，执行记录见 §10。
+  深度已定 **45× raw**（客户 10-30 来信 "Please run 45X!" + Quote 10282602），厂方实际交付
+  **497–675 M read pairs/样本（≈48–65× raw）**。
+  - *历史状态（2026-11-06 21:50，已被上面取代，原文见 `superseded_for_comparison/docs/v1_20261121_pre_data_arrival/`）*：
+    客户已交回问卷，§3 的 4 项待问已有 3 项答复；测序数据仍未到；未开跑。
 
 ## 更新记录
 
@@ -39,6 +41,15 @@
   脚本 `scripts/1_append_client_email_1106.py`，存档 `docs/P46_email_two_questions_1106.md`。
   信中另加一段期望管理：结论层级落在"编辑克隆的新增变化是否多于对照"，不把单个克隆的单个变化
   归因于编辑（对应 §8.4 的 decision table）。
+- 2026-11-09 — **客户答复，§9 两项全部关闭**：Cas9 = RNP（Cas9 蛋白 + gRNA，nucleofection），
+  本轮未转入任何 Cas9 质粒、无新构建体；分组确认与我方读法一致。客户同时书面同意 §8.4 的
+  结论层级（"We understand and agree with this approach"）。详见 §10.2。
+- 2026-11-21 — **数据到达 + 用户授权"全过程自动化分析"，Stage 0 开跑**。
+  新增 **§10 执行记录**（10.1 数据清点、10.2 客户答复、10.3 Stage 0 实况与冒烟+看门狗验证、
+  10.4 脱靶候选表继承的独立重新推导、10.5 载体 mask 完整性重新推导、10.6 待用户处理项）。
+  §9 标题由"只剩第 1、2 两项待答复"改为"四项全部关闭"；文首当前状态改写；
+  §8.3 的 mask "1,711 bp" 更正为实测 **1,710 bp**（BED 半开区间）。
+  旧版（数据到达前）已归档 `superseded_for_comparison/docs/v1_20261121_pre_data_arrival/`。
 
 ---
 
@@ -289,6 +300,7 @@ agent 无权自行判定"可再生中间产物"）。⇒ 计划里把它写成**
   `analysis/round2_refs_20260825/vectors.fa` —— **已含两条序列** `pLPC_mCherry_BP1_2` 与
   `pMSCV_Cas9_EGFP`（含 bwa-mem2 索引，可直接用）；
   `vector_human_mappable_mask.bed` —— **1 个屏蔽区间 `pLPC_mCherry_BP1_2:5550-7260`（1,711 bp）**，
+  （**2026-11-21 实测更正：BED 半开区间 ⇒ 1,710 bp**；完整性已独立重新推导，见 §10.5）
   即载体内与人基因组同源的 53BP1 cDNA 段（150 bp 瓦片回贴 GRCh38，MAPQ ≥ 20 即屏蔽）；
   `vector_features.tsv` —— 载体注释（AmpR / ori / mCherry / EGFP 等），骨架阴性对照直接查这张表。
   ⚠ **这个 mask 是必需的，不是优化**：P31 第一版把 3 个"整合位点"全判在 **TP53BP1**，实为载体里
@@ -354,7 +366,7 @@ agent 无权自行判定"可再生中间产物"）。⇒ 计划里把它写成**
 
 ---
 
-## 9. 待确认事项（**现行只剩第 1、2 两项，均待客户答复**；第 3、4 项已关闭）
+## 9. 待确认事项（**四项全部关闭**；第 1、2 项由客户 2026-11-09 邮件答复 —— 见 §10.2）
 
 **第 1、2 项已起草去信**：`scripts/1_append_client_email_1106.py`，已 APPEND 进 Gmail Drafts
 （**未发送**，待用户过目后自行发出）；经过与划界见 `docs/P46_email_two_questions_1106.md`。
@@ -382,3 +394,129 @@ agent 无权自行判定"可再生中间产物"）。⇒ 计划里把它写成**
 | 新增双等位组 + 组间统计设计 | Stage 1 的三态判别与 Stage 4 的 7 vs 3 统计口径都是 P31 没有的新设计 |
 
 ⇒ **待 §9 第 1、3 项答复后一次性重估**，本轮按 stage 实测记时，使下一次报价有实测依据（§8.6）。
+
+---
+
+## 10. 执行记录（2026-11-21 起，用户授权"全过程自动化分析"）
+
+> 本节是 §8 计划的**执行侧实况**：每个 stage 的实测起止、实际参数、断言结果。
+> §8 是计划，本节是发生了什么；两者不一致时以本节为准并写明原因。
+
+### 10.1 数据清点（实测，截至 **2026-11-21 15:00** 目录内为 20 个文件）
+
+- **来源目录**：`/srv/external_data/gao_projects/46_park_wgs_raw/WALKUP-21683/fastq/`
+  （项目内 `raw_data/` 为指向它的 20 个 symlink；Dropbox 交付副本 20/20 已齐）
+- **完整性**：`_final_verify_20261121_1131.log` 以 `ALL_DONE` 结尾，**40 OK / 0 FAIL**
+  （size + crc32c 与 bucket 一致）。⚠ 校验通过只证明**这 20 个文件传完了**，
+  其依据是厂方 metadata 里恰好 10 个样本 ⇒ 本批到齐。
+- **总量**：**759.9 GiB**（10 样本 × R1/R2），单样本 33.4–45.9 GiB/端。
+- **lane 分布**：flowcell `25FGWWLT4`，Ctr_1–3 + Sample 1–2 在 **lane 4**，
+  Sample 3–7 在 **lane 5**；每样本单 lane ⇒ 无需按 lane 合并。
+- **样本名 ↔ 厂方 Sample ID 对齐**（来源：Kuo-Chan Hung 2026-11-20 17:01 UTC 邮件
+  "Yeji Data Delivery and Metadata" 正文表格，**不是推断**）：
+  `Ctr_1–3 = WGS000029/30/31`，`Sample 1–7 = WGS000032…038`。
+  已连同 i7/i5 index、厂方报告 read pairs 一并写入样本表
+  （脚本 `scripts/3_update_sample_table_1121.py`，断言 10 样本/20 文件/无重复认领全过）。
+- ⚠ **口径**：样本表的 `vendor_read_pairs` 是**厂方报告值**；`raw_read_pairs` / `raw_depth_x`
+  留空待 Stage 0 的 flagstat + mosdepth **实测**回填。两者分列，不得互相顶替。
+
+### 10.2 §9 两项待确认的答复（客户 2026-11-09 23:43 UTC 邮件，Gmail `1a1c2b1a901b4a7a`）
+
+| # | 客户答复（原文要点） | 对分析的影响 |
+| :--- | :--- | :--- |
+| 1 | Cas9 以 **RNP（Cas9 蛋白 + gRNA）nucleofection** 递送；**未转入任何 Cas9 质粒**，本轮未引入新构建体 ⇒ 无需提供 Cas9 图谱 | Stage 3 的 `vectors.fa` 组成不变（仍查两个载体），但 `pMSCV_Cas9_EGFP` 的角色从"本轮可能整合"改为"细胞系早期历史可能残留"；**骨架阴性对照依然成立**。报告措辞按此改 |
+| 2 | 分组**确认与我方读法一致**：Ctr_1–3 无缺失；Sample 1–4 单等位；Sample 5–7 双等位 | §7.2 的偏移 3 解析由"我方推断"升级为**客户确认的事实**；Stage 2d/4 的 7 vs 3 组间设计成立 |
+
+另：客户 2026-11-10 两次来信补充了**最终目标**与**期望管理的回执** ——
+"deletion only at the intended target site, with no off-target effects elsewhere"；
+我方 11-10 回信已把结论层级讲在前面（靶点逐克隆直答 / 脱靶落在 gRNA 可达位点 / 编辑克隆是否比
+三个对照携带更多新发变异），客户 11-09 来信明确 "We understand and agree with this approach"。
+⇒ **§8.4 的 decision table 已获客户书面同意**，不必在交付阶段再行解释落差。
+客户另问"这些数据是否足以支撑一篇 CRISPR 脱靶的论文" —— Kuo-Chan 11-15 已以 CRO 口径回复
+（是否足够发表由客户研究团队判断），**我方不在报告里替客户下这个判断**。
+
+### 10.3 Stage 0 — 比对 / 去重 / QC（**2026-11-21 15:05 启动，运行中**）
+
+| 项 | 实际做法 |
+| :--- | :--- |
+| 参考 | GATK.GRCh38 `Homo_sapiens_assembly38.fasta`（与 P31 同一份；下游所有吃 BAM 的步骤必须指向这同一份，M5 坑） |
+| 比对 | `bwa-mem2 2.2.1 mem -t 36 -K 100000000 -Y` → `samtools 1.23.1 sort -@ 8 -m 4G`（2-way pipe，绝不 3-way） |
+| 去重 | **GATK/Picard 3.4.0 MarkDuplicates（常规版，非 Spark）**，`-Xmx24G`；Spark 版的 ELC 陷阱见 wgs skill |
+| 不做 | 不跑 fastp/trimming（fastp 1.3.3 数据驱动死锁；bwa-mem2 自带 soft-clip 不伪造断点，属假阴性方向，报告写明） |
+| 覆盖度 | `mosdepth 0.3.14 -n --by 1000` **默认模式**（含 mate-overlap 校正），全程不混用 `samtools depth` |
+| 并行设计 | **1 条比对车道 + 2 个去重/QC worker**（三个 tmux）。理由：MarkDuplicates 近单线程（本批预计 6–7 h/样本），串行会让 ~55 线程空转；两车道并行后瓶颈回到比对。预算：44（比对）+ 2×≤4（worker）≈ **52 线程 ≤ 56**；RAM 36G(sort) + 2×24G(markdup) ≈ **84G ≤ 125G** |
+| 产物位置 | **`/srv/external_data/gao_projects/46_park_wgs_bam/stage0_20261121/`**（项目所在 `/mnt/ex_8T_SSD` 实测仅剩 1.5 T，本批 sorted + markdup 约 1.3–1.5 TiB）；项目内 `analysis/stage0_20261121` 为 symlink |
+| 续跑协议 | 每轮**重新从 `scripts/0_sample_table.csv` 枚举**，靠 `flags/*.done` 跳过；中途打断只损失当前那一步 |
+| `sorted.bam` | **一律保留、不自动删除**（删除需用户逐次同意；/srv 有 6.9 T 可用，无需删） |
+| 脚本 | `scripts/4_stage0_align.sh`、`scripts/5_stage0_markdup_worker.sh`、`scripts/6_stage0_launch.sh` |
+
+**开跑前的冒烟测试（实测，非假设）**：取 Ctr_1（对照）与 Sample_5（双等位）各 40 万 read pairs
+跑完整链路，端到端通过 —— RG 标签正确（`SM:Sample_5` / `PU:25FGWWLT4.5.CCAGTTCA`）、
+duplicate metrics 产出、mosdepth summary 与 flagstat 齐全。两个样本类别各一个，覆盖
+worker 0 / worker 1 两条分工。冒烟产物在
+`/srv/external_data/gao_projects/46_park_wgs_bam/smoke_20261121/`（**非交付、非结论**）。
+
+**监控（Phase-2 常驻，不依赖 agent 在场）**：`scripts/8_watchdog_stage0.sh`，tmux `p46_watch`，
+10 分钟巡检。判据与阈值：session 消失但收尾 flag 缺失 / 三条日志最新 mtime 停滞 > 120 min /
+可用内存 < 4 GiB 连续 2 次 / `/srv` 可用 < 300 GiB / 日志出现 `FATAL`。
+告警投递复用共享 `wd_sendmail.py`（SMTP，覆盖夜间）+ tty 广播（枚举用 `ps` 不用 `who`）。
+**两条都已实测验证**：① 用不存在的 session 跑一轮 ⇒ 三条 `gone_*` 告警正确触发、去重正确
+（后续轮次只有心跳）；② 真实发信一封送达。
+⚠ **未完成**：crontab 守护行（看门狗的看门狗）**本会话无权写入 crontab**，待用户加一行，
+内容见 §10.6。缺它的后果：看门狗若被误杀，不会自动复活，监控会静默消失。
+
+### 10.4 Stage 2a — 脱靶候选位点表：继承 + **独立重新推导验证**（2026-11-21 完成）
+
+`scripts/9_stage2a_inherit_and_verify_offtarget_candidates.py`，产物
+`analysis/stage2a_candidates_20261121/tables/`。
+
+- **继承的是什么**：P31 的 **1,587 个候选位点**（3 个 spacer 版本 × 全基因组 ≤4 mismatch，
+  NGG 主表 + NAG 次表）。只继承**位点定义列**；P31 的样本证据列**一律不继承**，本轮逐样本全部重算。
+- **为什么可以继承**：gRNA 对与参考基因组都与 P31 逐字相同 ⇒ "基因组上哪些位置与这两条 spacer
+  近似"与样本无关。
+- **为什么继承也必须验证**：表被截断/列错位/当初枚举本身有缺陷，都**不会报错**。三道检查：
+
+| 检查 | 做法 | 实测结果 |
+| :--- | :--- | :---: |
+| 1 完整性 | sha256 + 行数；断言 1,587 个候选、3 行 on-target（每 spacer 版本一行）、切点 = 客户给的 195,542,947 / 195,543,149 | **PASS** |
+| 2 逐行回核 | chr3 + chr20 全部 127 行：表里的 protospacer+PAM 拿回参考，在记录坐标 ±60 bp 内实际找得到且错配数一致 | **0 失败** |
+| 3 独立重新推导 | 自写 numpy 全量扫描重新枚举 chr3 + chr20（198+64 Mb ≈ 8.5% 基因组），与继承表**逐位点集合比较** | chr3 **87 = 87**、chr20 **40 = 40**，双向零差异，错配数全部一致 |
+
+⇒ `verdict = INHERIT_OK`（审计 JSON 同目录）。**不同代码、同一问题、同一答案** —— 这是本轮
+继承的独立互证依据，不是"P31 跑过所以可信"。
+**已知盲区照旧**：只支持 mismatch，不支持 DNA/RNA bulge（需 cas-offinder，未装）⇒ 报告写明。
+
+### 10.5 Stage 3 准备 — 载体参考与同源 mask：继承 + **独立重新推导完整性**（2026-11-21 完成）
+
+`scripts/10_stage3_prepare_vector_refs.sh`，产物 `analysis/stage3_refs_20261121/`
+（含 `import_manifest.tsv`：4 个文件的 P31 源路径 + sha256 + 字节数）。
+
+- 继承 `vectors.fa`（2 条：`pLPC_mCherry_BP1_2` 7,985 bp、`pMSCV_Cas9_EGFP` 11,191 bp）、
+  `vector_human_mappable_mask.bed`、`vector_features.tsv`。
+- **mask 实测为 `pLPC_mCherry_BP1_2:5550-7260` = 1,710 bp**
+  （§8.3 原文写 1,711 bp，系未计 BED 半开区间，**以 1,710 bp 为准**）。
+- **为什么重新推导**：mask 的风险不是"有没有"而是"够不够" —— 漏一段同源区就复现 P31 把 3 个
+  "整合位点"全判在 TP53BP1 的假阳性（P31 坑 #8），而漏掉时**不报错**，只是多出几个看似发现的位点。
+- **做法**：把两个载体全长切 150 bp 瓦片 / 步长 50 bp（**瓦片跨过环状接缝**，否则接缝附近的同源区
+  会被漏掉），共 384 条，回贴 GRCh38。断言：所有 MAPQ ≥ 20 的瓦片**必须全部落在继承 mask 之内**。
+- **实测**：32 条瓦片比对上人基因组，**全部 MAPQ ≥ 20、全部落在载体坐标 5,550–7,250 之内、
+  全部落在 chr15**（TP53BP1 所在染色体，与"载体内 53BP1 cDNA 段"的解释自洽）；
+  **mask 之外 0 条** ⇒ `VERDICT = MASK_COMPLETE`。
+
+### 10.6 待用户处理的一项（本会话无权限）
+
+**crontab 守护行**（看门狗的看门狗，每 30 分钟检查并复活）。内容已存
+`/tmp/claude-1001/-home-gao/28f7fbf1-a55a-48f3-a128-c5570f180ea3/scratchpad/p46_crontab_line.txt`：
+
+```
+9,39 * * * * /home/gao/Utilities/Server/monitoring_alerting/wd_guard.sh p46_stage0_markdup1 p46_watch 'bash /home/gao/projects_2026Q4/46_park_wgs/scripts/8_watchdog_stage0.sh' >/dev/null 2>&1 # P46 Stage0 watchdog guard
+```
+
+被监控 session 取 `p46_stage0_markdup1`（它负责最后一个样本 Sample_7，活到整个 Stage 0 结束），
+**不取比对车道** —— 比对必然先结束，用它会让守护提前判定"流程已结束"而停止守护。
+
+⚠ 另一项**与本项目无关但影响本项目**的实测发现：共享的 `wd_guard.sh` 里
+`MAILER=/home/gao/projects_2026H2/facilities/Server/wd_sendmail.py` **该路径已不存在**
+（脚本 canonical 位置 2026-07-17 起已移到 `Utilities/Server/monitoring_alerting/`）。
+由于那一行是 `[ -x "$MAILER" ] && ...`，**发信会静默跳过** ⇒ 守护复活看门狗时不会通知任何人。
+这同样影响现有的 P52 守护行。属共享基础设施，**未擅自修改**。
