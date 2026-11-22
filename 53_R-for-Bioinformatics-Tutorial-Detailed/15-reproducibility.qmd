@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -46,7 +46,7 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
 ```
 
 ## 项目结构
@@ -82,10 +82,10 @@ my-rnaseq-project/
 ```{r}
 #| eval: false
 renv::init(bioconductor = "3.22")   # 为项目创建独立库，并记录 Bioconductor 版本
-renv::install(c("DESeq2", "Seurat"))
+renv::install(c("DESeq2", "Seurat"))  # 在项目库中安装包
 renv::snapshot()                    # 写入 renv.lock
 # 在另一台机器上：
-renv::restore()
+renv::restore()  # 按 renv.lock 恢复完全相同的包版本
 ```
 
 `renv.lock` 记录了每个包的确切版本与来源（CRAN / Bioconductor / GitHub）。
@@ -122,7 +122,7 @@ HPC 上通常用 Apptainer/Singularity 运行同一镜像：`apptainer run docke
 ### 记录会话信息
 
 ```{r}
-sessioninfo::session_info(c("DESeq2", "Seurat", "edgeR"), dependencies = FALSE)
+sessioninfo::session_info(c("DESeq2", "Seurat", "edgeR"), dependencies = FALSE)  # 记录关键包的版本与来源
 ```
 
 每份报告末尾都应包含 `sessionInfo()` 或 `sessioninfo::session_info()`。
@@ -154,8 +154,8 @@ quarto render report.qmd -P celltype:"B cells" -P fdr:0.01 --output B_cells.html
 
 ```{r}
 #| eval: false
-for (ct in c("B cells", "CD14+ Monocytes", "NK cells")) {
-  quarto::quarto_render("report.qmd", execute_params = list(celltype = ct),
+for (ct in c("B cells", "CD14+ Monocytes", "NK cells")) {  # 每种细胞类型渲染一份报告
+  quarto::quarto_render("report.qmd", execute_params = list(celltype = ct),  # 参数化渲染：通过 params 传入细胞类型
                         output_file = paste0(make.names(ct), ".html"))
 }
 ```
@@ -174,12 +174,12 @@ for (ct in c("B cells", "CD14+ Monocytes", "NK cells")) {
 ```{r}
 #| eval: false
 # _targets.R
-library(targets)
-library(tarchetypes)
-tar_option_set(packages = c("DESeq2", "airway", "tidyverse", "clusterProfiler", "org.Hs.eg.db"))
+library(targets)  # 流水线管理：只重算过时的步骤
+library(tarchetypes)  # targets 的扩展（tar_quarto 等）
+tar_option_set(packages = c("DESeq2", "airway", "tidyverse", "clusterProfiler", "org.Hs.eg.db"))  # 流水线中每个目标需要加载的包
 tar_source("R/")    # 加载 R/ 下的函数
 
-list(
+list(  # 定义流水线的各个目标及其依赖
   tar_target(se,      { data(airway, package = "airway"); airway }),
   tar_target(dds,     make_dds(se, design = ~ cell + dex)),          # R/de.R 中定义
   tar_target(dds_fit, DESeq(dds)),
@@ -202,8 +202,8 @@ targets::tar_outdated()        # 哪些目标需要重算
 一个可以直接运行的最小示例（在临时目录中）：
 
 ```{r}
-tmp <- tempfile("targets_demo"); dir.create(tmp)
-writeLines(c(
+tmp <- tempfile("targets_demo"); dir.create(tmp)  # 临时目录
+writeLines(c(  # 写一个最小的 _targets.R
   'library(targets)',
   'list(',
   '  tar_target(x, rnorm(100)),',
@@ -211,7 +211,7 @@ writeLines(c(
   '  tar_target(s, sd(x))',
   ')'), file.path(tmp, "_targets.R"))
 
-withr::with_dir(tmp, {
+withr::with_dir(tmp, {  # 在该目录中运行两次：第二次全部跳过
   targets::tar_make(reporter = "silent")
   print(targets::tar_read(m))
   targets::tar_make(reporter = "timestamp")   # 第二次运行：全部跳过（已是最新）
@@ -224,9 +224,9 @@ withr::with_dir(tmp, {
 
 ```{r}
 #| label: targets-demo
-tdir <- file.path(tempdir(), "targets_demo")
-dir.create(tdir, showWarnings = FALSE)
-writeLines(c(
+tdir <- file.path(tempdir(), "targets_demo")  # 演示用目录
+dir.create(tdir, showWarnings = FALSE)  # 创建目录
+writeLines(c(  # 写一个三步流水线
   'library(targets)',
   'filter_genes <- function(m, min_count = 10) m[rowSums(m >= min_count) >= 4, ]',
   'summarise_lib <- function(m) data.frame(sample = colnames(m), lib = colSums(m))',
@@ -237,7 +237,7 @@ writeLines(c(
   ')'
 ), file.path(tdir, "_targets.R"))
 
-withr::with_dir(tdir, {
+withr::with_dir(tdir, {  # 运行并读取结果
   targets::tar_make(callr_function = NULL, reporter = "timestamp")
   print(targets::tar_read(lib))
 })
@@ -246,7 +246,7 @@ withr::with_dir(tdir, {
 修改 `filter_genes()` 的默认阈值，再看哪些目标"过时"了：
 
 ```{r}
-withr::with_dir(tdir, {
+withr::with_dir(tdir, {  # 修改一个参数后：只有下游目标过时
   x <- readLines("_targets.R")
   writeLines(sub("min_count = 10", "min_count = 20", x), "_targets.R")
   print(targets::tar_outdated(callr_function = NULL))    # counts 不需要重算
@@ -263,17 +263,17 @@ withr::with_dir(tdir, {
 Bioconductor 包统一使用 `BiocParallel` 的 `BPPARAM` 参数：
 
 ```{r}
-library(BiocParallel)
+library(BiocParallel)  # Bioconductor 统一的并行接口
 bp <- MulticoreParam(workers = 2, RNGseed = 1)    # Linux / macOS fork；Windows 用 SnowParam
-res <- bplapply(1:4, \(i) { Sys.sleep(0.5); i^2 }, BPPARAM = bp)
-unlist(res)
+res <- bplapply(1:4, \(i) { Sys.sleep(0.5); i^2 }, BPPARAM = bp)  # 并行执行 4 个任务
+unlist(res)  # 合并结果
 ```
 
 ```{r}
 #| eval: false
-dds <- DESeq(dds, parallel = TRUE, BPPARAM = MulticoreParam(8))
-sce <- scDblFinder(sce, samples = "sample", BPPARAM = MulticoreParam(8))
-dec <- modelGeneVar(sce, BPPARAM = MulticoreParam(8))
+dds <- DESeq(dds, parallel = TRUE, BPPARAM = MulticoreParam(8))  # DESeq2 并行
+sce <- scDblFinder(sce, samples = "sample", BPPARAM = MulticoreParam(8))  # scDblFinder 按样本并行
+dec <- modelGeneVar(sce, BPPARAM = MulticoreParam(8))  # scran 并行
 register(MulticoreParam(8))      # 设为全局默认
 ```
 
@@ -281,11 +281,11 @@ Seurat 使用 `future`：
 
 ```{r}
 #| eval: false
-library(future)
-plan("multicore", workers = 8)
+library(future)  # 通用并行框架（Seurat 用它并行）
+plan("multicore", workers = 8)  # 多进程后端
 options(future.globals.maxSize = 8 * 1024^3)    # 允许传递 8 GB 的全局对象
-markers <- FindAllMarkers(obj)
-plan("sequential")
+markers <- FindAllMarkers(obj)  # 并行找 marker
+plan("sequential")  # 恢复串行
 ```
 
 ::: callout-tip
@@ -308,41 +308,41 @@ BPCells 以位压缩格式把计数矩阵存在磁盘上，按需流式计算：
 
 ```{r}
 #| eval: false
-library(BPCells)
-mat <- open_matrix_10x_hdf5("data/1M_neurons_filtered_gene_bc_matrices_h5.h5")
+library(BPCells)  # 磁盘上的高效单细胞矩阵
+mat <- open_matrix_10x_hdf5("data/1M_neurons_filtered_gene_bc_matrices_h5.h5")  # 打开 10x HDF5 文件
 write_matrix_dir(mat, dir = "data/bpcells_1M")          # 转换为 BPCells 格式（一次）
-mat <- open_matrix_dir("data/bpcells_1M")
+mat <- open_matrix_dir("data/bpcells_1M")  # 打开转换后的矩阵目录
 
 obj <- CreateSeuratObject(counts = mat)                 # 计数留在磁盘上
-obj <- NormalizeData(obj) |> FindVariableFeatures()
+obj <- NormalizeData(obj) |> FindVariableFeatures()  # 在磁盘矩阵上归一化与选高变基因
 # "草图"（sketch）：抽取有代表性的子集做聚类，再投射回全部细胞
-obj <- SketchData(obj, ncells = 50000, method = "LeverageScore", sketched.assay = "sketch")
+obj <- SketchData(obj, ncells = 50000, method = "LeverageScore", sketched.assay = "sketch")  # 按杠杆得分抽取 5 万个细胞
 ```
 
 ### HDF5Array + SingleCellExperiment
 
 ```{r}
 #| eval: false
-library(HDF5Array)
+library(HDF5Array)  # HDF5 磁盘矩阵：数据不必全部读入内存
 sce <- TENxBrainData::TENxBrainData()        # 130 万细胞，HDF5 后端
 class(counts(sce))                           # HDF5Matrix（DelayedArray）
 sce <- scuttle::logNormCounts(sce)           # 延迟计算，不会一次读入内存
-saveHDF5SummarizedExperiment(sce, "data/brain_h5", replace = TRUE)
+saveHDF5SummarizedExperiment(sce, "data/brain_h5", replace = TRUE)  # 保存为 HDF5 格式
 ```
 
 ## 序列化：rds vs qs2
 
 ```{r}
-pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")
-if (file.exists(pbmc_file)) {
-  obj <- readRDS(pbmc_file)
-  f_rds <- tempfile(fileext = ".rds"); f_qs2 <- tempfile(fileext = ".qs2")
-  bench::mark(
+pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")  # 第 11 章保存的对象
+if (file.exists(pbmc_file)) {  # 文件存在时
+  obj <- readRDS(pbmc_file)  # 读入
+  f_rds <- tempfile(fileext = ".rds"); f_qs2 <- tempfile(fileext = ".qs2")  # 两个临时文件
+  bench::mark(  # saveRDS 与 qs2 的保存速度对比
     rds = saveRDS(obj, f_rds),
     qs2 = qs2::qs_save(obj, f_qs2, nthreads = 2),
     iterations = 1, check = FALSE
   )[, c("expression", "median")] |> print()
-  c(rds_MB = file.size(f_rds), qs2_MB = file.size(f_qs2)) / 1e6
+  c(rds_MB = file.size(f_rds), qs2_MB = file.size(f_qs2)) / 1e6  # 两种格式的文件大小
 }
 ```
 
@@ -354,7 +354,7 @@ if (file.exists(pbmc_file)) {
 ```{r}
 #| eval: false
 # tests/testthat/test-qc.R
-test_that("cpm 保留维度且每列和为 1e6", {
+test_that("cpm 保留维度且每列和为 1e6", {  # 单元测试：CPM 函数的基本性质
   m <- matrix(c(10, 0, 90, 5, 5, 0), nrow = 3, dimnames = list(letters[1:3], c("s1", "s2")))
   out <- cpm(m)
   expect_equal(dim(out), dim(m))
@@ -375,29 +375,29 @@ test_that("cpm 保留维度且每列和为 1e6", {
 ### 数据文件清单（manifest）
 
 ```{r}
-files <- list.files(DATA_DIR, recursive = TRUE, full.names = TRUE)
+files <- list.files(DATA_DIR, recursive = TRUE, full.names = TRUE)  # data 目录下所有文件
 files <- files[!grepl("parquet|/hg19/|_files/", files)]          # 跳过目录型数据
-manifest <- tibble(
+manifest <- tibble(  # 数据清单：大小、修改日期、MD5
   file   = sub(paste0("^", DATA_DIR, "/"), "", files),
   size_MB = round(file.size(files) / 1e6, 2),
   modified = format(file.mtime(files), "%Y-%m-%d"),
   md5    = unname(tools::md5sum(files))
 ) |> arrange(desc(size_MB))
-head(manifest, 10)
+head(manifest, 10)  # 最大的 10 个文件
 ```
 
 ```{r}
 #| eval: false
 write_tsv(manifest, "data/MANIFEST.tsv")   # 与代码一起提交到 Git；数据本身不提交
 # 下次运行前校验：
-old <- read_tsv("data/MANIFEST.tsv")
-changed <- old$file[old$md5 != tools::md5sum(file.path(DATA_DIR, old$file))]
+old <- read_tsv("data/MANIFEST.tsv")  # 读入旧清单
+changed <- old$file[old$md5 != tools::md5sum(file.path(DATA_DIR, old$file))]  # MD5 变化的文件
 ```
 
 ### 注释资源的版本
 
 ```{r}
-ann_versions <- list(
+ann_versions <- list(  # 记录各注释资源的版本
   Bioconductor = as.character(BiocManager::version()),
   org.Hs.eg.db = {
     m <- AnnotationDbi::metadata(org.Hs.eg.db::org.Hs.eg.db)
@@ -411,15 +411,15 @@ ann_versions <- list(
   airway_annotation = "Ensembl 75 (GRCh37)，见第 5 章",
   TCGA_MC3 = "GRCh37（第 14 章用已知热点验证）"
 )
-tibble(resource = names(ann_versions), version = unlist(ann_versions))
+tibble(resource = names(ann_versions), version = unlist(ann_versions))  # 整理成表
 ```
 
 ### 关键包版本表
 
 ```{r}
-key_pkgs <- c("DESeq2", "edgeR", "limma", "Seurat", "SeuratObject", "scran", "scater", "SingleR",
+key_pkgs <- c("DESeq2", "edgeR", "limma", "Seurat", "SeuratObject", "scran", "scater", "SingleR",  # 关键包
               "clusterProfiler", "fgsea", "maftools", "survival", "data.table", "dplyr", "ggplot2")
-tibble(package = key_pkgs,
+tibble(package = key_pkgs,  # 版本与来源
        version = vapply(key_pkgs, \(p) as.character(packageVersion(p)), character(1)),
        source  = vapply(key_pkgs, \(p) {
          d <- packageDescription(p)
@@ -433,31 +433,31 @@ tibble(package = key_pkgs,
 行数范围、必须存在的列、取值范围、缺失比例上限、ID 唯一性。契约失败时立刻停止，而不是让错误传到最终报告：
 
 ```{r}
-library(checkmate)
-validate_de_table <- function(df, id_col = "gene_id", max_na_padj = 0.5) {
+library(checkmate)  # 快速、表达力强的参数断言库
+validate_de_table <- function(df, id_col = "gene_id", max_na_padj = 0.5) {  # 差异结果表的校验函数
   coll <- makeAssertCollection()                          # 收集所有失败，一次报告
-  assert_data_frame(df, min.rows = 1000, add = coll)
-  assert_names(names(df), must.include = c(id_col, "baseMean", "padj", "pvalue"), add = coll)
-  assert_character(df[[id_col]], unique = TRUE, any.missing = FALSE, add = coll)
-  assert_numeric(df$pvalue, lower = 0, upper = 1, add = coll)
-  assert_numeric(df$baseMean, lower = 0, any.missing = FALSE, add = coll)
-  if (mean(is.na(df$padj)) > max_na_padj)
-    coll$push(sprintf("padj 缺失比例 %.1f%% 超过上限 %.0f%%", 100 * mean(is.na(df$padj)), 100 * max_na_padj))
-  reportAssertions(coll)
-  invisible(df)
+  assert_data_frame(df, min.rows = 1000, add = coll)  # 至少 1000 行
+  assert_names(names(df), must.include = c(id_col, "baseMean", "padj", "pvalue"), add = coll)  # 必须包含的列
+  assert_character(df[[id_col]], unique = TRUE, any.missing = FALSE, add = coll)  # ID 唯一且不缺失
+  assert_numeric(df$pvalue, lower = 0, upper = 1, add = coll)  # p 值在 0–1
+  assert_numeric(df$baseMean, lower = 0, any.missing = FALSE, add = coll)  # baseMean 非负且不缺失
+  if (mean(is.na(df$padj)) > max_na_padj)  # padj 缺失比例过高时
+    coll$push(sprintf("padj 缺失比例 %.1f%% 超过上限 %.0f%%", 100 * mean(is.na(df$padj)), 100 * max_na_padj))  # 追加一条失败信息
+  reportAssertions(coll)  # 一次性报告所有失败
+  invisible(df)  # 通过则不可见地返回
 }
-de_tbl <- read_tsv(file.path(DATA_DIR, "airway_DESeq2_results.tsv"), show_col_types = FALSE)
+de_tbl <- read_tsv(file.path(DATA_DIR, "airway_DESeq2_results.tsv"), show_col_types = FALSE)  # 第 7 章导出的结果表
 validate_de_table(de_tbl)            # 通过：无输出
 ```
 
 一个"坏"的结果表会一次性报告所有问题：
 
 ```{r}
-bad_tbl <- de_tbl |> slice(1:2000) |>
-  mutate(pvalue = if_else(row_number() == 1, 1.5, pvalue),
+bad_tbl <- de_tbl |> slice(1:2000) |>  # 人为制造三种错误
+  mutate(pvalue = if_else(row_number() == 1, 1.5, pvalue),  # p 值越界、ID 重复、padj 大量缺失
          gene_id = if_else(row_number() == 2, gene_id[1], gene_id),
          padj = if_else(row_number() > 500, NA_real_, padj))
-try(validate_de_table(bad_tbl))
+try(validate_de_table(bad_tbl))  # 三条错误一起报告
 ```
 
 ## 性能剖析：找到真正的瓶颈 {#sec-profiling}
@@ -467,13 +467,13 @@ try(validate_de_table(bad_tbl))
 
 ```{r}
 #| label: rprof
-E_demo <- matrix(rnorm(2000 * 8), 2000, 8)
-cell <- factor(rep(1:4, each = 2)); dex <- factor(rep(c("u", "t"), 4))
-prof_file <- tempfile()
-Rprof(prof_file, interval = 0.01)
-invisible(apply(E_demo, 1, \(y) anova(lm(y ~ cell + dex))[["Sum Sq"]]))
-Rprof(NULL)
-head(summaryRprof(prof_file)$by.total, 12)
+E_demo <- matrix(rnorm(2000 * 8), 2000, 8)  # 2000 × 8 的随机矩阵
+cell <- factor(rep(1:4, each = 2)); dex <- factor(rep(c("u", "t"), 4))  # 两个协变量
+prof_file <- tempfile()  # 性能分析输出文件
+Rprof(prof_file, interval = 0.01)  # 开始采样
+invisible(apply(E_demo, 1, \(y) anova(lm(y ~ cell + dex))[["Sum Sq"]]))  # 被分析的代码
+Rprof(NULL)  # 停止采样
+head(summaryRprof(prof_file)$by.total, 12)  # 按总耗时排序的函数
 ```
 
 大部分时间花在 `lm()` 的**准备工作**（`model.frame`、`model.matrix`、公式解析）上，而不是数值计算本身——
@@ -488,10 +488,10 @@ profvis::profvis({ apply(E_demo, 1, \(y) anova(lm(y ~ cell + dex))) })   # 交�
 ### 内存：对象到底有多大？
 
 ```{r}
-pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")
-if (file.exists(pbmc_file)) {
-  obj <- readRDS(pbmc_file)
-  c(object.size = format(object.size(obj), units = "MB"),
+pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")  # 第 11 章保存的对象
+if (file.exists(pbmc_file)) {  # 文件存在时
+  obj <- readRDS(pbmc_file)  # 读入
+  c(object.size = format(object.size(obj), units = "MB"),  # 两种内存大小估计（lobstr 计入共享部分）
     lobstr      = format(lobstr::obj_size(obj), units = "MB"))
 }
 ```
@@ -500,8 +500,8 @@ if (file.exists(pbmc_file)) {
 Seurat 对象的大部分体积来自 `scale.data`（稠密矩阵！）——保存前可以用 `DietSeurat()` 去掉不需要的层。
 
 ```{r}
-x <- runif(1e6)
-lobstr::obj_size(x)
+x <- runif(1e6)  # 100 万个随机数
+lobstr::obj_size(x)  # 约 8 MB
 y <- x                          # 不复制：两个名字指向同一个对象
 lobstr::obj_size(x, y)          # 总共仍是 8 MB
 y[1] <- 0                       # 修改时才复制（copy-on-modify，第 1 章）
@@ -534,5 +534,5 @@ lobstr::obj_size(x, y)          # 16 MB
 - **生存分析**：Therneau & Grambsch, *Modeling Survival Data*；`survival` 包 vignettes
 
 ```{r}
-sessionInfo()
+sessionInfo()  # 记录完整的会话信息
 ```

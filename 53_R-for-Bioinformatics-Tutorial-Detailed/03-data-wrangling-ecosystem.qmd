@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -60,9 +60,9 @@ source("_common.R")
 | **polars** | 2023– | Rust DataFrame | Python 生态同名库的 R 绑定，在 R 中仍较新 |
 
 ```{r}
-library(data.table)
-library(tidyverse)
-library(maftools)
+library(data.table)  # 高性能表格处理：[i, j, by] 语法、原地修改
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(maftools)  # 突变注释格式（MAF）的读取、汇总与可视化
 ```
 
 ::: callout-warning
@@ -76,16 +76,16 @@ plyr 与 dplyr 有大量同名函数（`summarise`、`mutate`、`arrange`、`ren
 我们使用 TCGA MC3 项目（Ellrott et al. 2018, *Cell Systems*）统一重新检测的 LUAD 外显子 体细胞突变（MAF 格式），通过 `maftools::tcgaLoad()` 下载（约 20 MB）。第 14 章会正式分析它； 这里把它当作一张**真实的、中等规模的长表**来练习。
 
 ```{r}
-luad <- cached("tcga_luad_mc3_maf.rds", tcgaLoad(study = "LUAD", source = "MC3"))
-luad
+luad <- cached("tcga_luad_mc3_maf.rds", tcgaLoad(study = "LUAD", source = "MC3"))  # 下载并缓存 TCGA LUAD MC3 突变数据
+luad  # 打印 MAF 对象概况
 
 maf <- as.data.table(luad@data)                         # 非同义突变
-maf <- maf[, .(Hugo_Symbol, Chromosome = as.character(Chromosome),
+maf <- maf[, .(Hugo_Symbol, Chromosome = as.character(Chromosome),  # 只保留需要的列，并把因子列转为字符
                Start_Position, End_Position, Variant_Classification, Variant_Type,
                Reference_Allele, Tumor_Seq_Allele2, Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode),
                HGVSp_Short, t_ref_count, t_alt_count)]
-dim(maf)
-maf[1:3]
+dim(maf)  # 突变数 × 列数
+maf[1:3]  # 前 3 行
 ```
 
 （`maf[, .(...)]` 已经是 data.table 语法：在 `j` 中选列并重命名/转换。下面详解。）
@@ -93,8 +93,8 @@ maf[1:3]
 为了对照，同一份数据的 tibble 与 data.frame 版本：
 
 ```{r}
-maf_tbl <- as_tibble(maf)
-maf_df  <- as.data.frame(maf)
+maf_tbl <- as_tibble(maf)  # 同一份数据的 tibble 版本
+maf_df  <- as.data.frame(maf)  # 同一份数据的 data.frame 版本
 ```
 
 ## 原始 MAF 的质量与缺失审计 {#sec-maf-audit}
@@ -102,15 +102,15 @@ maf_df  <- as.data.frame(maf)
 在开始任何汇总之前，先对原始表做一次"体检"。`luad@data` 保留了 MC3 MAF 的更多列：
 
 ```{r}
-raw <- as.data.table(luad@data)
-dim(raw)
-names(raw)
+raw <- as.data.table(luad@data)  # 读入原始全部列
+dim(raw)  # 维度
+names(raw)  # 所有列名
 ```
 
 **问题 1：重复列名**。`IMPACT` 出现了两次——data.table 允许这样，但 dplyr、arrow、duckdb 都会报错或静默取第一列：
 
 ```{r}
-names(raw)[duplicated(names(raw))]
+names(raw)[duplicated(names(raw))]  # 找出重复的列名
 raw <- setnames(copy(raw), make.unique(names(raw)))   # IMPACT, IMPACT.1
 raw[, .N, by = .(IMPACT, IMPACT.1)][order(-N)]   # 两列内容是否一致？
 ```
@@ -118,9 +118,9 @@ raw[, .N, by = .(IMPACT, IMPACT.1)][order(-N)]   # 两列内容是否一致？
 **问题 2：每列有多少缺失？** 对数值列只有 `NA`，对字符列还要算上 `""` 和 `"."`：
 
 ```{r}
-is_missing <- function(x) if (is.character(x)) is.na(x) | x %in% c("", ".") else is.na(x)
-miss <- raw[, lapply(.SD, \(x) sum(is_missing(x)))]
-melt(miss, measure.vars = names(miss), variable.name = "column", value.name = "n_missing")[
+is_missing <- function(x) if (is.character(x)) is.na(x) | x %in% c("", ".") else is.na(x)  # 字符列把空串和 "." 也视为缺失
+miss <- raw[, lapply(.SD, \(x) sum(is_missing(x)))]  # 每列缺失计数
+melt(miss, measure.vars = names(miss), variable.name = "column", value.name = "n_missing")[  # 转长表，计算缺失比例并排序
   n_missing > 0][, pct := round(100 * n_missing / nrow(raw), 2)][order(-n_missing)]
 ```
 
@@ -128,13 +128,13 @@ melt(miss, measure.vars = names(miss), variable.name = "column", value.name = "n
 - `Exon_Number` 的空值集中在剪接位点与非编码区：
 
 ```{r}
-raw[, .(n = .N, exon_missing = sum(is_missing(Exon_Number))), by = Variant_Classification][order(-exon_missing)]
+raw[, .(n = .N, exon_missing = sum(is_missing(Exon_Number))), by = Variant_Classification][order(-exon_missing)]  # Exon_Number 的缺失按突变类型分布
 ```
 
 - `HGVSp_Short` 为 `"."` 的行，看看是什么类型：
 
 ```{r}
-raw[HGVSp_Short == ".", .N, by = Variant_Classification]
+raw[HGVSp_Short == ".", .N, by = Variant_Classification]  # HGVSp_Short 为 "." 的突变类型
 ```
 
 **问题 3：FILTER 列**。MC3 保留了所有调用，用 `FILTER` 标注可疑原因（`oxog` = 8-oxoguanine 测序假象、
@@ -142,34 +142,34 @@ raw[HGVSp_Short == ".", .N, by = Variant_Classification]
 `maftools::tcgaLoad()` 加载的数据**没有**过滤这些：
 
 ```{r}
-raw[, .N, by = FILTER][order(-N)][, pct := round(100 * N / sum(N), 2)][]
+raw[, .N, by = FILTER][order(-N)][, pct := round(100 * N / sum(N), 2)][]  # FILTER 各取值的计数与比例
 # FILTER 可以有多个原因，用逗号分隔 —— 拆开统计
-raw[FILTER != "PASS", .(reason = unlist(strsplit(FILTER, ",", fixed = TRUE)))][, .N, by = reason][order(-N)]
+raw[FILTER != "PASS", .(reason = unlist(strsplit(FILTER, ",", fixed = TRUE)))][, .N, by = reason][order(-N)]  # 拆分多原因的 FILTER 后计数
 ```
 
 **问题 4：深度与 VAF**。`t_ref_count + t_alt_count` 太小的调用不可靠：
 
 ```{r}
-raw[, `:=`(t_depth = t_ref_count + t_alt_count, vaf = t_alt_count / (t_ref_count + t_alt_count))]
-raw[, .(min_depth = min(t_depth), q05 = quantile(t_depth, 0.05), median = median(t_depth),
+raw[, `:=`(t_depth = t_ref_count + t_alt_count, vaf = t_alt_count / (t_ref_count + t_alt_count))]  # 原地新增肿瘤深度与 VAF 两列
+raw[, .(min_depth = min(t_depth), q05 = quantile(t_depth, 0.05), median = median(t_depth),  # 深度与 VAF 的概况
         n_depth_lt_10 = sum(t_depth < 10), n_vaf_lt_0.05 = sum(vaf < 0.05))]
 ```
 
 把这些审计变成一个可复用的过滤步骤，并记录每一步删掉了多少行（**过滤日志**是可复现分析的重要组成部分）：
 
 ```{r}
-filter_log <- data.table(step = "raw", n = nrow(raw))
-step <- function(dt, cond_expr, label) {
-  out <- dt[eval(cond_expr)]
-  filter_log <<- rbind(filter_log, data.table(step = label, n = nrow(out)))
-  out
+filter_log <- data.table(step = "raw", n = nrow(raw))  # 过滤记录表：初始行数
+step <- function(dt, cond_expr, label) {  # 带记录的过滤步骤函数
+  out <- dt[eval(cond_expr)]  # 按条件过滤
+  filter_log <<- rbind(filter_log, data.table(step = label, n = nrow(out)))  # 把本步结果行数追加到记录表
+  out  # 返回过滤结果
 }
-clean <- raw |>
-  step(quote(FILTER == "PASS"), "FILTER == PASS") |>
-  step(quote(t_depth >= 10), "tumor depth >= 10") |>
-  step(quote(t_alt_count >= 3), "alt reads >= 3") |>
-  step(quote(vaf >= 0.05), "VAF >= 5%")
-filter_log[, removed := shift(n) - n][]
+clean <- raw |>  # 逐级过滤并记录每步剩余行数
+  step(quote(FILTER == "PASS"), "FILTER == PASS") |>  # 只保留通过质控的变异
+  step(quote(t_depth >= 10), "tumor depth >= 10") |>  # 肿瘤测序深度 ≥ 10
+  step(quote(t_alt_count >= 3), "alt reads >= 3") |>  # 支持变异的 reads ≥ 3
+  step(quote(vaf >= 0.05), "VAF >= 5%")  # VAF ≥ 5%
+filter_log[, removed := shift(n) - n][]  # 每步删除的行数
 ```
 
 ::: callout-note
@@ -190,7 +190,7 @@ filter_log[, removed := shift(n) - n][]
 4.  **T4 长宽转换**：基因 × 变异类型的计数矩阵。
 
 ```{r}
-drivers <- data.frame(
+drivers <- data.frame(  # 驱动基因与其角色
   Hugo_Symbol = c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "BRAF", "NF1", "SMARCA4"),
   role        = c("TSG", "oncogene", "oncogene", "TSG", "TSG", "oncogene", "TSG", "TSG")
 )
@@ -200,27 +200,27 @@ drivers <- data.frame(
 
 ```{r}
 # T1
-n_mut  <- table(maf_df$Hugo_Symbol)
-n_samp <- tapply(maf_df$Tumor_Sample_Barcode, maf_df$Hugo_Symbol, \(x) length(unique(x)))
-t1_base <- data.frame(gene = names(n_mut), n_mut = as.vector(n_mut),
+n_mut  <- table(maf_df$Hugo_Symbol)  # 每个基因的突变数
+n_samp <- tapply(maf_df$Tumor_Sample_Barcode, maf_df$Hugo_Symbol, \(x) length(unique(x)))  # 每个基因的突变样本数
+t1_base <- data.frame(gene = names(n_mut), n_mut = as.vector(n_mut),  # 合并成表
                       n_samples = as.vector(n_samp[names(n_mut)]))
-head(t1_base[order(-t1_base$n_samples), ], 10)
+head(t1_base[order(-t1_base$n_samples), ], 10)  # 突变样本数最多的 10 个基因
 
 # T1 的另一种写法：公式接口
-head(aggregate(Tumor_Sample_Barcode ~ Hugo_Symbol, data = maf_df,
+head(aggregate(Tumor_Sample_Barcode ~ Hugo_Symbol, data = maf_df,  # aggregate 写法
                FUN = \(x) length(unique(x))), 3)
 
 # T2：ave() 返回与输入等长的分组统计 —— base R 的 "mutate by group"
-maf_df$tmb_rows <- ave(seq_len(nrow(maf_df)), maf_df$Tumor_Sample_Barcode, FUN = length)
+maf_df$tmb_rows <- ave(seq_len(nrow(maf_df)), maf_df$Tumor_Sample_Barcode, FUN = length)  # 每行附上所在样本的突变数
 
 # T3
-t3_base <- merge(maf_df, drivers, by = "Hugo_Symbol", all.x = TRUE, sort = FALSE)
-table(t3_base$role, useNA = "ifany")
+t3_base <- merge(maf_df, drivers, by = "Hugo_Symbol", all.x = TRUE, sort = FALSE)  # 左连接驱动基因角色
+table(t3_base$role, useNA = "ifany")  # 角色分布
 
 # T4
-t4_base <- with(maf_df[maf_df$Hugo_Symbol %in% drivers$Hugo_Symbol, ],
+t4_base <- with(maf_df[maf_df$Hugo_Symbol %in% drivers$Hugo_Symbol, ],  # 驱动基因 × 突变类型的列联表
                 table(Hugo_Symbol, Variant_Classification))
-t4_base[, 1:4]
+t4_base[, 1:4]  # 看前 4 列
 ```
 
 base R 的关键函数：`table`/`xtabs`（计数）、`tapply`（分组 → 向量）、`ave`（分组 → 等长）、 `aggregate`（分组 → 数据框）、`split` + `lapply` + `do.call(rbind, ...)`（通用 split-apply-combine）、 `merge`（连接）、`reshape`（长宽转换，参数晦涩，不推荐）。
@@ -231,13 +231,13 @@ plyr 的函数名是 **输入类型 + 输出类型 + ply**：`d`ata.frame、`l`i
 
 ```{r}
 # T1：ddply = data.frame 进，data.frame 出
-t1_plyr <- plyr::ddply(maf_df, "Hugo_Symbol", plyr::summarise,
+t1_plyr <- plyr::ddply(maf_df, "Hugo_Symbol", plyr::summarise,  # plyr 分组汇总
                        n_mut = length(Hugo_Symbol),
                        n_samples = length(unique(Tumor_Sample_Barcode)))
-head(t1_plyr[order(-t1_plyr$n_samples), ], 3)
+head(t1_plyr[order(-t1_plyr$n_samples), ], 3)  # 前 3 个基因
 
 # ldply = list 进，data.frame 出（等价于 map() |> list_rbind()）
-plyr::ldply(split(maf_df$t_alt_count, maf_df$Variant_Type)[1:3],
+plyr::ldply(split(maf_df$t_alt_count, maf_df$Variant_Type)[1:3],  # 按变异类型拆分后汇总
             \(x) data.frame(median_alt = median(x, na.rm = TRUE)))
 ```
 
@@ -255,18 +255,18 @@ plyr 速度慢、已不再开发；遇到时可按下表翻译：
 ## dplyr（回顾）
 
 ```{r}
-t1_dplyr <- maf_tbl |>
-  summarise(n_mut = n(), n_samples = n_distinct(Tumor_Sample_Barcode), .by = Hugo_Symbol) |>
-  slice_max(n_samples, n = 10)
-t1_dplyr
+t1_dplyr <- maf_tbl |>  # dplyr 版 T1
+  summarise(n_mut = n(), n_samples = n_distinct(Tumor_Sample_Barcode), .by = Hugo_Symbol) |>  # 每个基因的突变数与样本数
+  slice_max(n_samples, n = 10)  # 按样本数取前 10
+t1_dplyr  # 打印
 
-t2_dplyr <- maf_tbl |> mutate(tmb_rows = n(), .by = Tumor_Sample_Barcode)
-t3_dplyr <- maf_tbl |> left_join(drivers, join_by(Hugo_Symbol))
-t4_dplyr <- maf_tbl |>
-  filter(Hugo_Symbol %in% drivers$Hugo_Symbol) |>
-  count(Hugo_Symbol, Variant_Classification) |>
-  pivot_wider(names_from = Variant_Classification, values_from = n, values_fill = 0)
-t4_dplyr
+t2_dplyr <- maf_tbl |> mutate(tmb_rows = n(), .by = Tumor_Sample_Barcode)  # T2：分组计数作为新列
+t3_dplyr <- maf_tbl |> left_join(drivers, join_by(Hugo_Symbol))  # T3：左连接
+t4_dplyr <- maf_tbl |>  # T4：驱动基因 × 突变类型
+  filter(Hugo_Symbol %in% drivers$Hugo_Symbol) |>  # 只看驱动基因
+  count(Hugo_Symbol, Variant_Classification) |>  # 计数
+  pivot_wider(names_from = Variant_Classification, values_from = n, values_fill = 0)  # 转宽表，缺的填 0
+t4_dplyr  # 打印
 ```
 
 ## data.table 深入
@@ -279,16 +279,16 @@ t4_dplyr
 
 ```{r}
 # i：筛选行
-maf[Hugo_Symbol == "KRAS" & Variant_Classification == "Missense_Mutation"][1:3, 1:6]
-maf[order(-t_alt_count)][1:2, .(Hugo_Symbol, t_alt_count)]
+maf[Hugo_Symbol == "KRAS" & Variant_Classification == "Missense_Mutation"][1:3, 1:6]  # 按条件筛选 KRAS 错义突变
+maf[order(-t_alt_count)][1:2, .(Hugo_Symbol, t_alt_count)]  # 按 alt reads 降序取前 2 行
 
 # j：选择/计算列。.() 是 list() 的别名 → 返回 data.table
-maf[, .(mean_alt = mean(t_alt_count, na.rm = TRUE), n = .N)]
+maf[, .(mean_alt = mean(t_alt_count, na.rm = TRUE), n = .N)]  # 整表汇总
 
 # by：分组。.N = 当前组行数；uniqueN() = 去重计数
-t1_dt <- maf[, .(n_mut = .N, n_samples = uniqueN(Tumor_Sample_Barcode)), by = Hugo_Symbol
+t1_dt <- maf[, .(n_mut = .N, n_samples = uniqueN(Tumor_Sample_Barcode)), by = Hugo_Symbol  # data.table 版 T1：分组计数后排序取前 10
              ][order(-n_samples)][1:10]
-t1_dt
+t1_dt  # 打印
 ```
 
 最后一行展示了**链式调用** `DT[...][...]`：上一步结果直接再取下标。
@@ -308,13 +308,13 @@ t1_dt
 
 ```{r}
 # T2：按样本计算负荷并"原地"添加列 —— 不复制整张表
-maf[, tmb_rows := .N, by = Tumor_Sample_Barcode]
-maf[, vaf := t_alt_count / (t_alt_count + t_ref_count)]
-maf[, c("is_snv", "is_indel") := .(Variant_Type == "SNP", Variant_Type %in% c("INS", "DEL"))]
-names(maf)
+maf[, tmb_rows := .N, by = Tumor_Sample_Barcode]  # 原地添加每样本突变数
+maf[, vaf := t_alt_count / (t_alt_count + t_ref_count)]  # 原地添加 VAF
+maf[, c("is_snv", "is_indel") := .(Variant_Type == "SNP", Variant_Type %in% c("INS", "DEL"))]  # 一次添加多列
+names(maf)  # 查看列名
 
 # 删除列
-maf[, c("is_snv", "is_indel") := NULL]
+maf[, c("is_snv", "is_indel") := NULL]  # 赋值 NULL 即删除列
 ```
 
 ::: callout-important
@@ -323,13 +323,13 @@ maf[, c("is_snv", "is_indel") := NULL]
 data.table 打破了 R 的 copy-on-modify 约定（@sec-r-language）：
 
 ```{r}
-a <- data.table(x = 1:3)
+a <- data.table(x = 1:3)  # 小表演示引用语义
 b <- a               # b 与 a 指向同一个对象
 b[, y := x * 2]      # 原地修改
 names(a)             # a 也被改了！
 b2 <- copy(a)        # 需要独立副本时显式 copy()
-b2[, z := 0]
-names(a)
+b2[, z := 0]  # 修改副本
+names(a)  # a 不受影响
 ```
 
 在**函数内部**对传入的 data.table 使用 `:=` 会修改调用者的数据。写函数时要么先 `copy()`， 要么在文档中写清楚"本函数会原地修改输入"。`set()`、`setnames()`、`setorder()`、`setkey()`、 `setDT()` 等 `set*` 函数同样是原地操作。
@@ -340,19 +340,19 @@ data.table 1.15+ 新增了 `let()` 作为 `:=` 的别名，可读性更好：`ma
 ### `.SD` 与 `.SDcols`：对多列应用函数
 
 ```{r}
-maf[, lapply(.SD, median, na.rm = TRUE), by = Variant_Type,
+maf[, lapply(.SD, median, na.rm = TRUE), by = Variant_Type,  # 对指定列按组取中位数
     .SDcols = c("t_ref_count", "t_alt_count", "vaf")]
 
 # 每个样本 VAF 最高的那条突变（组内 top-1）
-maf[order(-vaf), .SD[1], by = Tumor_Sample_Barcode][1:3, .(Tumor_Sample_Barcode, Hugo_Symbol, vaf)]
+maf[order(-vaf), .SD[1], by = Tumor_Sample_Barcode][1:3, .(Tumor_Sample_Barcode, Hugo_Symbol, vaf)]  # 按 VAF 排序后每组取第一行
 # 更快的写法：先找行号再取
-maf[maf[, .I[which.max(vaf)], by = Tumor_Sample_Barcode]$V1][1:3, .(Tumor_Sample_Barcode, Hugo_Symbol, vaf)]
+maf[maf[, .I[which.max(vaf)], by = Tumor_Sample_Barcode]$V1][1:3, .(Tumor_Sample_Barcode, Hugo_Symbol, vaf)]  # 用 .I 取行号再取子集
 ```
 
 ### 连接
 
 ```{r}
-drv <- as.data.table(drivers)
+drv <- as.data.table(drivers)  # 驱动基因表转 data.table
 
 # X[Y, on = ]：以 Y 为准查找 X（右连接语义）
 maf[drv, on = "Hugo_Symbol", .N, by = .EACHI]          # 每个驱动基因的突变数
@@ -363,7 +363,7 @@ t3_dt2 <- merge(maf, drv, by = "Hugo_Symbol", all.x = TRUE)  # data.table 的 me
 
 # "更新连接"：不新建表，原地把 role 填进 maf
 maf[drv, on = "Hugo_Symbol", role := i.role]          # i. 前缀 = 来自右表的列
-maf[!is.na(role), .N, by = role]
+maf[!is.na(role), .N, by = role]  # 填入角色后的计数
 ```
 
 ### 区间连接：`foverlaps()`
@@ -371,18 +371,18 @@ maf[!is.na(role), .N, by = role]
 基因组区间重叠是 data.table 的拿手好戏（与 `GenomicRanges::findOverlaps` 思想相同）。 找出落在若干"热点区域"内的突变：
 
 ```{r}
-hotspots <- data.table(
+hotspots <- data.table(  # 三个热点区域
   region = c("KRAS_exon2", "EGFR_exon19-21", "BRAF_exon15"),
   Chromosome = c("12", "7", "7"),
   start = c(25398200L, 55242400L, 140453100L),
   end   = c(25398330L, 55260000L, 140453200L)
 )
-setkey(hotspots, Chromosome, start, end)
+setkey(hotspots, Chromosome, start, end)  # 设置键（foverlaps 要求区间表已设键）
 
-muts <- maf[, .(Chromosome, start = Start_Position, end = End_Position,
+muts <- maf[, .(Chromosome, start = Start_Position, end = End_Position,  # 突变改写成区间格式
                 Hugo_Symbol, HGVSp_Short, Tumor_Sample_Barcode)]
-hits <- foverlaps(muts, hotspots, type = "within", nomatch = NULL)
-hits[, .N, by = .(region, HGVSp_Short)][order(region, -N)][, head(.SD, 3), by = region]
+hits <- foverlaps(muts, hotspots, type = "within", nomatch = NULL)  # 区间重叠连接：突变落在哪个热点内
+hits[, .N, by = .(region, HGVSp_Short)][order(region, -N)][, head(.SD, 3), by = region]  # 每个热点前 3 个最常见的氨基酸改变
 ```
 
 KRAS G12C/G12V/G12D、EGFR L858R 与外显子 19 缺失、BRAF V600E（以及同在外显子 15 的 D594N 等非经典突变）——正是肺腺癌的经典靶点。
@@ -392,29 +392,29 @@ KRAS G12C/G12V/G12D、EGFR L858R 与外显子 19 缺失、BRAF V600E（以及同
 为每个突变找到**上游最近的**一个 marker 位置（例如最近的 SNP 探针）：
 
 ```{r}
-markers <- data.table(Chromosome = "12", pos = c(25000000L, 25390000L, 25400000L),
+markers <- data.table(Chromosome = "12", pos = c(25000000L, 25390000L, 25400000L),  # 三个标记位点
                       marker = c("m1", "m2", "m3"))
-q <- maf[Hugo_Symbol == "KRAS", .(Chromosome, pos = Start_Position, HGVSp_Short)][1:5]
+q <- maf[Hugo_Symbol == "KRAS", .(Chromosome, pos = Start_Position, HGVSp_Short)][1:5]  # 5 个 KRAS 突变
 markers[q, on = .(Chromosome, pos), roll = TRUE]       # roll = TRUE：向前取最近值（LOCF）
 ```
 
 ### 长宽转换：`melt()` / `dcast()`
 
 ```{r}
-t4_dt <- dcast(maf[Hugo_Symbol %in% drivers$Hugo_Symbol],
+t4_dt <- dcast(maf[Hugo_Symbol %in% drivers$Hugo_Symbol],  # 长转宽：驱动基因 × 突变类型的样本计数
                Hugo_Symbol ~ Variant_Classification, value.var = "Tumor_Sample_Barcode", fun.aggregate = length)
-t4_dt
+t4_dt  # 打印
 
-melt(t4_dt, id.vars = "Hugo_Symbol", variable.name = "class", value.name = "n")[n > 0][1:5]
+melt(t4_dt, id.vars = "Hugo_Symbol", variable.name = "class", value.name = "n")[n > 0][1:5]  # 宽转长，只看非零
 ```
 
 ### 快速读写：`fread()` / `fwrite()`
 
 ```{r}
-tmp <- tempfile(fileext = ".tsv.gz")
+tmp <- tempfile(fileext = ".tsv.gz")  # 临时文件路径
 fwrite(maf, tmp, sep = "\t")                   # 多线程，按扩展名自动 gzip
-maf2 <- fread(tmp, select = c("Hugo_Symbol", "Tumor_Sample_Barcode", "vaf"))
-dim(maf2)
+maf2 <- fread(tmp, select = c("Hugo_Symbol", "Tumor_Sample_Barcode", "vaf"))  # 只读指定列
+dim(maf2)  # 维度
 ```
 
 `fread` 还能直接执行 shell 命令：`fread(cmd = "zcat big.vcf.gz | grep -v '^##'")`， 是读取 VCF 体部或巨大 TSV 的利器。
@@ -424,10 +424,10 @@ dim(maf2)
 data.table 1.15+ 提供 `env` 参数，让"把列名作为字符串传入"变得清晰：
 
 ```{r}
-count_by <- function(dt, group_col) {
-  dt[, .(n = .N), by = group_col, env = list(group_col = group_col)][order(-n)]
+count_by <- function(dt, group_col) {  # 列名以字符串传入的分组计数
+  dt[, .(n = .N), by = group_col, env = list(group_col = group_col)][order(-n)]  # env 参数把字符串替换为列名
 }
-count_by(maf, "Variant_Classification")[1:4]
+count_by(maf, "Variant_Classification")[1:4]  # 调用
 ```
 
 ## 缺失值在各方言中的行为差异 {#sec-na-dialects}
@@ -435,8 +435,8 @@ count_by(maf, "Variant_Classification")[1:4]
 同一个"含 NA 的条件"，不同框架的处理方式不同——这是跨框架翻译代码时最隐蔽的 bug 来源：
 
 ```{r}
-d <- data.frame(gene = c("A", "B", "C", "D"), padj = c(0.01, NA, 0.2, 0.001))
-dt <- as.data.table(d)
+d <- data.frame(gene = c("A", "B", "C", "D"), padj = c(0.01, NA, 0.2, 0.001))  # 含 NA 的示例表
+dt <- as.data.table(d)  # data.table 版本
 
 d[d$padj < 0.05, ]                      # base：NA 行变成一行全 NA
 subset(d, padj < 0.05)                  # base subset()：丢弃 NA
@@ -448,8 +448,8 @@ dt[padj < 0.05]                         # data.table：丢弃 NA
 （`incomparables = NULL`）；data.table 同样会匹配 `NA` 键。这可能把两张表中所有"缺失 symbol"的行两两配对：
 
 ```{r}
-x <- data.frame(symbol = c("TP53", NA, NA), x = 1:3)
-y <- data.frame(symbol = c("TP53", NA), y = c("a", "b"))
+x <- data.frame(symbol = c("TP53", NA, NA), x = 1:3)  # 键中含 NA 的左表
+y <- data.frame(symbol = c("TP53", NA), y = c("a", "b"))  # 键中含 NA 的右表
 dplyr::left_join(x, y, by = "symbol")                         # NA 与 NA 匹配上了
 dplyr::left_join(x, y, by = "symbol", na_matches = "never")   # 更安全
 ```
@@ -458,11 +458,11 @@ dplyr::left_join(x, y, by = "symbol", na_matches = "never")   # 更安全
 `COUNT(*)` 数行，`COUNT(col)` 只数非空值：
 
 ```{r}
-con <- DBI::dbConnect(duckdb::duckdb())
-duckdb::duckdb_register(con, "d", d)
-DBI::dbGetQuery(con, "SELECT AVG(padj) AS avg_padj, COUNT(*) AS n_rows, COUNT(padj) AS n_nonnull FROM d")
-mean(d$padj); mean(d$padj, na.rm = TRUE)
-DBI::dbDisconnect(con, shutdown = TRUE)
+con <- DBI::dbConnect(duckdb::duckdb())  # 连接内存中的 DuckDB
+duckdb::duckdb_register(con, "d", d)  # 注册 data.frame 为 SQL 表
+DBI::dbGetQuery(con, "SELECT AVG(padj) AS avg_padj, COUNT(*) AS n_rows, COUNT(padj) AS n_nonnull FROM d")  # SQL 的聚合函数默认忽略 NULL
+mean(d$padj); mean(d$padj, na.rm = TRUE)  # R 的 mean 默认不忽略 NA
+DBI::dbDisconnect(con, shutdown = TRUE)  # 断开并关闭数据库
 ```
 
 dbplyr 把 `mean(x, na.rm = TRUE)` 翻译成 `AVG(x)`；但如果你写 `mean(x)`（不带 `na.rm`），
@@ -471,14 +471,14 @@ dbplyr 把 `mean(x, na.rm = TRUE)` 翻译成 `AVG(x)`；但如果你写 `mean(x)
 data.table 与 collapse 提供了高效的缺失处理函数：
 
 ```{r}
-v <- c(1, NA, NA, 4, NA, 6)
+v <- c(1, NA, NA, 4, NA, 6)  # 含 NA 的数值向量
 fcoalesce(v, 0)                    # 与 dplyr::coalesce 相同，C 实现
 nafill(v, type = "locf")           # 向前填充（last observation carried forward）
 nafill(v, type = "nocb")           # 向后填充
-nafill(v, fill = 0)
-dt2 <- data.table(a = c(1, NA), b = c(NA, 2))
+nafill(v, fill = 0)  # 用常数填充
+dt2 <- data.table(a = c(1, NA), b = c(NA, 2))  # 含 NA 的 data.table
 setnafill(dt2, fill = 0)           # 原地填充所有数值列
-dt2
+dt2  # 打印
 collapse::fnobs(v)                 # 非缺失个数
 collapse::fmean(v)                 # collapse 的统计函数默认 na.rm = TRUE
 ```
@@ -498,10 +498,10 @@ collapse::fmean(v)                 # collapse 的统计函数默认 na.rm = TRUE
 `setkey()` 对表按键**物理排序**，之后的等值查询用二分查找（O(log n)）而非全表扫描：
 
 ```{r}
-big_maf <- rbindlist(replicate(5, maf, simplify = FALSE))
-setkey(big_maf, Hugo_Symbol)
-key(big_maf)
-bench::mark(
+big_maf <- rbindlist(replicate(5, maf, simplify = FALSE))  # 把 MAF 复制 5 份变大
+setkey(big_maf, Hugo_Symbol)  # 按基因设键（排序 + 标记）
+key(big_maf)  # 查看键
+bench::mark(  # 向量扫描与键查找的速度对比
   vector_scan = big_maf[Hugo_Symbol == "TP53", .N],    # data.table 会自动建二级索引，第一次后也很快
   key_lookup  = big_maf["TP53", .N],                    # 用键：J("TP53")
   check = TRUE, iterations = 20
@@ -514,14 +514,14 @@ data.table 会在 `DT[col == value]` 时自动创建并复用索引（auto-index
 ### `fifelse()`、`fcase()`、`between()`、`%like%`
 
 ```{r}
-maf[, vaf_class := fcase(
+maf[, vaf_class := fcase(  # fcase：按 VAF 分档
   vaf < 0.1,  "subclonal?",
   vaf < 0.35, "low",
   vaf <= 0.65, "heterozygous-like",
   default = "high / LOH?"
 )]
-maf[, .N, by = vaf_class]
-maf[Start_Position %between% c(25398200L, 25398330L) & Chromosome == "12", .N]
+maf[, .N, by = vaf_class]  # 各档计数
+maf[Start_Position %between% c(25398200L, 25398330L) & Chromosome == "12", .N]  # %between%：区间筛选
 maf[Hugo_Symbol %like% "^KRT", uniqueN(Hugo_Symbol)]    # 正则匹配，角蛋白家族
 ```
 
@@ -530,11 +530,11 @@ maf[Hugo_Symbol %like% "^KRT", uniqueN(Hugo_Symbol)]    # 正则匹配，角蛋�
 把 `HGVSp_Short`（如 `p.G12C`）拆成参考氨基酸、位置、突变氨基酸——这是画蛋白质突变图（lollipop）的前置步骤：
 
 ```{r}
-mis <- maf[Variant_Classification == "Missense_Mutation"]
-mis[, c("aa_ref", "aa_pos", "aa_alt") := tstrsplit(sub("^p\\.", "", HGVSp_Short),
+mis <- maf[Variant_Classification == "Missense_Mutation"]  # 错义突变
+mis[, c("aa_ref", "aa_pos", "aa_alt") := tstrsplit(sub("^p\\.", "", HGVSp_Short),  # 把 p.G12D 拆成 参考氨基酸/位置/替换氨基酸
                                                      "(?<=[A-Z])(?=\\d)|(?<=\\d)(?=[A-Z])", perl = TRUE)]
-mis[, aa_pos := as.integer(aa_pos)]
-mis[Hugo_Symbol %in% c("KRAS", "EGFR", "BRAF"), .N, by = .(Hugo_Symbol, aa_pos)][
+mis[, aa_pos := as.integer(aa_pos)]  # 位置转为整数
+mis[Hugo_Symbol %in% c("KRAS", "EGFR", "BRAF"), .N, by = .(Hugo_Symbol, aa_pos)][  # 每个基因最常见的 3 个突变位置
   order(-N)][, head(.SD, 3), by = Hugo_Symbol]
 ```
 
@@ -543,24 +543,24 @@ mis[Hugo_Symbol %in% c("KRAS", "EGFR", "BRAF"), .N, by = .(Hugo_Symbol, aa_pos)]
 计算同一样本、同一染色体上相邻突变的距离——**kataegis**（局部超突变簇）检测的核心步骤：
 
 ```{r}
-setorder(maf, Tumor_Sample_Barcode, Chromosome, Start_Position)
-maf[, dist_prev := Start_Position - shift(Start_Position), by = .(Tumor_Sample_Barcode, Chromosome)]
-maf[, .(n_close = sum(dist_prev < 1000, na.rm = TRUE)), by = Tumor_Sample_Barcode][order(-n_close)][1:5]
+setorder(maf, Tumor_Sample_Barcode, Chromosome, Start_Position)  # 按样本、染色体、位置原地排序
+maf[, dist_prev := Start_Position - shift(Start_Position), by = .(Tumor_Sample_Barcode, Chromosome)]  # 与同染色体上一突变的距离
+maf[, .(n_close = sum(dist_prev < 1000, na.rm = TRUE)), by = Tumor_Sample_Barcode][order(-n_close)][1:5]  # 每个样本相距 < 1 kb 的突变数
 ```
 
 把"距上一个突变 ≥ 1 kb（或是该染色体第一个突变）"当作新簇的起点，`cumsum()` 就给出了簇编号：
 
 ```{r}
-maf[, cluster := cumsum(is.na(dist_prev) | dist_prev >= 1000), by = Tumor_Sample_Barcode]
-maf[, .(n = .N, span = max(Start_Position) - min(Start_Position)),
+maf[, cluster := cumsum(is.na(dist_prev) | dist_prev >= 1000), by = Tumor_Sample_Barcode]  # 距离 ≥ 1 kb 时开启新簇
+maf[, .(n = .N, span = max(Start_Position) - min(Start_Position)),  # 每个簇的突变数与跨度，只看 ≥4 个的簇
     by = .(Tumor_Sample_Barcode, Chromosome, cluster)][n >= 4][order(-n)]
 ```
 
 `rleid()` 给**连续相同值**编号（等价于 dplyr 的 `consecutive_id()`），`frank()` 是快速的 `rank()`：
 
 ```{r}
-rleid(c("neutral", "gain", "gain", "neutral", "loss", "loss"))
-frank(c(5, 1, 3, 3), ties.method = "min")
+rleid(c("neutral", "gain", "gain", "neutral", "loss", "loss"))  # 连续相同值编同一 ID
+frank(c(5, 1, 3, 3), ties.method = "min")  # 排名，并列取最小
 ```
 
 （这只是一个演示：外显子数据中的"簇"更可能来自同一基因内的多次突变或比对假象，真正的 kataegis 分析需要 WGS。）
@@ -570,24 +570,24 @@ frank(c(5, 1, 3, 3), ties.method = "min")
 把突变按位置分配到**区间**——不用 `foverlaps()`，直接写不等式：
 
 ```{r}
-bins <- data.table(Chromosome = "17", bin_start = seq(7.57e6, 7.59e6, by = 5e3))
-bins[, bin_end := bin_start + 5e3 - 1]
-maf[Hugo_Symbol == "TP53"][bins, on = .(Chromosome, Start_Position >= bin_start, Start_Position <= bin_end),
+bins <- data.table(Chromosome = "17", bin_start = seq(7.57e6, 7.59e6, by = 5e3))  # TP53 附近的 5 kb bin
+bins[, bin_end := bin_start + 5e3 - 1]  # bin 终点
+maf[Hugo_Symbol == "TP53"][bins, on = .(Chromosome, Start_Position >= bin_start, Start_Position <= bin_end),  # 非等值连接：每个 bin 内的突变数
                            .(n = .N), by = .EACHI]
 ```
 
 `CJ()`（cross join）生成所有组合，相当于 `tidyr::complete()` 的基础——把"隐式缺失"补成 0：
 
 ```{r}
-top_genes <- c("TP53", "KRAS", "EGFR")
-samples5 <- unique(maf$Tumor_Sample_Barcode)[1:5]
-obs <- maf[Hugo_Symbol %in% top_genes & Tumor_Sample_Barcode %in% samples5, .N,
+top_genes <- c("TP53", "KRAS", "EGFR")  # 三个基因
+samples5 <- unique(maf$Tumor_Sample_Barcode)[1:5]  # 五个样本
+obs <- maf[Hugo_Symbol %in% top_genes & Tumor_Sample_Barcode %in% samples5, .N,  # 实际观测到的 样本×基因 突变数
            by = .(Tumor_Sample_Barcode, Hugo_Symbol)]
 obs                                                   # 只有发生了突变的组合
-full <- obs[CJ(Tumor_Sample_Barcode = samples5, Hugo_Symbol = top_genes),
+full <- obs[CJ(Tumor_Sample_Barcode = samples5, Hugo_Symbol = top_genes),  # CJ 生成全部组合后连接
             on = .(Tumor_Sample_Barcode, Hugo_Symbol)]
-full[is.na(N), N := 0L][]
-dcast(full, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "N")
+full[is.na(N), N := 0L][]  # 未观测到的组合填 0
+dcast(full, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "N")  # 转成 样本×基因 宽表
 ```
 
 ### `rbindlist()`：合并列不一致的表
@@ -595,15 +595,15 @@ dcast(full, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "N")
 真实项目中，多批次的 MAF / 样本表**列不完全相同**。`rbindlist(fill = TRUE)` 按列名对齐，缺的列填 `NA`：
 
 ```{r}
-batch1 <- maf[1:3, .(Hugo_Symbol, Tumor_Sample_Barcode, vaf)]
+batch1 <- maf[1:3, .(Hugo_Symbol, Tumor_Sample_Barcode, vaf)]  # 第一批
 batch2 <- maf[4:5, .(Hugo_Symbol, Tumor_Sample_Barcode, t_alt_count)]   # 列不同
-rbindlist(list(b1 = batch1, b2 = batch2), fill = TRUE, idcol = "batch")
+rbindlist(list(b1 = batch1, b2 = batch2), fill = TRUE, idcol = "batch")  # 按列名合并，缺的列填 NA，并加批次列
 ```
 
 ### 小计与总计：`rollup()` / `cube()` / `groupingsets()`
 
 ```{r}
-rollup(maf[Hugo_Symbol %in% c("KRAS", "EGFR")], j = .(n = .N),
+rollup(maf[Hugo_Symbol %in% c("KRAS", "EGFR")], j = .(n = .N),  # 分组小计与总计
        by = c("Hugo_Symbol", "Variant_Classification"))
 ```
 
@@ -626,44 +626,44 @@ rollup(maf[Hugo_Symbol %in% c("KRAS", "EGFR")], j = .(n = .N),
 同一任务——每个变异类型的深度与 VAF 中位数——三种写法：
 
 ```{r}
-cols <- c("t_ref_count", "t_alt_count", "vaf")
-aggregate(maf_df[cols[1:2]], by = list(type = maf_df$Variant_Type), FUN = median)
-maf_tbl |> mutate(vaf = t_alt_count / (t_alt_count + t_ref_count)) |>
-  summarise(across(all_of(cols), median), .by = Variant_Type)
-maf[, lapply(.SD, median), by = Variant_Type, .SDcols = cols]
+cols <- c("t_ref_count", "t_alt_count", "vaf")  # 要汇总的列
+aggregate(maf_df[cols[1:2]], by = list(type = maf_df$Variant_Type), FUN = median)  # base 版：按变异类型取中位数
+maf_tbl |> mutate(vaf = t_alt_count / (t_alt_count + t_ref_count)) |>  # dplyr 版
+  summarise(across(all_of(cols), median), .by = Variant_Type)  # across 对多列取中位数
+maf[, lapply(.SD, median), by = Variant_Type, .SDcols = cols]  # data.table 版
 ```
 
 对多列原地变换（data.table 中用括号 `(cols)` 表示"列名来自变量"）：
 
 ```{r}
-dt_copy <- copy(maf)[, .SD, .SDcols = c("Hugo_Symbol", cols)]
-dt_copy[, (cols) := lapply(.SD, \(x) round(x, 2)), .SDcols = cols]
-dt_copy[1:3]
+dt_copy <- copy(maf)[, .SD, .SDcols = c("Hugo_Symbol", cols)]  # 复制后只保留需要的列
+dt_copy[, (cols) := lapply(.SD, \(x) round(x, 2)), .SDcols = cols]  # 对多列原地取整
+dt_copy[1:3]  # 前 3 行
 ```
 
 ## dtplyr：写 dplyr，跑 data.table
 
 ```{r}
-library(dtplyr)
-lz <- lazy_dt(maf)
-q <- lz |>
-  filter(Variant_Type == "SNP") |>
-  summarise(n_samples = n_distinct(Tumor_Sample_Barcode), .by = Hugo_Symbol) |>
-  arrange(desc(n_samples))
+library(dtplyr)  # dplyr 语法翻译成 data.table 执行
+lz <- lazy_dt(maf)  # 包装成惰性 data.table
+q <- lz |>  # 写 dplyr 管道（尚未执行）
+  filter(Variant_Type == "SNP") |>  # 只要 SNP
+  summarise(n_samples = n_distinct(Tumor_Sample_Barcode), .by = Hugo_Symbol) |>  # 每个基因的突变样本数
+  arrange(desc(n_samples))  # 降序
 show_query(q)            # 查看翻译出的 data.table 代码 —— 学习 data.table 的好工具
-as_tibble(q) |> head(3)
+as_tibble(q) |> head(3)  # 执行并取前 3 行
 ```
 
 ## collapse：快速分组统计
 
 ```{r}
-library(collapse)
-maf |>
-  fgroup_by(Variant_Type) |>
-  fsummarise(n = fnobs(vaf), mean_vaf = fmean(vaf), median_alt = fmedian(t_alt_count))
+library(collapse)  # 高速分组统计（C/C++ 实现）
+maf |>  # collapse 版分组汇总
+  fgroup_by(Variant_Type) |>  # 按变异类型分组
+  fsummarise(n = fnobs(vaf), mean_vaf = fmean(vaf), median_alt = fmedian(t_alt_count))  # 非缺失数、均值、中位数
 
 # 向量化的分组函数也可以单独使用：fmean(x, g)、fsum(x, g)、fnth(x, 0.9, g)……
-fmedian(maf$vaf, maf$Variant_Classification) |> head(4)
+fmedian(maf$vaf, maf$Variant_Classification) |> head(4)  # 分组中位数的向量化写法
 ```
 
 ## arrow：列式存储与大于内存的数据
@@ -671,20 +671,20 @@ fmedian(maf$vaf, maf$Variant_Classification) |> head(4)
 Parquet 是列式、压缩、带模式（schema）的文件格式，读取部分列时只读需要的字节。 arrow 允许把**一个目录里的多个 Parquet 文件**当作一张表，用 dplyr 动词查询， 只在 `collect()` 时把结果拉入内存。
 
 ```{r}
-library(arrow)
-pq_dir <- file.path(DATA_DIR, "luad_maf_parquet")
+library(arrow)  # Apache Arrow：Parquet 读写与内存外数据查询
+pq_dir <- file.path(DATA_DIR, "luad_maf_parquet")  # Parquet 输出目录
 write_dataset(maf, pq_dir, format = "parquet", partitioning = "Chromosome")  # 按染色体分区
-list.files(pq_dir)[1:5]
+list.files(pq_dir)[1:5]  # 查看分区目录
 
-ds <- open_dataset(pq_dir)
-ds
+ds <- open_dataset(pq_dir)  # 打开数据集（不读入内存）
+ds  # 打印结构
 
-ds |>
-  filter(Hugo_Symbol %in% c("TP53", "KRAS", "EGFR")) |>
-  group_by(Hugo_Symbol, Variant_Classification) |>
-  summarise(n = n(), mean_vaf = mean(vaf, na.rm = TRUE)) |>
-  arrange(Hugo_Symbol, desc(n)) |>
-  collect()
+ds |>  # dplyr 查询在 Arrow 中执行
+  filter(Hugo_Symbol %in% c("TP53", "KRAS", "EGFR")) |>  # 只看 3 个基因
+  group_by(Hugo_Symbol, Variant_Classification) |>  # 分组
+  summarise(n = n(), mean_vaf = mean(vaf, na.rm = TRUE)) |>  # 计数与平均 VAF
+  arrange(Hugo_Symbol, desc(n)) |>  # 排序
+  collect()  # 此时才真正计算并读回 R
 ```
 
 分区意味着 `filter(Chromosome == "12")` 时 arrow **只打开**12 号染色体的文件。 对于单细胞元数据、GWAS summary statistics、多项目 MAF 汇总这类"几十 GB 的长表"， 这是在笔记本上完成分析的关键。
@@ -694,9 +694,9 @@ ds |>
 duckdb 无需服务器，进程内运行，列式向量化执行，对分析型 SQL 极快。
 
 ```{r}
-library(DBI)
-library(duckdb)
-con <- dbConnect(duckdb())
+library(DBI)  # R 的统一数据库接口
+library(duckdb)  # 嵌入式分析型数据库（SQL 引擎）
+con <- dbConnect(duckdb())  # 连接内存中的 DuckDB
 
 duckdb_register(con, "maf", maf)        # 零拷贝注册内存中的表
 
@@ -721,13 +721,13 @@ dbGetQuery(con, sprintf("
 用 dbplyr，可以对数据库表写 dplyr，由它翻译成 SQL：
 
 ```{r}
-tbl(con, "maf") |>
-  filter(Variant_Classification == "Missense_Mutation") |>
-  summarise(n = n(), .by = Hugo_Symbol) |>
-  slice_max(n, n = 3) |>
-  show_query()
+tbl(con, "maf") |>  # dplyr 语法查询数据库表
+  filter(Variant_Classification == "Missense_Mutation") |>  # 只要错义突变
+  summarise(n = n(), .by = Hugo_Symbol) |>  # 每个基因计数
+  slice_max(n, n = 3) |>  # 取前 3
+  show_query()  # 查看翻译出的 SQL
 
-dbDisconnect(con, shutdown = TRUE)
+dbDisconnect(con, shutdown = TRUE)  # 断开并关闭数据库
 ```
 
 ::: callout-tip
@@ -741,16 +741,16 @@ tidyverse 团队的 `duckplyr` 包让普通数据框**透明地**用 duckdb 执�
 把 airway 的长表扩大到约 500 万行，比较分组汇总速度：
 
 ```{r}
-library(airway)
-data(airway, package = "airway")
-long <- as.data.table(SummarizedExperiment::assay(airway), keep.rownames = "gene") |>
-  melt(id.vars = "gene", variable.name = "run", value.name = "count")
-big <- rbindlist(replicate(10, long, simplify = FALSE), idcol = "rep")
-big[, run := paste0(run, "_", rep)]
-dim(big)
-big_tbl <- as_tibble(big); big_df <- as.data.frame(big)
+library(airway)  # 示例数据包：气道平滑肌细胞 ± 地塞米松
+data(airway, package = "airway")  # 载入 airway 对象
+long <- as.data.table(SummarizedExperiment::assay(airway), keep.rownames = "gene") |>  # 计数矩阵转长表
+  melt(id.vars = "gene", variable.name = "run", value.name = "count")  # 宽转长
+big <- rbindlist(replicate(10, long, simplify = FALSE), idcol = "rep")  # 复制 10 份做基准测试
+big[, run := paste0(run, "_", rep)]  # 让 run 名唯一
+dim(big)  # 行数 × 列数
+big_tbl <- as_tibble(big); big_df <- as.data.frame(big)  # tibble 与 data.frame 两个版本
 
-bench::mark(
+bench::mark(  # 四种实现的分组均值速度对比
   base       = tapply(big_df$count, big_df$gene, mean),
   dplyr      = summarise(big_tbl, m = mean(count), .by = gene),
   data.table = big[, .(m = mean(count)), by = gene],

@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -50,18 +50,18 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(SingleCellExperiment)
-library(scuttle)
-library(scran)
-library(scater)
-library(bluster)
-library(slingshot)
-library(TSCAN)
-library(scRNAseq)
-library(AnnotationDbi)
-library(org.Mm.eg.db)
-library(patchwork)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(SingleCellExperiment)  # Bioconductor 的单细胞数据容器（SCE）
+library(scuttle)  # 单细胞 QC 与归一化工具：addPerCellQCMetrics 等
+library(scran)  # 单细胞统计方法：去卷积归一化、高变基因、marker
+library(scater)  # 单细胞可视化与降维：runUMAP、plotReducedDim 等
+library(bluster)  # 聚类参数与评估：NNGraphParam、pairwiseRand 等
+library(slingshot)  # 基于主曲线的轨迹推断与伪时间
+library(TSCAN)  # 基于簇间最小生成树的轨迹推断
+library(scRNAseq)  # Bioconductor 单细胞公开数据集
+library(AnnotationDbi)  # 注释数据库的统一查询接口（mapIds）
+library(org.Mm.eg.db)  # 小鼠基因 ID 对照库（ENSEMBL/ENTREZ/SYMBOL）
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
 ```
 
 ## 为什么还要学 Bioconductor 流程
@@ -98,12 +98,12 @@ SingleCellExperiment
 造血干细胞（HSC）→ 多能祖细胞（MPP）→ 分叉为红系/巨核系（MEP）、髓系（GMP）、淋系（LMPP）。
 
 ```{r}
-sce <- NestorowaHSCData()
-sce
-altExpNames(sce)
-altExp(sce, "FACS")
-table(sce$gate)
-table(sce$broad, useNA = "ifany")
+sce <- NestorowaHSCData()  # Nestorowa 2016 小鼠造血干/祖细胞 Smart-seq2 数据
+sce  # 打印概况
+altExpNames(sce)  # 附加实验：ERCC 与 FACS
+altExp(sce, "FACS")  # FACS 表面蛋白强度
+table(sce$gate)  # 各分选门的细胞数
+table(sce$broad, useNA = "ifany")  # 作者的粗粒度注释
 ```
 
 ::: callout-warning
@@ -120,17 +120,17 @@ table(sce$broad, useNA = "ifany")
 行名是 Ensembl ID；用 org.Mm.eg.db 映射 symbol，`uniquifyFeatureNames()` 在缺失或重复时回退到 Ensembl ID：
 
 ```{r}
-symbol <- mapIds(org.Mm.eg.db, keys = rownames(sce), keytype = "ENSEMBL", column = "SYMBOL")
-rowData(sce)$ensembl <- rownames(sce)
-rowData(sce)$symbol  <- symbol
-rownames(sce) <- uniquifyFeatureNames(rownames(sce), symbol)
-head(rownames(sce))
+symbol <- mapIds(org.Mm.eg.db, keys = rownames(sce), keytype = "ENSEMBL", column = "SYMBOL")  # Ensembl → symbol
+rowData(sce)$ensembl <- rownames(sce)  # 保存原始 Ensembl ID
+rowData(sce)$symbol  <- symbol  # 保存 symbol
+rownames(sce) <- uniquifyFeatureNames(rownames(sce), symbol)  # 行名换成 symbol，缺失或重复时退回 ID
+head(rownames(sce))  # 前几个行名
 ```
 
 映射的损失与重复：
 
 ```{r}
-c(genes = length(symbol), no_symbol = sum(is.na(symbol)),
+c(genes = length(symbol), no_symbol = sum(is.na(symbol)),  # 无 symbol 与重复 symbol 的个数
   dup_symbol = sum(duplicated(symbol[!is.na(symbol)])))
 grepl("^ENSMUSG", rownames(sce)) |> sum()      # 回退为 Ensembl ID 的行
 ```
@@ -144,8 +144,8 @@ grepl("^ENSMUSG", rownames(sce)) |> sum()      # 回退为 Ensembl ID 的行
 可以作为独立于 RNA 的验证。但这张表有缺失：
 
 ```{r}
-facs <- t(assay(altExp(sce, "FACS")))
-dim(facs)
+facs <- t(assay(altExp(sce, "FACS")))  # FACS 矩阵：细胞 × 标记
+dim(facs)  # 维度
 colSums(is.na(facs))                                     # 每个标记缺失多少
 table(n_missing = rowSums(is.na(facs)), gate = sce$gate) # 缺失的模式：全有或全无，且与分选门相关
 ```
@@ -158,43 +158,43 @@ table(n_missing = rowSums(is.na(facs)), gate = sce$gate) # 缺失的模式：全
 
 ```{r}
 #| fig-height: 3.5
-tibble(gate = sce$gate, has_facs = !is.na(facs[, "CD34"]), broad = sce$broad) |>
-  dplyr::count(broad, has_facs) |>
-  ggplot(aes(n, broad, fill = has_facs)) + geom_col() +
-  scale_fill_manual(values = c(`TRUE` = "steelblue", `FALSE` = "grey70")) +
-  labs(x = "细胞数", y = "作者注释 (broad)", fill = "有 FACS 数据")
+tibble(gate = sce$gate, has_facs = !is.na(facs[, "CD34"]), broad = sce$broad) |>  # 各注释类别中有无 FACS 数据
+  dplyr::count(broad, has_facs) |>  # 计数
+  ggplot(aes(n, broad, fill = has_facs)) + geom_col() +  # 横向柱状图
+  scale_fill_manual(values = c(`TRUE` = "steelblue", `FALSE` = "grey70")) +  # 颜色
+  labs(x = "细胞数", y = "作者注释 (broad)", fill = "有 FACS 数据")  # 标签
 ```
 
 ## 质控
 
 ```{r}
-is_mito <- grepl("^mt-", rownames(sce))
-sum(is_mito)
+is_mito <- grepl("^mt-", rownames(sce))  # 线粒体基因
+sum(is_mito)  # 个数
 
-sce <- addPerCellQCMetrics(sce, subsets = list(Mito = is_mito))
-colnames(colData(sce)) |> tail(12)
+sce <- addPerCellQCMetrics(sce, subsets = list(Mito = is_mito))  # 每个细胞的 QC 指标
+colnames(colData(sce)) |> tail(12)  # 新增的列
 ```
 
 `altexps_ERCC_percent` 是 spike-in 占比：细胞内源 RNA 越少（细胞破损或体积小），ERCC 占比越高。
 
 ```{r}
-qc <- perCellQCFilters(colData(sce), sub.fields = c("subsets_Mito_percent", "altexps_ERCC_percent"))
-colSums(as.matrix(qc))
+qc <- perCellQCFilters(colData(sce), sub.fields = c("subsets_Mito_percent", "altexps_ERCC_percent"))  # 按总计数、检出数、线粒体比例、ERCC 比例找离群
+colSums(as.matrix(qc))  # 每项过滤掉的细胞数
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-sce$discard <- qc$discard
-plotColData(sce, x = "gate", y = "sum", colour_by = "discard") + scale_y_log10() + ggtitle("总计数") |
+sce$discard <- qc$discard  # 标记要丢弃的细胞
+plotColData(sce, x = "gate", y = "sum", colour_by = "discard") + scale_y_log10() + ggtitle("总计数") |  # 三个 QC 指标按分选门的分布
   plotColData(sce, x = "gate", y = "detected", colour_by = "discard") + ggtitle("检出基因数") |
   plotColData(sce, x = "gate", y = "altexps_ERCC_percent", colour_by = "discard") + ggtitle("ERCC %")
 ```
 
 ```{r}
-sce <- sce[, !sce$discard]
-sce <- sce[rowSums(counts(sce) > 0) >= 5, ]
-dim(sce)
+sce <- sce[, !sce$discard]  # 去掉低质量细胞
+sce <- sce[rowSums(counts(sce) > 0) >= 5, ]  # ≥ 5 个细胞中检出的基因
+dim(sce)  # 维度
 ```
 
 ## 归一化：去卷积（deconvolution）
@@ -208,21 +208,21 @@ dim(sce)
 先粗聚类（`quickCluster`）以免在差异很大的细胞间池化：
 
 ```{r}
-set.seed(100)
-clust <- quickCluster(sce)
-sce <- computeSumFactors(sce, clusters = clust)
-summary(sizeFactors(sce))
+set.seed(100)  # 固定随机种子
+clust <- quickCluster(sce)  # 预聚类（去卷积需要）
+sce <- computeSumFactors(sce, clusters = clust)  # 按簇池化的去卷积 size factor
+summary(sizeFactors(sce))  # 分布概况
 
-tibble(libsize = librarySizeFactors(sce), deconv = sizeFactors(sce), cluster = clust) |>
-  ggplot(aes(libsize, deconv, colour = cluster)) +
-  geom_point(size = 0.8) + geom_abline(linetype = "dashed") +
-  scale_x_log10() + scale_y_log10() +
-  labs(title = "去卷积因子 vs 文库大小因子", subtitle = "偏离对角线 = 组成偏差")
+tibble(libsize = librarySizeFactors(sce), deconv = sizeFactors(sce), cluster = clust) |>  # 去卷积因子 vs 文库大小因子
+  ggplot(aes(libsize, deconv, colour = cluster)) +  # 坐标
+  geom_point(size = 0.8) + geom_abline(linetype = "dashed") +  # 点 + 对角线
+  scale_x_log10() + scale_y_log10() +  # 双对数坐标
+  labs(title = "去卷积因子 vs 文库大小因子", subtitle = "偏离对角线 = 组成偏差")  # 标签
 ```
 
 ```{r}
 sce <- logNormCounts(sce)        # 生成 logcounts = log2(count / sizeFactor + 1)
-assayNames(sce)
+assayNames(sce)  # 现有 assay
 ```
 
 ::: callout-note
@@ -238,25 +238,25 @@ ERCC 只经历技术噪声（无生物学变异），它们的均值–方差关
 内源基因的方差超出基线的部分就是**生物学变异**。
 
 ```{r}
-dec <- modelGeneVarWithSpikes(sce, "ERCC")
-dec[order(dec$bio, decreasing = TRUE), ][1:8, c("mean", "total", "tech", "bio", "FDR")]
+dec <- modelGeneVarWithSpikes(sce, "ERCC")  # 用 ERCC 拟合技术噪声，分解生物学方差
+dec[order(dec$bio, decreasing = TRUE), ][1:8, c("mean", "total", "tech", "bio", "FDR")]  # 生物学方差最大的 8 个基因
 ```
 
 ```{r}
-fit_spike <- metadata(dec)
-tibble(mean = dec$mean, total = dec$total) |>
-  ggplot(aes(mean, total)) +
-  geom_point(size = 0.4, alpha = 0.4) +
-  geom_point(data = tibble(mean = fit_spike$mean, var = fit_spike$var), aes(mean, var),
+fit_spike <- metadata(dec)  # 拟合信息
+tibble(mean = dec$mean, total = dec$total) |>  # 均值–方差图
+  ggplot(aes(mean, total)) +  # 坐标
+  geom_point(size = 0.4, alpha = 0.4) +  # 所有基因
+  geom_point(data = tibble(mean = fit_spike$mean, var = fit_spike$var), aes(mean, var),  # ERCC 点
              colour = "red", size = 1.5) +
-  geom_function(fun = fit_spike$trend, colour = "dodgerblue", linewidth = 1) +
-  labs(x = "Mean log-expression", y = "Variance", title = "红点：ERCC；蓝线：技术噪声趋势")
+  geom_function(fun = fit_spike$trend, colour = "dodgerblue", linewidth = 1) +  # 技术噪声趋势
+  labs(x = "Mean log-expression", y = "Variance", title = "红点：ERCC；蓝线：技术噪声趋势")  # 标签
 ```
 
 ```{r}
-hvg <- getTopHVGs(dec, prop = 0.1)
-length(hvg)
-head(hvg, 20)
+hvg <- getTopHVGs(dec, prop = 0.1)  # 取生物学方差最高的 10% 基因
+length(hvg)  # 个数
+head(hvg, 20)  # 前 20 个
 ```
 
 ## 降维
@@ -264,16 +264,16 @@ head(hvg, 20)
 `denoisePCA()` 利用技术噪声估计，自动保留"生物学方差之和"所需的 PC 数，丢弃主要反映技术噪声的 PC：
 
 ```{r}
-set.seed(101)
-sce <- denoisePCA(sce, technical = dec, subset.row = hvg)
-ncol(reducedDim(sce, "PCA"))
+set.seed(101)  # 固定随机种子
+sce <- denoisePCA(sce, technical = dec, subset.row = hvg)  # 按技术噪声自动决定保留的 PC 数
+ncol(reducedDim(sce, "PCA"))  # 保留的 PC 数
 ```
 
 ```{r}
-set.seed(102)
-sce <- runUMAP(sce, dimred = "PCA")
-sce <- runTSNE(sce, dimred = "PCA", perplexity = 30)
-reducedDimNames(sce)
+set.seed(102)  # 固定随机种子
+sce <- runUMAP(sce, dimred = "PCA")  # UMAP
+sce <- runTSNE(sce, dimred = "PCA", perplexity = 30)  # t-SNE
+reducedDimNames(sce)  # 现有降维
 ```
 
 ## 聚类：bluster
@@ -281,19 +281,19 @@ reducedDimNames(sce)
 bluster 把"聚类算法"与"参数"抽象为 `BlusterParam` 对象，同一接口切换方法：
 
 ```{r}
-set.seed(103)
-sce$cluster <- clusterCells(sce, use.dimred = "PCA",
+set.seed(103)  # 固定随机种子
+sce$cluster <- clusterCells(sce, use.dimred = "PCA",  # 基于 SNN 图的 Louvain 聚类
                             BLUSPARAM = NNGraphParam(k = 15, type = "jaccard", cluster.fun = "louvain"))
-table(sce$cluster)
+table(sce$cluster)  # 各簇细胞数
 
-km <- clusterCells(sce, use.dimred = "PCA", BLUSPARAM = KmeansParam(centers = 8))
+km <- clusterCells(sce, use.dimred = "PCA", BLUSPARAM = KmeansParam(centers = 8))  # k-means 聚类（对比用）
 pairwiseRand(sce$cluster, km, mode = "index")       # 两种聚类的一致性（调整兰德指数）
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4.5
-plotReducedDim(sce, "UMAP", colour_by = "cluster", text_by = "cluster") + ggtitle("Louvain") |
+plotReducedDim(sce, "UMAP", colour_by = "cluster", text_by = "cluster") + ggtitle("Louvain") |  # 聚类与作者注释并排
   plotReducedDim(sce, "UMAP", colour_by = "broad") + ggtitle("作者注释 (broad)")
 ```
 
@@ -302,10 +302,10 @@ FACS 表面标记也可以直接画在 UMAP 上（来自 `altExp`）：
 ```{r}
 #| fig-width: 11
 #| fig-height: 3.5
-facs <- t(assay(altExp(sce, "FACS")))
-head(facs, 3)
-emb <- reducedDim(sce, "UMAP")
-map(c("cKit", "Sca1", "CD34", "Flk2"), \(m) {
+facs <- t(assay(altExp(sce, "FACS")))  # QC 后的 FACS 矩阵
+head(facs, 3)  # 前 3 行
+emb <- reducedDim(sce, "UMAP")  # UMAP 坐标
+map(c("cKit", "Sca1", "CD34", "Flk2"), \(m) {  # 4 个表面标记在 UMAP 上的强度
   if (!m %in% colnames(facs)) return(NULL)
   tibble(x = emb[, 1], y = emb[, 2], v = facs[, m]) |>
     ggplot(aes(x, y, colour = v)) + geom_point(size = 0.5) +
@@ -319,23 +319,23 @@ map(c("cKit", "Sca1", "CD34", "Flk2"), \(m) {
 检出比例差（logFC.detected），然后跨对比汇总（mean / min / median / max / rank）。
 
 ```{r}
-mk <- scoreMarkers(sce, groups = sce$cluster)
-names(mk)
+mk <- scoreMarkers(sce, groups = sce$cluster)  # 每个簇的 marker 打分（AUC、Cohen's d 等）
+names(mk)  # 簇名
 
-top_markers <- map(mk, \(df) {
+top_markers <- map(mk, \(df) {  # 每簇 AUC 最高的 3 个基因
   df |> as_tibble(rownames = "gene") |>
     slice_max(mean.AUC, n = 3) |>
     dplyr::select(gene, mean.AUC, mean.logFC.cohen)
 }) |> list_rbind(names_to = "cluster")
-top_markers
+top_markers  # 打印
 ```
 
 `min.AUC` 高的基因在**所有**两两比较中都上调（最严格）；`mean.AUC` 用于一般排序。
 
 ```{r}
 #| fig-height: 5
-plotDots(sce, features = unique(top_markers$gene), group = "cluster") +
-  scale_colour_viridis_c() + coord_flip()
+plotDots(sce, features = unique(top_markers$gene), group = "cluster") +  # marker 点图
+  scale_colour_viridis_c() + coord_flip()  # 颜色并转置
 ```
 
 用已知造血 marker 帮助解读：
@@ -348,9 +348,9 @@ known <- c("Procr", "Hlf", "Mecom",          # HSC
            "Mpo", "Elane", "Ctsg",            # 粒系 GMP
            "Car1", "Klf1", "Gata1",           # 红系 MEP
            "Pf4", "Itga2b")                   # 巨核
-known <- intersect(known, rownames(sce))
-plotExpression(sce, features = known, x = "cluster", colour_by = "cluster", ncol = 5) +
-  theme(legend.position = "none")
+known <- intersect(known, rownames(sce))  # 只保留数据中存在的
+plotExpression(sce, features = known, x = "cluster", colour_by = "cluster", ncol = 5) +  # 已知谱系 marker 按簇的表达
+  theme(legend.position = "none")  # 不显示图例
 ```
 
 ## 轨迹推断
@@ -376,46 +376,46 @@ plotExpression(sce, features = known, x = "cluster", colour_by = "cluster", ncol
 用 HSC 标记的平均表达确定起始簇：
 
 ```{r}
-hsc_genes <- intersect(c("Procr", "Hlf", "Mecom", "Mllt3", "Hoxb5"), rownames(sce))
-hsc_score <- colMeans(logcounts(sce)[hsc_genes, , drop = FALSE])
-root <- names(which.max(tapply(hsc_score, sce$cluster, mean)))
-root
-tapply(hsc_score, sce$cluster, mean) |> round(2)
+hsc_genes <- intersect(c("Procr", "Hlf", "Mecom", "Mllt3", "Hoxb5"), rownames(sce))  # HSC 标记基因
+hsc_score <- colMeans(logcounts(sce)[hsc_genes, , drop = FALSE])  # 每个细胞的 HSC 得分
+root <- names(which.max(tapply(hsc_score, sce$cluster, mean)))  # HSC 得分最高的簇作为起点
+root  # 打印
+tapply(hsc_score, sce$cluster, mean) |> round(2)  # 各簇的 HSC 得分
 ```
 
 ### slingshot
 
 ```{r}
-set.seed(104)
-sce <- slingshot(sce, clusterLabels = "cluster", reducedDim = "PCA", start.clus = root)
-sds <- SlingshotDataSet(sce)
-slingLineages(sds)
+set.seed(104)  # 固定随机种子
+sce <- slingshot(sce, clusterLabels = "cluster", reducedDim = "PCA", start.clus = root)  # slingshot：基于簇构建谱系并拟合主曲线
+sds <- SlingshotDataSet(sce)  # 取出 slingshot 结果
+slingLineages(sds)  # 每条谱系经过的簇
 ```
 
 每条谱系是一条从起始簇出发、经过若干簇的路径。每个细胞对每条谱系都有一个伪时间（不属于该谱系的为 NA）。
 
 ```{r}
-pt <- slingPseudotime(sce)
-head(pt)
-sce$pseudotime_mean <- rowMeans(pt, na.rm = TRUE)
+pt <- slingPseudotime(sce)  # 每个细胞在各谱系上的伪时间
+head(pt)  # 前几行
+sce$pseudotime_mean <- rowMeans(pt, na.rm = TRUE)  # 各谱系伪时间的平均
 ```
 
 把主曲线投影到 UMAP 上展示：
 
 ```{r}
 #| fig-height: 5.5
-emb_curves <- embedCurves(sce, "UMAP")
-curve_df <- map(seq_along(slingCurves(emb_curves)), \(i) {
+emb_curves <- embedCurves(sce, "UMAP")  # 主曲线投影到 UMAP
+curve_df <- map(seq_along(slingCurves(emb_curves)), \(i) {  # 曲线坐标整理成长表
   crv <- slingCurves(emb_curves)[[i]]
   as_tibble(crv$s[crv$ord, ], .name_repair = ~ c("x", "y")) |> mutate(lineage = paste0("Lineage", i))
 }) |> list_rbind()
 
-tibble(x = emb[colnames(sce), 1], y = emb[colnames(sce), 2], pt = sce$pseudotime_mean) |>
-  ggplot(aes(x, y)) +
-  geom_point(aes(colour = pt), size = 0.6) +
-  geom_path(data = curve_df, aes(group = lineage, linetype = lineage), linewidth = 1) +
-  scale_colour_viridis_c(name = "pseudotime") +
-  labs(x = "UMAP1", y = "UMAP2", title = "slingshot 谱系") + theme_classic()
+tibble(x = emb[colnames(sce), 1], y = emb[colnames(sce), 2], pt = sce$pseudotime_mean) |>  # UMAP 上的伪时间与谱系曲线
+  ggplot(aes(x, y)) +  # 坐标
+  geom_point(aes(colour = pt), size = 0.6) +  # 细胞按伪时间着色
+  geom_path(data = curve_df, aes(group = lineage, linetype = lineage), linewidth = 1) +  # 谱系曲线
+  scale_colour_viridis_c(name = "pseudotime") +  # 颜色
+  labs(x = "UMAP1", y = "UMAP2", title = "slingshot 谱系") + theme_classic()  # 标签与主题
 ```
 
 （注意：曲线是在 PCA 空间中拟合，再嵌入 UMAP 展示；UMAP 中看起来弯曲是正常的。）
@@ -426,35 +426,35 @@ tibble(x = emb[colnames(sce), 1], y = emb[colnames(sce), 2], pt = sce$pseudotime
 样条回归，检验伪时间效应：
 
 ```{r}
-lin_genes <- map(seq_len(ncol(pt)), \(i) {
+lin_genes <- map(seq_len(ncol(pt)), \(i) {  # 每条谱系分别检验随伪时间变化的基因
   keep <- !is.na(pt[, i])
   res <- testPseudotime(sce[, keep], pseudotime = pt[keep, i])
   res$gene <- rownames(res)
   as_tibble(res) |> mutate(lineage = colnames(pt)[i])
 }) |> list_rbind()
 
-lin_genes |>
-  dplyr::filter(FDR < 0.05) |>
-  slice_max(abs(logFC), n = 6, by = lineage) |>
-  dplyr::select(lineage, gene, logFC, FDR)
+lin_genes |>  # 每条谱系效应最大的 6 个显著基因
+  dplyr::filter(FDR < 0.05) |>  # 显著的
+  slice_max(abs(logFC), n = 6, by = lineage) |>  # 按谱系取前 6
+  dplyr::select(lineage, gene, logFC, FDR)  # 关键列
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 5
-show_genes <- intersect(c("Procr", "Mpo", "Car1", "Klf1", "Elane", "Dntt"), rownames(sce))
-map(seq_len(ncol(pt)), \(i) {
+show_genes <- intersect(c("Procr", "Mpo", "Car1", "Klf1", "Elane", "Dntt"), rownames(sce))  # 要展示的基因
+map(seq_len(ncol(pt)), \(i) {  # 每条谱系的表达随伪时间变化
   keep <- !is.na(pt[, i])
   as_tibble(t(as.matrix(logcounts(sce)[show_genes, keep]))) |>
     mutate(pseudotime = pt[keep, i], lineage = colnames(pt)[i])
 }) |>
-  list_rbind() |>
-  pivot_longer(all_of(show_genes), names_to = "gene", values_to = "expr") |>
-  ggplot(aes(pseudotime, expr, colour = lineage)) +
-  geom_point(size = 0.2, alpha = 0.2) +
-  geom_smooth(se = FALSE, method = "gam", formula = y ~ s(x, k = 5)) +
-  facet_wrap(~ gene, scales = "free_y", nrow = 2) +
-  labs(title = "基因表达随伪时间的变化")
+  list_rbind() |>  # 合并
+  pivot_longer(all_of(show_genes), names_to = "gene", values_to = "expr") |>  # 转长表
+  ggplot(aes(pseudotime, expr, colour = lineage)) +  # 坐标
+  geom_point(size = 0.2, alpha = 0.2) +  # 点
+  geom_smooth(se = FALSE, method = "gam", formula = y ~ s(x, k = 5)) +  # GAM 平滑曲线
+  facet_wrap(~ gene, scales = "free_y", nrow = 2) +  # 每个基因一个分面
+  labs(title = "基因表达随伪时间的变化")  # 标题
 ```
 
 对照 `table(sce$cluster, sce$broad)` 与 `slingLineages(sds)` 来解读（以本书固定随机种子的结果为例）：
@@ -469,7 +469,7 @@ map(seq_len(ncol(pt)), \(i) {
 `end.clus =` 指定终点簇（练习 5）。
 
 ```{r}
-table(cluster = sce$cluster, broad = sce$broad)
+table(cluster = sce$cluster, broad = sce$broad)  # 聚类 × 作者注释
 ```
 
 ### 用 FACS 蛋白信号验证伪时间 {#sec-facs-validate}
@@ -479,23 +479,23 @@ EPCR⁺（由 *Procr* 编码）、CD150⁺、CD48⁻；离开干细胞状态时 
 只在有 FACS 数据的细胞上计算相关：
 
 ```{r}
-facs_kept <- facs[colnames(sce), ]
-ok <- !is.na(facs_kept[, "CD34"])
-sum(ok)
-cor_pt <- vapply(colnames(facs_kept)[-1], function(m)
+facs_kept <- facs[colnames(sce), ]  # QC 后细胞的 FACS
+ok <- !is.na(facs_kept[, "CD34"])  # 有 FACS 数据的细胞
+sum(ok)  # 个数
+cor_pt <- vapply(colnames(facs_kept)[-1], function(m)  # 每个表面标记与伪时间的 Spearman 相关
   cor(facs_kept[ok, m], sce$pseudotime_mean[ok], method = "spearman", use = "complete.obs"),
   numeric(1))
-sort(round(cor_pt, 2))
+sort(round(cor_pt, 2))  # 排序
 ```
 
 ```{r}
 #| fig-height: 3.5
-tibble(pseudotime = sce$pseudotime_mean[ok], as_tibble(facs_kept[ok, c("Sca1", "EPCR", "CD48", "CD34")])) |>
-  pivot_longer(-pseudotime, names_to = "marker", values_to = "intensity") |>
-  ggplot(aes(pseudotime, intensity)) +
-  geom_point(size = 0.3, alpha = 0.3) + geom_smooth(se = FALSE, colour = "firebrick") +
-  facet_wrap(~ marker, scales = "free_y", nrow = 1) +
-  labs(title = "FACS 表面蛋白强度沿 RNA 伪时间的变化")
+tibble(pseudotime = sce$pseudotime_mean[ok], as_tibble(facs_kept[ok, c("Sca1", "EPCR", "CD48", "CD34")])) |>  # 4 个标记强度沿伪时间的变化
+  pivot_longer(-pseudotime, names_to = "marker", values_to = "intensity") |>  # 转长表
+  ggplot(aes(pseudotime, intensity)) +  # 坐标
+  geom_point(size = 0.3, alpha = 0.3) + geom_smooth(se = FALSE, colour = "firebrick") +  # 点 + 平滑
+  facet_wrap(~ marker, scales = "free_y", nrow = 1) +  # 每个标记一个分面
+  labs(title = "FACS 表面蛋白强度沿 RNA 伪时间的变化")  # 标题
 ```
 
 Sca-1 与 EPCR 随伪时间明显下降（ρ ≈ −0.66、−0.46），CD48 上升——独立的蛋白数据支持了 RNA 推断的**方向**。
@@ -516,30 +516,30 @@ CD150 与伪时间几乎无关；CD34、CD16/32 则依赖谱系（CD16/32 在粒
 一个透明的近似：取每条谱系伪时间最后 15% 的细胞作为"终点细胞"，用 `scoreMarkers()` 比较：
 
 ```{r}
-ends <- map(seq_len(ncol(pt)), \(i) {
+ends <- map(seq_len(ncol(pt)), \(i) {  # 每条谱系伪时间前 15% 的细胞作为终点
   p <- pt[, i]
   thr <- quantile(p, 0.85, na.rm = TRUE)
   rownames(pt)[which(p >= thr)]
 }) |> set_names(colnames(pt))
-lengths(ends)
-shared <- Reduce(intersect, ends)
+lengths(ends)  # 各终点的细胞数
+shared <- Reduce(intersect, ends)  # 同时属于多个终点的细胞
 length(shared)                                    # 同时属于两个终点的细胞（应该很少）
-end_label <- rep(NA_character_, ncol(sce)); names(end_label) <- colnames(sce)
-for (l in names(ends)) end_label[setdiff(ends[[l]], shared)] <- l
-table(end_label, useNA = "ifany")
+end_label <- rep(NA_character_, ncol(sce)); names(end_label) <- colnames(sce)  # 终点标签向量
+for (l in names(ends)) end_label[setdiff(ends[[l]], shared)] <- l  # 只给唯一终点的细胞赋标签
+table(end_label, useNA = "ifany")  # 计数
 ```
 
 ```{r}
-keep_end <- !is.na(end_label)
-sm <- scoreMarkers(sce[, keep_end], groups = end_label[keep_end])
-lapply(sm, \(df) as_tibble(df, rownames = "gene") |>
+keep_end <- !is.na(end_label)  # 有终点标签的细胞
+sm <- scoreMarkers(sce[, keep_end], groups = end_label[keep_end])  # 终点之间的 marker
+lapply(sm, \(df) as_tibble(df, rownames = "gene") |>  # 每个终点前 8 个
          dplyr::select(gene, mean.AUC, mean.logFC.cohen) |> arrange(desc(mean.AUC)) |> head(8))
 ```
 
 用作者的 `broad` 注释检查每个终点主要是什么细胞：
 
 ```{r}
-table(end = end_label[keep_end], broad = sce$broad[keep_end], useNA = "ifany")
+table(end = end_label[keep_end], broad = sce$broad[keep_end], useNA = "ifany")  # 终点 × 作者注释
 ```
 
 - **Lineage1** 的终点几乎全是 MEP，标志基因 *Klf1*、*Epor*、*Rhag*、*Ermap* 都是红系基因，AUC 接近 1；
@@ -563,13 +563,13 @@ table(end = end_label[keep_end], broad = sce$broad[keep_end], useNA = "ifany")
 
 ```{r}
 # quickPseudotime：计算簇中心 → 构建 MST → 把细胞投影到 MST 的边上
-tscan_pt <- quickPseudotime(sce, use.dimred = "PCA", clusters = sce$cluster, start = root)
+tscan_pt <- quickPseudotime(sce, use.dimred = "PCA", clusters = sce$cluster, start = root)  # TSCAN：簇中心 MST 上的伪时间
 tscan_pt$mst                       # 簇之间的最小生成树（igraph 对象）
 tscan_pt$ordering                  # PseudotimeOrdering 对象：细胞 × 路径
-tscan_avg <- TrajectoryUtils::averagePseudotime(tscan_pt$ordering)
+tscan_avg <- TrajectoryUtils::averagePseudotime(tscan_pt$ordering)  # 各路径伪时间的平均
 
 # 与 slingshot 的（各谱系平均）伪时间一致吗？
-cor(tscan_avg, sce$pseudotime_mean, use = "complete.obs", method = "spearman")
+cor(tscan_avg, sce$pseudotime_mean, use = "complete.obs", method = "spearman")  # 与 slingshot 的一致性
 ```
 
 ### 手写扩散映射与扩散伪时间 {#sec-diffmap}
@@ -580,43 +580,43 @@ cor(tscan_avg, sce$pseudotime_mean, use = "complete.obs", method = "spearman")
 
 ```{r}
 #| label: diffusion-map
-diffusion_map <- function(X, k = 30, n_ev = 10) {
+diffusion_map <- function(X, k = 30, n_ev = 10) {  # 手写扩散映射
   D2 <- as.matrix(dist(X))^2                                   # 细胞间平方欧氏距离
   sigma <- apply(sqrt(D2), 1, \(d) sort(d)[k])                  # 每个细胞的局部带宽：第 k 近邻距离
   K <- exp(-D2 / outer(sigma, sigma, \(a, b) a^2 + b^2)) *      # 局部自适应高斯核（Haghverdi 2016）
        sqrt(2 * outer(sigma, sigma) / outer(sigma, sigma, \(a, b) a^2 + b^2))
-  diag(K) <- 0
-  q <- rowSums(K)
+  diag(K) <- 0  # 去掉自环
+  q <- rowSums(K)  # 每个细胞的密度
   K <- K / outer(q, q)                                          # 密度归一化
-  d <- rowSums(K)
+  d <- rowSums(K)  # 归一化后的行和
   S <- K / sqrt(outer(d, d))                                    # 对称化的转移矩阵
-  e <- eigen(S, symmetric = TRUE)
+  e <- eigen(S, symmetric = TRUE)  # 特征分解
   ev <- e$vectors[, 2:(n_ev + 1)] / sqrt(d)                     # 去掉平凡的第一特征向量
-  list(dc = ev, values = e$values[2:(n_ev + 1)])
+  list(dc = ev, values = e$values[2:(n_ev + 1)])  # 扩散成分与特征值
 }
 ncol(reducedDim(sce, "PCA"))                                    # denoisePCA 保留的 PC 数
-dm <- cached("nestorowa_diffmap.rds", diffusion_map(reducedDim(sce, "PCA")))
-round(dm$values, 4)
+dm <- cached("nestorowa_diffmap.rds", diffusion_map(reducedDim(sce, "PCA")))  # 计算并缓存
+round(dm$values, 4)  # 前 10 个特征值
 ```
 
 扩散伪时间（DPT）的简化版：在特征值加权的扩散空间中，计算每个细胞到起点（根细胞）的距离。
 根细胞选 HSC 得分最高的细胞：
 
 ```{r}
-root_cell <- which.max(hsc_score[colnames(sce)])
+root_cell <- which.max(hsc_score[colnames(sce)])  # HSC 得分最高的细胞作为根
 w <- dm$values / (1 - dm$values)                                 # 对所有游走步长求和后的权重
-dc_w <- sweep(dm$dc, 2, w, "*")
-dpt <- sqrt(rowSums(sweep(dc_w, 2, dc_w[root_cell, ], "-")^2))
-sce$dpt <- dpt / max(dpt)
-cor(sce$dpt, sce$pseudotime_mean, method = "spearman")
+dc_w <- sweep(dm$dc, 2, w, "*")  # 加权的扩散成分
+dpt <- sqrt(rowSums(sweep(dc_w, 2, dc_w[root_cell, ], "-")^2))  # 到根细胞的扩散距离
+sce$dpt <- dpt / max(dpt)  # 缩放到 0–1
+cor(sce$dpt, sce$pseudotime_mean, method = "spearman")  # 与 slingshot 伪时间的一致性
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-dm_df <- tibble(DC1 = dm$dc[, 1], DC2 = dm$dc[, 2], DC3 = dm$dc[, 3],
+dm_df <- tibble(DC1 = dm$dc[, 1], DC2 = dm$dc[, 2], DC3 = dm$dc[, 3],  # 前 3 个扩散成分
                 broad = sce$broad, dpt = sce$dpt)
-(ggplot(dm_df, aes(DC1, DC2, colour = broad)) + geom_point(size = 0.6) + labs(title = "扩散成分 DC1 vs DC2")) |
+(ggplot(dm_df, aes(DC1, DC2, colour = broad)) + geom_point(size = 0.6) + labs(title = "扩散成分 DC1 vs DC2")) |  # 按注释与按伪时间着色并排
   (ggplot(dm_df, aes(DC1, DC2, colour = dpt)) + geom_point(size = 0.6) + scale_colour_viridis_c() +
      labs(title = "扩散伪时间"))
 ```
@@ -632,17 +632,17 @@ dm_df <- tibble(DC1 = dm$dc[, 1], DC2 = dm$dc[, 2], DC3 = dm$dc[, 3],
 ```{r}
 #| label: pt-robustness
 pca50 <- calculatePCA(sce, ncomponents = 50, subset_row = hvg)   # 另算一个 50 PC 的版本
-settings <- expand_grid(n_pc = c(10, 20, 50), k = c(10, 20))
-pt_runs <- cached("nestorowa_pt_robustness.rds", pmap(settings, function(n_pc, k) {
+settings <- expand_grid(n_pc = c(10, 20, 50), k = c(10, 20))  # PC 数 × k 的参数组合
+pt_runs <- cached("nestorowa_pt_robustness.rds", pmap(settings, function(n_pc, k) {  # 每组参数重跑聚类 + slingshot（结果缓存）
   emb_k <- pca50[, 1:n_pc]
   cl <- clusterRows(emb_k, NNGraphParam(k = k, cluster.fun = "louvain"))
   rt <- names(which.max(tapply(hsc_score[colnames(sce)], cl, mean)))
   s <- slingshot(emb_k, clusterLabels = cl, start.clus = rt)
   rowMeans(slingPseudotime(s), na.rm = TRUE)
 }))
-pt_mat <- do.call(cbind, pt_runs)
-colnames(pt_mat) <- with(settings, paste0("pc", n_pc, "_k", k))
-round(cor(cbind(reference = sce$pseudotime_mean, dpt = sce$dpt, pt_mat), method = "spearman"), 2)
+pt_mat <- do.call(cbind, pt_runs)  # 合并成矩阵
+colnames(pt_mat) <- with(settings, paste0("pc", n_pc, "_k", k))  # 列名
+round(cor(cbind(reference = sce$pseudotime_mean, dpt = sce$dpt, pt_mat), method = "spearman"), 2)  # 各设置之间伪时间的相关
 ```
 
 如果大多数设置之间的秩相关都很高，说明"细胞沿轨迹的排序"是稳健的；谱系的**分支结构**（哪些簇连在一起）
@@ -655,18 +655,18 @@ round(cor(cbind(reference = sce$pseudotime_mean, dpt = sce$dpt, pt_mat), method 
 
 ```{r}
 #| fig-height: 5
-lin1 <- !is.na(pt[, 1])
-top_dyn <- lin_genes |> dplyr::filter(lineage == colnames(pt)[1], FDR < 1e-10) |>
-  slice_max(abs(logFC), n = 150) |> pull(gene)
-ord <- order(pt[lin1, 1])
-grid_pt <- seq(min(pt[lin1, 1]), max(pt[lin1, 1]), length.out = 50)
-smooth_mat <- t(apply(as.matrix(logcounts(sce)[top_dyn, lin1]), 1, function(y) {
+lin1 <- !is.na(pt[, 1])  # 谱系 1 上的细胞
+top_dyn <- lin_genes |> dplyr::filter(lineage == colnames(pt)[1], FDR < 1e-10) |>  # 谱系 1 上最显著的 150 个基因
+  slice_max(abs(logFC), n = 150) |> pull(gene)  # 按效应取
+ord <- order(pt[lin1, 1])  # 按伪时间排序
+grid_pt <- seq(min(pt[lin1, 1]), max(pt[lin1, 1]), length.out = 50)  # 50 个等距伪时间点
+smooth_mat <- t(apply(as.matrix(logcounts(sce)[top_dyn, lin1]), 1, function(y) {  # 每个基因用样条平滑
   predict(smooth.spline(pt[lin1, 1], y, df = 5), grid_pt)$y
 }))
-smooth_z <- t(scale(t(smooth_mat)))
-set.seed(1)
-km <- kmeans(smooth_z, centers = 4, nstart = 20)
-ComplexHeatmap::Heatmap(
+smooth_z <- t(scale(t(smooth_mat)))  # 行 z-score
+set.seed(1)  # 固定随机种子
+km <- kmeans(smooth_z, centers = 4, nstart = 20)  # k-means 分成 4 个表达模块
+ComplexHeatmap::Heatmap(  # 按模块分块的热图
   smooth_z, name = "z", cluster_columns = FALSE, show_row_names = FALSE,
   row_split = paste("module", km$cluster), cluster_row_slices = FALSE,
   column_title = paste(colnames(pt)[1], "：伪时间 →"),
@@ -675,7 +675,7 @@ ComplexHeatmap::Heatmap(
 ```
 
 ```{r}
-split(rownames(smooth_z), km$cluster) |> lapply(head, 8)
+split(rownames(smooth_z), km$cluster) |> lapply(head, 8)  # 每个模块的前 8 个基因
 ```
 
 ## 与 Seurat / Python 互通
@@ -683,18 +683,18 @@ split(rownames(smooth_z), km$cluster) |> lapply(head, 8)
 ```{r}
 #| eval: false
 # SCE → Seurat
-seu <- Seurat::as.Seurat(sce, counts = "counts", data = "logcounts")
+seu <- Seurat::as.Seurat(sce, counts = "counts", data = "logcounts")  # SCE → Seurat
 
 # SCE ↔ AnnData（h5ad，Scanpy）
-library(zellkonverter)
-writeH5AD(sce, "data/nestorowa.h5ad")
-sce2 <- readH5AD("data/nestorowa.h5ad")
+library(zellkonverter)  # SCE 与 AnnData（h5ad）互转
+writeH5AD(sce, "data/nestorowa.h5ad")  # 写出 h5ad
+sce2 <- readH5AD("data/nestorowa.h5ad")  # 读回
 ```
 
 ## 保存
 
 ```{r}
-saveRDS(sce, file.path(DATA_DIR, "nestorowa_sce.rds"))
+saveRDS(sce, file.path(DATA_DIR, "nestorowa_sce.rds"))  # 保存对象
 ```
 
 ## 练习

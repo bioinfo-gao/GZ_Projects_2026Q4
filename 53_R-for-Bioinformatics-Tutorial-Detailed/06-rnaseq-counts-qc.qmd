@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -48,13 +48,13 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(SummarizedExperiment)
-library(DESeq2)
-library(ggrepel)
-library(patchwork)
-library(ComplexHeatmap)
-library(circlize)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(SummarizedExperiment)  # Bioconductor 的表达矩阵容器
+library(DESeq2)  # 负二项模型的差异表达分析；本章用其归一化与 VST
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ComplexHeatmap)  # 功能最全的热图包（含 UpSet 图）
+library(circlize)  # 连续颜色映射（colorRamp2）
 ```
 
 ## 实验设计：分析开始之前就决定了结果
@@ -99,19 +99,19 @@ nextflow run nf-core/rnaseq -r 3.19.0 -profile docker \
 `airway` 包内附带了两个样本的 salmon 输出，用于演示：
 
 ```{r}
-dir <- system.file("extdata", package = "airway", mustWork = TRUE)
-list.files(file.path(dir, "quants"))
+dir <- system.file("extdata", package = "airway", mustWork = TRUE)  # airway 包自带的 salmon 输出目录
+list.files(file.path(dir, "quants"))  # 每个样本一个子目录
 ```
 
 ```{r}
 #| eval: false
 # 需要联网下载 GENCODE v29 的 GTF（首次运行），这里只展示写法
-library(tximeta)
-coldata <- read.csv(file.path(dir, "sample_table.csv"), row.names = 1, stringsAsFactors = FALSE)
-coldata <- coldata[1:2, ]
-coldata$names <- coldata$Run
-coldata$files <- file.path(dir, "quants", coldata$names, "quant.sf.gz")
-file.exists(coldata$files)
+library(tximeta)  # 导入 salmon 定量并自动附加转录组注释
+coldata <- read.csv(file.path(dir, "sample_table.csv"), row.names = 1, stringsAsFactors = FALSE)  # 样本表
+coldata <- coldata[1:2, ]  # 只取 2 个样本演示
+coldata$names <- coldata$Run  # tximeta 要求的 names 列
+coldata$files <- file.path(dir, "quants", coldata$names, "quant.sf.gz")  # tximeta 要求的 files 列：quant.sf 路径
+file.exists(coldata$files)  # 确认文件存在
 
 se  <- tximeta(coldata)                 # 转录本水平；自动识别 GENCODE 版本
 gse <- summarizeToGene(se)              # 汇总到基因
@@ -138,9 +138,9 @@ airway <- readRDS(file.path(DATA_DIR, "airway_annotated.rds"))   # 来自第 5 �
 # data(airway, package = "airway"); rowData(airway)$eff_length <- sum(width(reduce(rowRanges(airway))))
 assays(airway) <- assays(airway)["counts"]                         # 只保留原始计数
 
-airway$dex  <- relevel(airway$dex, ref = "untrt")
-airway$cell <- factor(airway$cell)
-colData(airway)[, c("cell", "dex", "avgLength")]
+airway$dex  <- relevel(airway$dex, ref = "untrt")  # 设 untrt 为参照水平
+airway$cell <- factor(airway$cell)  # 供者转为因子
+colData(airway)[, c("cell", "dex", "avgLength")]  # 查看样本信息
 ```
 
 ## 拿到计数矩阵后的第一件事：完整性检查 {#sec-count-sanity}
@@ -149,8 +149,8 @@ colData(airway)[, c("cell", "dex", "avgLength")]
 把检查写成一个函数，每个项目复用：
 
 ```{r}
-check_counts <- function(m, coldata = NULL, id_col = NULL) {
-  checks <- c(
+check_counts <- function(m, coldata = NULL, id_col = NULL) {  # 计数矩阵的完整性检查函数
+  checks <- c(  # 逐项检查
     is_matrix          = is.matrix(m) || is(m, "Matrix"),
     numeric            = is.numeric(m),
     no_NA              = !anyNA(m),
@@ -161,25 +161,25 @@ check_counts <- function(m, coldata = NULL, id_col = NULL) {
     no_version_suffix  = !any(grepl("^ENS[A-Z]*G\\d+\\.\\d+", rownames(m))),
     genes_gt_samples   = nrow(m) > ncol(m)          # 防止矩阵被转置
   )
-  if (!is.null(coldata)) {
-    ids <- if (is.null(id_col)) rownames(coldata) else coldata[[id_col]]
-    checks["coldata_aligned"] <- identical(colnames(m), as.character(ids))
+  if (!is.null(coldata)) {  # 提供样本表时
+    ids <- if (is.null(id_col)) rownames(coldata) else coldata[[id_col]]  # 样本 ID 来源：行名或指定列
+    checks["coldata_aligned"] <- identical(colnames(m), as.character(ids))  # 矩阵列名必须与样本表顺序一致
   }
-  checks
+  checks  # 返回检查结果
 }
-check_counts(assay(airway), colData(airway))
+check_counts(assay(airway), colData(airway))  # 对 airway 做检查
 ```
 
 再看一个"有问题"的矩阵会被查出哪些问题——这些情况在 GEO 补充文件中都很常见：
 
 ```{r}
-bad <- assay(airway)[1:1000, ]
+bad <- assay(airway)[1:1000, ]  # 取一部分做反例
 bad[5, 2] <- NA                                     # 缺失
 bad[10, 3] <- 12.7                                  # salmon 的估计计数（非整数）
 rownames(bad)[20] <- rownames(bad)[21]              # 重复 ID
 rownames(bad)[30] <- paste0(rownames(bad)[30], ".5")  # 带版本号
 cd_shuffled <- colData(airway)[c(2, 1, 3:8), ]      # 样本表顺序与矩阵不一致
-check_counts(bad, cd_shuffled)
+check_counts(bad, cd_shuffled)  # 每项问题都应被检出
 ```
 
 ::: callout-warning
@@ -203,29 +203,29 @@ DESeq2 的 `DESeqDataSetFromTximport()` 会自动处理；如果你手里只有�
 - **配对一致性**：同一个供者的对照与处理样本，性别（以及其他供者特异的表达特征）必须一致。
 
 ```{r}
-sex_genes <- c("XIST", "RPS4Y1", "DDX3Y", "KDM5D", "UTY", "EIF1AY")
-id_sex <- setNames(rownames(airway), rowData(airway)$gene_name)[sex_genes]
-cpm_all <- t(t(assay(airway)) / colSums(assay(airway))) * 1e6
-sex_expr <- as_tibble(t(log2(cpm_all[id_sex, ] + 1)), rownames = "run") |>
-  setNames(c("run", sex_genes)) |>
-  mutate(cell = airway$cell, dex = airway$dex,
+sex_genes <- c("XIST", "RPS4Y1", "DDX3Y", "KDM5D", "UTY", "EIF1AY")  # 性别标记基因
+id_sex <- setNames(rownames(airway), rowData(airway)$gene_name)[sex_genes]  # 对应的 Ensembl ID
+cpm_all <- t(t(assay(airway)) / colSums(assay(airway))) * 1e6  # 全部基因的 CPM
+sex_expr <- as_tibble(t(log2(cpm_all[id_sex, ] + 1)), rownames = "run") |>  # 性别基因表达 + 推断性别
+  setNames(c("run", sex_genes)) |>  # 列名换成基因名
+  mutate(cell = airway$cell, dex = airway$dex,  # Y 基因平均分与按阈值推断的性别
          y_score = rowMeans(pick(RPS4Y1:EIF1AY)),
          inferred_sex = if_else(y_score > 2 & XIST < 2, "male",
                          if_else(y_score < 1 & XIST > 2, "female", "ambiguous")))
-sex_expr |> select(run, cell, dex, XIST, RPS4Y1, y_score, inferred_sex) |>
-  mutate(across(where(is.double), \(x) round(x, 1)))
+sex_expr |> select(run, cell, dex, XIST, RPS4Y1, y_score, inferred_sex) |>  # 查看结果
+  mutate(across(where(is.double), \(x) round(x, 1)))  # 保留一位小数
 ```
 
 ```{r}
 #| fig-height: 3.5
-ggplot(sex_expr, aes(XIST, y_score, colour = cell, shape = dex)) +
-  geom_point(size = 4) +
-  labs(x = "XIST log2(CPM+1)", y = "Y 染色体基因平均 log2(CPM+1)",
+ggplot(sex_expr, aes(XIST, y_score, colour = cell, shape = dex)) +  # XIST vs Y 基因得分
+  geom_point(size = 4) +  # 点
+  labs(x = "XIST log2(CPM+1)", y = "Y 染色体基因平均 log2(CPM+1)",  # 标签
        title = "性别核查：每个供者的两个样本应落在同一位置")
 ```
 
 ```{r}
-sex_expr |> summarise(n_sex = n_distinct(inferred_sex), sex = paste(unique(inferred_sex), collapse = "/"), .by = cell)
+sex_expr |> summarise(n_sex = n_distinct(inferred_sex), sex = paste(unique(inferred_sex), collapse = "/"), .by = cell)  # 每个供者的推断性别应唯一
 ```
 
 每个细胞系的两个样本推断性别一致，配对关系可信。GEO 中 airway 的样本表**没有**记录性别——
@@ -247,21 +247,21 @@ sex_expr |> summarise(n_sex = n_distinct(inferred_sex), sex = paste(unique(infer
 实际上生物学变异使方差远大于均值——**过度离散**（overdispersion）。
 
 ```{r}
-untrt <- assay(airway)[, airway$dex == "untrt"]
-untrt <- untrt[rowSums(untrt) > 0, ]
+untrt <- assay(airway)[, airway$dex == "untrt"]  # 只看对照样本
+untrt <- untrt[rowSums(untrt) > 0, ]  # 去掉全零基因
 sf <- colSums(untrt) / exp(mean(log(colSums(untrt))))     # 粗略的文库大小因子
-norm <- t(t(untrt) / sf)
+norm <- t(t(untrt) / sf)  # 归一化计数
 
-mv <- tibble(mean = rowMeans(norm), var = matrixStats::rowVars(norm)) |>
-  filter(mean > 0)
+mv <- tibble(mean = rowMeans(norm), var = matrixStats::rowVars(norm)) |>  # 每个基因的均值与方差
+  filter(mean > 0)  # 去掉均值为 0 的
 
-ggplot(mv, aes(mean, var)) +
-  geom_hex(bins = 70) +
+ggplot(mv, aes(mean, var)) +  # 均值–方差关系图
+  geom_hex(bins = 70) +  # 六边形分箱
   geom_abline(slope = 1, intercept = 0, colour = "red", linewidth = 1) +     # 泊松：var = mean
-  geom_smooth(se = FALSE, colour = "steelblue") +
-  scale_x_log10() + scale_y_log10() +
-  scale_fill_viridis_c(trans = "log10") +
-  labs(title = "4 个对照样本：均值–方差关系", subtitle = "红线：泊松（var = mean）")
+  geom_smooth(se = FALSE, colour = "steelblue") +  # 实际趋势
+  scale_x_log10() + scale_y_log10() +  # 双对数坐标
+  scale_fill_viridis_c(trans = "log10") +  # 颜色按 log10 基因数
+  labs(title = "4 个对照样本：均值–方差关系", subtitle = "红线：泊松（var = mean）")  # 标题
 ```
 
 负二项分布（Negative Binomial）把这一关系建模为：
@@ -277,20 +277,20 @@ $\alpha\mu^2$ 主导，$\sqrt{\alpha}$ 就是生物学变异系数（BCV）。DE
 ### 少数基因占据大量 reads
 
 ```{r}
-lib <- assay(airway)
-top_share <- apply(lib, 2, \(x) { x <- sort(x, decreasing = TRUE); cumsum(x) / sum(x) })
-tibble(rank = seq_len(nrow(top_share)), share = rowMeans(top_share)) |>
-  filter(rank <= 5000) |>
-  ggplot(aes(rank, share)) + geom_line(linewidth = 1) +
-  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +
-  labs(x = "基因秩次（按表达量）", y = "累计 reads 占比")
+lib <- assay(airway)  # 原始计数
+top_share <- apply(lib, 2, \(x) { x <- sort(x, decreasing = TRUE); cumsum(x) / sum(x) })  # 每个样本：按表达降序后的累计占比
+tibble(rank = seq_len(nrow(top_share)), share = rowMeans(top_share)) |>  # 多样本平均的累计占比曲线
+  filter(rank <= 5000) |>  # 只看前 5000 个基因
+  ggplot(aes(rank, share)) + geom_line(linewidth = 1) +  # 折线
+  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +  # 对数 x 轴、百分比 y 轴
+  labs(x = "基因秩次（按表达量）", y = "累计 reads 占比")  # 轴标签
 ```
 
 ## 样本级 QC 指标
 
 ```{r}
-rd <- rowData(airway)
-qc <- tibble(
+rd <- rowData(airway)  # 基因注释
+qc <- tibble(  # 每个样本的 QC 指标
   run        = colnames(airway),
   cell       = airway$cell,
   dex        = airway$dex,
@@ -299,16 +299,16 @@ qc <- tibble(
   pct_mito   = 100 * colSums(assay(airway)[rd$seq_name == "MT", ]) / colSums(assay(airway)),
   pct_pc     = 100 * colSums(assay(airway)[rd$gene_biotype == "protein_coding", ]) / colSums(assay(airway))
 )
-qc
+qc  # 打印
 
-qc |>
-  pivot_longer(lib_M:pct_pc) |>
-  ggplot(aes(run, value, fill = dex)) +
-  geom_col() +
-  facet_wrap(~ name, scales = "free_y", nrow = 1) +
-  scale_fill_manual(values = c(untrt = "grey60", trt = "firebrick")) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.position = "top") +
-  labs(x = NULL, y = NULL)
+qc |>  # QC 指标分面柱状图
+  pivot_longer(lib_M:pct_pc) |>  # 转长表
+  ggplot(aes(run, value, fill = dex)) +  # x 为样本
+  geom_col() +  # 柱状图
+  facet_wrap(~ name, scales = "free_y", nrow = 1) +  # 每个指标一个分面
+  scale_fill_manual(values = c(untrt = "grey60", trt = "firebrick")) +  # 处理组颜色
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.position = "top") +  # x 轴文字斜放
+  labs(x = NULL, y = NULL)  # 去掉轴标题
 ```
 
 没有任何样本是明显的离群者。在真实项目中，常见的危险信号是：
@@ -324,8 +324,8 @@ Qualimap）提供的信息应与这里的结果一起看。
 
 ```{r}
 keep <- rowSums(assay(airway) >= 10) >= 4      # 最小组有 4 个样本
-table(keep)
-airway_f <- airway[keep, ]
+table(keep)  # 保留与去掉的基因数
+airway_f <- airway[keep, ]  # 过滤后的对象
 ```
 
 ::: callout-note
@@ -341,14 +341,14 @@ DESeq2 的**独立过滤**（independent filtering，第 7 章）会在结果阶
 
 ```{r}
 #| fig-height: 3.5
-gl <- tibble(gene_id = rownames(airway), len_kb = rowData(airway)$eff_length / 1e3,
+gl <- tibble(gene_id = rownames(airway), len_kb = rowData(airway)$eff_length / 1e3,  # 有效长度与平均计数
              mean_count = rowMeans(assay(airway))) |>
-  filter(len_kb > 0, mean_count > 0)
-ggplot(gl, aes(len_kb, mean_count)) +
-  geom_hex(bins = 60) + geom_smooth(colour = "red", se = FALSE) +
-  scale_x_log10() + scale_y_log10() + scale_fill_viridis_c(trans = "log10") +
-  labs(x = "有效长度 (kb)", y = "平均计数", title = "长基因计数更高")
-cor(log10(gl$len_kb), log10(gl$mean_count), method = "spearman")
+  filter(len_kb > 0, mean_count > 0)  # 去掉零值
+ggplot(gl, aes(len_kb, mean_count)) +  # 长度–计数关系
+  geom_hex(bins = 60) + geom_smooth(colour = "red", se = FALSE) +  # 六边形分箱 + 平滑趋势
+  scale_x_log10() + scale_y_log10() + scale_fill_viridis_c(trans = "log10") +  # 双对数坐标
+  labs(x = "有效长度 (kb)", y = "平均计数", title = "长基因计数更高")  # 标签
+cor(log10(gl$len_kb), log10(gl$mean_count), method = "spearman")  # Spearman 相关
 ```
 
 **生物类型构成**：每个样本中各类 RNA 的 reads 占比。poly-A 文库应以蛋白编码为主；
@@ -356,16 +356,16 @@ rRNA 占比高提示去除 rRNA 失败，snoRNA/snRNA 占比高可能提示总 R
 
 ```{r}
 #| fig-height: 3.5
-bt <- rowData(airway)$gene_biotype
-bt_lump <- forcats::fct_lump_n(bt, n = 6, w = rowSums(assay(airway)))
+bt <- rowData(airway)$gene_biotype  # 基因生物类型
+bt_lump <- forcats::fct_lump_n(bt, n = 6, w = rowSums(assay(airway)))  # 按 reads 数保留最多的 6 类，其余归为 Other
 comp <- rowsum(assay(airway), bt_lump)          # 第 1 章的 rowsum()：按生物类型汇总
-comp_pct <- sweep(comp, 2, colSums(comp), "/") * 100
-round(comp_pct, 2)
-as_tibble(comp_pct, rownames = "biotype") |>
-  pivot_longer(-biotype, names_to = "run", values_to = "pct") |>
-  ggplot(aes(run, pct, fill = biotype)) + geom_col() +
-  scale_fill_brewer(palette = "Set2") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = NULL, y = "% reads")
+comp_pct <- sweep(comp, 2, colSums(comp), "/") * 100  # 各类占比
+round(comp_pct, 2)  # 打印
+as_tibble(comp_pct, rownames = "biotype") |>  # 堆叠柱状图
+  pivot_longer(-biotype, names_to = "run", values_to = "pct") |>  # 转长表
+  ggplot(aes(run, pct, fill = biotype)) + geom_col() +  # 堆叠柱
+  scale_fill_brewer(palette = "Set2") +  # 配色
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = NULL, y = "% reads")  # x 轴文字斜放
 ```
 
 **GC 含量偏差**：PCR 扩增效率依赖 GC 含量，不同样本的偏差曲线不同时会产生样本特异的偏差
@@ -373,19 +373,19 @@ as_tibble(comp_pct, rownames = "biotype") |>
 
 ```{r}
 #| fig-height: 3.5
-bm_file <- file.path(DATA_DIR, "biomart_airway_grch37.rds")
-if (file.exists(bm_file) && !is.null(gc_tab <- readRDS(bm_file))) {
-  gc_df <- tibble(gene_id = rownames(airway)) |>
-    left_join(distinct(gc_tab, ensembl_gene_id, gc = percentage_gene_gc_content),
+bm_file <- file.path(DATA_DIR, "biomart_airway_grch37.rds")  # 第 5 章缓存的 BioMart 结果（含 GC 含量）
+if (file.exists(bm_file) && !is.null(gc_tab <- readRDS(bm_file))) {  # 有缓存且非空时才画
+  gc_df <- tibble(gene_id = rownames(airway)) |>  # 每个基因的 GC 含量
+    left_join(distinct(gc_tab, ensembl_gene_id, gc = percentage_gene_gc_content),  # 从 BioMart 结果连接
               join_by(gene_id == ensembl_gene_id))
-  ok <- !is.na(gc_df$gc) & rowSums(assay(airway) >= 10) == ncol(airway)
-  lc <- log2(cpm_all[ok, ] + 1)
+  ok <- !is.na(gc_df$gc) & rowSums(assay(airway) >= 10) == ncol(airway)  # 有 GC 且所有样本都有表达的基因
+  lc <- log2(cpm_all[ok, ] + 1)  # log2 CPM
   rel <- lc - rowMeans(lc)                        # 相对于基因均值的偏离
-  as_tibble(rel) |> mutate(gc = gc_df$gc[ok]) |>
-    pivot_longer(-gc, names_to = "run", values_to = "rel") |>
-    ggplot(aes(gc, rel, colour = run)) +
-    geom_smooth(se = FALSE, method = "loess", span = 0.5, linewidth = 0.7) +
-    labs(x = "基因 GC 含量 (%)", y = "log2 CPM − 基因均值", title = "每个样本的 GC 偏差曲线")
+  as_tibble(rel) |> mutate(gc = gc_df$gc[ok]) |>  # 每个样本的 GC 偏差曲线
+    pivot_longer(-gc, names_to = "run", values_to = "rel") |>  # 转长表
+    ggplot(aes(gc, rel, colour = run)) +  # x 为 GC，颜色为样本
+    geom_smooth(se = FALSE, method = "loess", span = 0.5, linewidth = 0.7) +  # loess 平滑
+    labs(x = "基因 GC 含量 (%)", y = "log2 CPM − 基因均值", title = "每个样本的 GC 偏差曲线")  # 标签
 }
 ```
 
@@ -396,24 +396,24 @@ if (file.exists(bm_file) && !is.null(gc_tab <- readRDS(bm_file))) {
 用"看图"判断离群依赖经验。几种可以量化的指标：
 
 ```{r}
-lcpm_f <- log2(cpm_all[rowSums(assay(airway) >= 10) >= 4, ] + 1)
+lcpm_f <- log2(cpm_all[rowSums(assay(airway) >= 10) >= 4, ] + 1)  # 过滤后的 log2 CPM
 
 # 1) 与其他样本的平均相关性（connectivity）
-r <- cor(lcpm_f)
-diag(r) <- NA
-conn <- colMeans(r, na.rm = TRUE)
-z_conn <- (conn - median(conn)) / mad(conn)
+r <- cor(lcpm_f)  # 样本间相关矩阵
+diag(r) <- NA  # 去掉自身相关
+conn <- colMeans(r, na.rm = TRUE)  # 与其他样本的平均相关
+z_conn <- (conn - median(conn)) / mad(conn)  # 稳健 z 分数
 
 # 2) 基于稳健 PCA 距离：样本在前几个 PC 上到中位数的马氏距离
-pc <- prcomp(t(lcpm_f))$x[, 1:3]
-md <- mahalanobis(pc, center = apply(pc, 2, median), cov = cov(pc))
+pc <- prcomp(t(lcpm_f))$x[, 1:3]  # 前 3 个主成分
+md <- mahalanobis(pc, center = apply(pc, 2, median), cov = cov(pc))  # 到中位数的马氏距离
 
 # 3) 相对对数表达（RLE）：每个基因减去其中位数后，每个样本的中位数应接近 0
-rle_mat <- lcpm_f - matrixStats::rowMedians(lcpm_f)
-rle_med <- apply(rle_mat, 2, median)
-rle_iqr <- apply(rle_mat, 2, IQR)
+rle_mat <- lcpm_f - matrixStats::rowMedians(lcpm_f)  # 每个基因减去中位数
+rle_med <- apply(rle_mat, 2, median)  # 每个样本的 RLE 中位数
+rle_iqr <- apply(rle_mat, 2, IQR)  # 每个样本的 RLE 四分位距
 
-tibble(run = colnames(lcpm_f), cell = airway$cell, dex = airway$dex,
+tibble(run = colnames(lcpm_f), cell = airway$cell, dex = airway$dex,  # 汇总三种离群指标
        connectivity = round(conn, 4), z_conn = round(z_conn, 2),
        mahalanobis = round(md, 2), rle_median = round(rle_med, 3), rle_iqr = round(rle_iqr, 3))
 ```
@@ -423,11 +423,11 @@ tibble(run = colnames(lcpm_f), cell = airway$cell, dex = airway$dex,
 
 ```{r}
 #| fig-height: 3.5
-as_tibble(rle_mat) |> pivot_longer(everything(), names_to = "run", values_to = "rle") |>
-  ggplot(aes(run, rle)) + geom_boxplot(outlier.shape = NA) + coord_cartesian(ylim = c(-1.5, 1.5)) +
-  geom_hline(yintercept = 0, colour = "red") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = NULL, y = "RLE", title = "相对对数表达（RLE）图：箱体应以 0 为中心且宽度相近")
+as_tibble(rle_mat) |> pivot_longer(everything(), names_to = "run", values_to = "rle") |>  # RLE 箱线图
+  ggplot(aes(run, rle)) + geom_boxplot(outlier.shape = NA) + coord_cartesian(ylim = c(-1.5, 1.5)) +  # 箱线，固定 y 范围
+  geom_hline(yintercept = 0, colour = "red") +  # 0 参考线
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # x 轴文字斜放
+  labs(x = NULL, y = "RLE", title = "相对对数表达（RLE）图：箱体应以 0 为中心且宽度相近")  # 标题
 ```
 
 ::: callout-important
@@ -443,15 +443,15 @@ as_tibble(rle_mat) |> pivot_longer(everything(), names_to = "run", values_to = "
 不同的过滤规则保留的基因数差别很大，而它们会影响离散度估计和多重检验校正：
 
 ```{r}
-grp <- airway$dex
-rules <- list(
+grp <- airway$dex  # 分组
+rules <- list(  # 五种低表达过滤规则
   "any count > 0"           = rowSums(assay(airway)) > 0,
   "≥ 10 in ≥ 4 samples"     = rowSums(assay(airway) >= 10) >= 4,
   "mean count ≥ 10"         = rowMeans(assay(airway)) >= 10,
   "CPM ≥ 1 in ≥ 4 samples"  = rowSums(cpm_all >= 1) >= 4,
   "edgeR::filterByExpr"     = edgeR::filterByExpr(assay(airway), group = grp)
 )
-vapply(rules, sum, integer(1))
+vapply(rules, sum, integer(1))  # 各规则保留的基因数
 ```
 
 `filterByExpr()` 根据最小组样本数与文库大小自动选择 CPM 阈值（约等于中位文库下 10 个 reads）。
@@ -459,7 +459,7 @@ vapply(rules, sum, integer(1))
 
 ```{r}
 #| fig-height: 3.5
-UpSet(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),
+UpSet(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),  # 规则之间的交集 UpSet 图
       top_annotation = upset_top_annotation(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),
                                             add_numbers = TRUE))
 ```
@@ -475,14 +475,14 @@ UpSet(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),
 这就是**组成偏差**（composition bias）。
 
 ```{r}
-toy <- tibble(
+toy <- tibble(  # 9 个基因，只有 SUPER 在 B 中升高
   gene = c(paste0("g", 1:8), "SUPER"),
   A = c(rep(100, 8), 100),
   B = c(rep(100, 8), 1000)          # 只有 SUPER 真的变了
 ) |>
-  mutate(cpm_A = A / sum(A) * 1e6, cpm_B = B / sum(B) * 1e6,
+  mutate(cpm_A = A / sum(A) * 1e6, cpm_B = B / sum(B) * 1e6,  # CPM 与 log2FC
          log2FC_cpm = log2(cpm_B / cpm_A))
-toy
+toy  # 打印：未变的基因也显示为下降
 ```
 
 ### DESeq2 的中位数比值法（median-of-ratios）
@@ -491,16 +491,16 @@ toy
 每个样本的大小因子 = 该样本所有基因相对伪参照比值的**中位数**。
 
 ```{r}
-counts_f <- assay(airway_f)
+counts_f <- assay(airway_f)  # 过滤后的计数
 
 log_geo_mean <- rowMeans(log(counts_f))           # 含 0 的基因 → -Inf，会被排除
-ok <- is.finite(log_geo_mean)
-size_factors_manual <- apply(counts_f[ok, ], 2, \(x) exp(median(log(x) - log_geo_mean[ok])))
+ok <- is.finite(log_geo_mean)  # 排除含 0 的基因
+size_factors_manual <- apply(counts_f[ok, ], 2, \(x) exp(median(log(x) - log_geo_mean[ok])))  # 中位数比值法计算 size factor
 
-dds <- DESeqDataSet(airway_f, design = ~ cell + dex)
-dds <- estimateSizeFactors(dds)
+dds <- DESeqDataSet(airway_f, design = ~ cell + dex)  # 建 DESeq2 对象
+dds <- estimateSizeFactors(dds)  # DESeq2 计算 size factor
 
-tibble(run = colnames(dds),
+tibble(run = colnames(dds),  # 手算、DESeq2、文库大小三者对比
        manual = size_factors_manual,
        DESeq2 = sizeFactors(dds),
        libsize_ratio = colSums(counts_f) / exp(mean(log(colSums(counts_f)))))
@@ -521,12 +521,12 @@ edgeR 的 **TMM**（trimmed mean of M-values）基于类似的假设，两者结
 | VST / rlog | 上述 + 方差稳定 | 聚类、PCA、热图、机器学习 |
 
 ```{r}
-len_kb <- rowData(airway_f)$eff_length / 1e3
-rpk <- counts_f / len_kb
-tpm <- t(t(rpk) / colSums(rpk)) * 1e6
+len_kb <- rowData(airway_f)$eff_length / 1e3  # 有效长度（kb）
+rpk <- counts_f / len_kb  # 每 kb 的 reads
+tpm <- t(t(rpk) / colSums(rpk)) * 1e6  # TPM
 colSums(tpm) |> head(3)            # 每个样本都是 1e6
 
-assay(dds, "tpm") <- tpm
+assay(dds, "tpm") <- tpm  # 存为新 assay
 ```
 
 ::: callout-warning
@@ -545,22 +545,22 @@ log 变换后，低表达基因的方差被放大（log 在 0 附近斜率陡）
 
 ```{r}
 vsd <- vst(dds, blind = FALSE)     # blind = FALSE：利用设计信息估计离散度趋势（但变换本身不使用组别）
-rld <- rlog(dds, blind = FALSE)
-log_norm <- log2(counts(dds, normalized = TRUE) + 1)
+rld <- rlog(dds, blind = FALSE)  # rlog 变换
+log_norm <- log2(counts(dds, normalized = TRUE) + 1)  # 简单的 log2(归一化计数 + 1)
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 3.8
-msd <- function(mat, title) {
-  tibble(rank = rank(rowMeans(mat)), sd = matrixStats::rowSds(mat)) |>
-    ggplot(aes(rank, sd)) +
-    geom_hex(bins = 60, show.legend = FALSE) +
-    geom_smooth(colour = "red", se = FALSE, method = "gam") +
-    scale_fill_viridis_c(trans = "log10") +
-    labs(title = title, x = "均值秩次", y = "SD")
+msd <- function(mat, title) {  # 画均值秩次–SD 图的函数
+  tibble(rank = rank(rowMeans(mat)), sd = matrixStats::rowSds(mat)) |>  # 每个基因的均值秩次与 SD
+    ggplot(aes(rank, sd)) +  # 坐标
+    geom_hex(bins = 60, show.legend = FALSE) +  # 六边形分箱
+    geom_smooth(colour = "red", se = FALSE, method = "gam") +  # 趋势线
+    scale_fill_viridis_c(trans = "log10") +  # 颜色
+    labs(title = title, x = "均值秩次", y = "SD")  # 标签
 }
-msd(log_norm, "log2(norm + 1)") | msd(assay(rld), "rlog") | msd(assay(vsd), "VST")
+msd(log_norm, "log2(norm + 1)") | msd(assay(rld), "rlog") | msd(assay(vsd), "VST")  # 三种变换并排对比
 ```
 
 理想情况下红色趋势线应**接近水平**：VST/rlog 消除了低表达端的方差膨胀。
@@ -569,11 +569,11 @@ msd(log_norm, "log2(norm + 1)") | msd(assay(rld), "rlog") | msd(assay(vsd), "VST
 
 ```{r}
 #| fig-height: 5
-sample_dist <- dist(t(assay(vsd)))
-dm <- as.matrix(sample_dist)
-rownames(dm) <- paste(vsd$cell, vsd$dex, sep = " · ")
+sample_dist <- dist(t(assay(vsd)))  # VST 数据上的样本间欧氏距离
+dm <- as.matrix(sample_dist)  # 转矩阵
+rownames(dm) <- paste(vsd$cell, vsd$dex, sep = " · ")  # 行名：供者 · 处理
 
-Heatmap(
+Heatmap(  # 样本距离热图
   dm, name = "Euclidean\ndistance",
   col = colorRamp2(c(0, max(dm)), c("navy", "white")),
   clustering_distance_rows = sample_dist,
@@ -595,28 +595,28 @@ Heatmap(
 ## PCA
 
 ```{r}
-pca_data <- plotPCA(vsd, intgroup = c("dex", "cell"), ntop = 500, returnData = TRUE)
-pv <- round(100 * attr(pca_data, "percentVar"), 1)
+pca_data <- plotPCA(vsd, intgroup = c("dex", "cell"), ntop = 500, returnData = TRUE)  # DESeq2 自带 PCA 的数据
+pv <- round(100 * attr(pca_data, "percentVar"), 1)  # 方差百分比
 
-ggplot(pca_data, aes(PC1, PC2, colour = dex, shape = cell)) +
-  geom_point(size = 4) +
-  geom_text_repel(aes(label = name), colour = "grey30", size = 3, seed = 1) +
-  scale_colour_manual(values = c(untrt = "grey40", trt = "firebrick")) +
-  labs(x = paste0("PC1: ", pv[1], "%"), y = paste0("PC2: ", pv[2], "%")) +
-  coord_fixed()
+ggplot(pca_data, aes(PC1, PC2, colour = dex, shape = cell)) +  # PCA 图
+  geom_point(size = 4) +  # 点
+  geom_text_repel(aes(label = name), colour = "grey30", size = 3, seed = 1) +  # 样本名
+  scale_colour_manual(values = c(untrt = "grey40", trt = "firebrick")) +  # 处理组颜色
+  labs(x = paste0("PC1: ", pv[1], "%"), y = paste0("PC2: ", pv[2], "%")) +  # 轴标签
+  coord_fixed()  # 1:1 坐标比例
 ```
 
 ### 哪些基因驱动了主成分？
 
 ```{r}
-rv  <- matrixStats::rowVars(assay(vsd))
-sel <- order(rv, decreasing = TRUE)[1:500]
-pca <- prcomp(t(assay(vsd)[sel, ]))
+rv  <- matrixStats::rowVars(assay(vsd))  # 每个基因的方差
+sel <- order(rv, decreasing = TRUE)[1:500]  # 方差最大的 500 个
+pca <- prcomp(t(assay(vsd)[sel, ]))  # PCA
 
-loadings <- tibble(gene_id = rownames(vsd)[sel], PC1 = pca$rotation[, 1], PC2 = pca$rotation[, 2]) |>
-  mutate(symbol = rowData(vsd)$gene_name[match(gene_id, rownames(vsd))])
+loadings <- tibble(gene_id = rownames(vsd)[sel], PC1 = pca$rotation[, 1], PC2 = pca$rotation[, 2]) |>  # PC1、PC2 的载荷
+  mutate(symbol = rowData(vsd)$gene_name[match(gene_id, rownames(vsd))])  # 加 symbol
 
-loadings |> slice_max(abs(PC1), n = 10) |> select(symbol, PC1)
+loadings |> slice_max(abs(PC1), n = 10) |> select(symbol, PC1)  # PC1 载荷绝对值最大的 10 个基因
 ```
 
 PC1 载荷最高的基因（例如 ZBTB16、KLF15、DUSP1）正是已知的糖皮质激素应答基因，
@@ -627,8 +627,8 @@ PC1 载荷最高的基因（例如 ZBTB16、KLF15、DUSP1）正是已知的糖�
 当协变量很多时（批次、RIN、建库日期、性别……），可以系统地检验每个 PC 与哪些协变量相关：
 
 ```{r}
-pcs <- as_tibble(pca$x[, 1:4]) |> mutate(dex = vsd$dex, cell = vsd$cell, avgLength = vsd$avgLength)
-map(c("dex", "cell", "avgLength"), \(v) {
+pcs <- as_tibble(pca$x[, 1:4]) |> mutate(dex = vsd$dex, cell = vsd$cell, avgLength = vsd$avgLength)  # 前 4 个 PC 与协变量
+map(c("dex", "cell", "avgLength"), \(v) {  # 每个协变量对每个 PC 的 R²
   map_dbl(paste0("PC", 1:4), \(pc) {
     fit <- lm(reformulate(v, pc), data = pcs)
     summary(fit)$r.squared
@@ -641,8 +641,8 @@ map(c("dex", "cell", "avgLength"), \(v) {
 ## 保存
 
 ```{r}
-saveRDS(dds, file.path(DATA_DIR, "airway_dds.rds"))
-saveRDS(vsd, file.path(DATA_DIR, "airway_vsd.rds"))
+saveRDS(dds, file.path(DATA_DIR, "airway_dds.rds"))  # 保存 dds 供后续章节使用
+saveRDS(vsd, file.path(DATA_DIR, "airway_vsd.rds"))  # 保存 vsd 供后续章节使用
 ```
 
 ## 小结

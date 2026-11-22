@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -47,18 +47,18 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(Seurat)
-library(patchwork)
-library(ggrepel)
-library(SingleR)
-library(celldex)
-library(bluster)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(Seurat)  # 单细胞分析框架：Seurat 对象、归一化、聚类、可视化
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
+library(SingleR)  # 基于参考数据集的自动细胞类型注释
+library(celldex)  # SingleR 的参考数据集（Monaco、HPCA 等）
+library(bluster)  # 聚类评估工具：轮廓宽度、ARI 等
 ```
 
 ```{r}
 pbmc <- readRDS(file.path(DATA_DIR, "pbmc3k_qc.rds"))     # 第 10 章输出
-pbmc
+pbmc  # 打印概况
 ```
 
 ## 归一化
@@ -72,8 +72,8 @@ $$
 即"每万 UMI 计数"后取自然对数。
 
 ```{r}
-pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 1e4)
-Layers(pbmc)
+pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 1e4)  # 每细胞总数归一化到 1e4 后取 log1p
+Layers(pbmc)  # 新增 data layer
 ```
 
 它的问题：假设每个细胞的 RNA 总量相同（实际上细胞大小差异很大），并且对高 UMI 细胞，
@@ -92,8 +92,8 @@ $$
 残差已经去除了深度效应并稳定了方差，可以直接做 PCA。安装 `glmGamPoi` 后速度大幅提升。
 
 ```{r}
-pbmc_sct <- SCTransform(pbmc, vst.flavor = "v2", vars.to.regress = NULL, verbose = FALSE)
-pbmc_sct
+pbmc_sct <- SCTransform(pbmc, vst.flavor = "v2", vars.to.regress = NULL, verbose = FALSE)  # SCTransform v2 归一化
+pbmc_sct  # 打印
 Assays(pbmc_sct)        # 新增 SCT assay，含 counts（校正后）、data、scale.data
 ```
 
@@ -113,15 +113,15 @@ Assays(pbmc_sct)        # 新增 SCT assay，含 counts（校正后）、data、
 用标准化方差排序。
 
 ```{r}
-pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
-top15 <- head(VariableFeatures(pbmc), 15)
-top15
+pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)  # 选 2000 个高变基因
+top15 <- head(VariableFeatures(pbmc), 15)  # 前 15 个
+top15  # 打印
 ```
 
 ```{r}
 #| fig-height: 4.5
-LabelPoints(VariableFeaturePlot(pbmc), points = top15, repel = TRUE, xnudge = 0, ynudge = 0) +
-  labs(title = "高变基因（LabelPoints 内部使用 ggrepel）")
+LabelPoints(VariableFeaturePlot(pbmc), points = top15, repel = TRUE, xnudge = 0, ynudge = 0) +  # 高变基因散点图并标注前 15 个
+  labs(title = "高变基因（LabelPoints 内部使用 ggrepel）")  # 标题
 ```
 
 PPBP、PF4（血小板）、LYZ、S100A9（单核）、GNLY、NKG7（NK）、IGLL5（B/浆细胞）——
@@ -133,14 +133,14 @@ PPBP、PF4（血小板）、LYZ、S100A9（单核）、GNLY、NKG7（NK）、IGL
 
 ```{r}
 pbmc <- ScaleData(pbmc)          # 默认只缩放 HVG；可加 vars.to.regress = "percent.mt"
-pbmc <- RunPCA(pbmc, npcs = 50, verbose = FALSE)
-print(pbmc[["pca"]], dims = 1:3, nfeatures = 6)
+pbmc <- RunPCA(pbmc, npcs = 50, verbose = FALSE)  # PCA，计算 50 个主成分
+print(pbmc[["pca"]], dims = 1:3, nfeatures = 6)  # 前 3 个 PC 的载荷最大的基因
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-VizDimLoadings(pbmc, dims = 1:2, reduction = "pca", nfeatures = 15) |
+VizDimLoadings(pbmc, dims = 1:2, reduction = "pca", nfeatures = 15) |  # PC1/PC2 载荷图与 PCA 散点并排
   DimPlot(pbmc, reduction = "pca") + NoLegend()
 ```
 
@@ -148,12 +148,12 @@ VizDimLoadings(pbmc, dims = 1:2, reduction = "pca", nfeatures = 15) |
 
 ```{r}
 #| fig-height: 4
-ElbowPlot(pbmc, ndims = 50)
+ElbowPlot(pbmc, ndims = 50)  # 肘部图：选 PC 数
 ```
 
 ```{r}
 #| fig-height: 6
-DimHeatmap(pbmc, dims = c(1:3, 9:11), cells = 500, balanced = TRUE, ncol = 3)
+DimHeatmap(pbmc, dims = c(1:3, 9:11), cells = 500, balanced = TRUE, ncol = 3)  # 各 PC 的热图
 ```
 
 经验：PC 数宁多勿少（10–50 都常见），下游结果对此不太敏感；对复杂组织可多取。
@@ -161,7 +161,7 @@ DimHeatmap(pbmc, dims = c(1:3, 9:11), cells = 500, balanced = TRUE, ncol = 3)
 本数据取 10 个 PC。
 
 ```{r}
-pcs <- 1:10
+pcs <- 1:10  # 选用前 10 个主成分
 ```
 
 ## 聚类：kNN 图 + 社区发现
@@ -171,15 +171,15 @@ pcs <- 1:10
 3. 在图上做社区发现（Louvain / Leiden），最大化模块度。`resolution` 越大，簇越多。
 
 ```{r}
-pbmc <- FindNeighbors(pbmc, dims = pcs, k.param = 20)
-pbmc <- FindClusters(pbmc, resolution = c(0.2, 0.5, 0.8, 1.2), algorithm = 1, verbose = FALSE)
-pbmc@meta.data |> dplyr::select(starts_with("RNA_snn_res")) |> map_int(n_distinct)
+pbmc <- FindNeighbors(pbmc, dims = pcs, k.param = 20)  # 构建 SNN 邻接图
+pbmc <- FindClusters(pbmc, resolution = c(0.2, 0.5, 0.8, 1.2), algorithm = 1, verbose = FALSE)  # Louvain 聚类，4 个分辨率
+pbmc@meta.data |> dplyr::select(starts_with("RNA_snn_res")) |> map_int(n_distinct)  # 各分辨率的簇数
 ```
 
 ```{r}
 #| fig-height: 4
 # 不同分辨率之间的对应关系
-table(res0.5 = pbmc$RNA_snn_res.0.5, res0.8 = pbmc$RNA_snn_res.0.8)
+table(res0.5 = pbmc$RNA_snn_res.0.5, res0.8 = pbmc$RNA_snn_res.0.8)  # 两个分辨率之间的簇对应
 ```
 
 ::: callout-note
@@ -198,9 +198,9 @@ Leiden（Traag et al. 2019）修复了 Louvain 可能产生"内部不连通社�
 ```{r}
 #| fig-height: 6
 #| fig-width: 8
-library(clustree)
-clustree(pbmc@meta.data, prefix = "RNA_snn_res.", node_text_size = 3) +
-  guides(edge_colour = "none", edge_alpha = "none")
+library(clustree)  # 聚类树：簇在不同分辨率间的分裂关系
+clustree(pbmc@meta.data, prefix = "RNA_snn_res.", node_text_size = 3) +  # 画聚类树
+  guides(edge_colour = "none", edge_alpha = "none")  # 去掉部分图例
 ```
 
 可以把一个 marker 的平均表达叠加到树上，看看在哪个分辨率下它被"分开"了：
@@ -208,7 +208,7 @@ clustree(pbmc@meta.data, prefix = "RNA_snn_res.", node_text_size = 3) +
 ```{r}
 #| fig-height: 6
 #| fig-width: 8
-clustree(pbmc, prefix = "RNA_snn_res.", node_colour = "FCGR3A", node_colour_aggr = "mean",
+clustree(pbmc, prefix = "RNA_snn_res.", node_colour = "FCGR3A", node_colour_aggr = "mean",  # 节点按 FCGR3A 平均表达着色
          node_text_size = 3) + guides(edge_colour = "none", edge_alpha = "none")
 ```
 
@@ -221,9 +221,9 @@ clustree(pbmc, prefix = "RNA_snn_res.", node_colour = "FCGR3A", node_colour_aggr
 
 ```{r}
 #| label: param-grid
-ref_cl <- pbmc$RNA_snn_res.0.5
-grid <- expand_grid(n_pc = c(5, 10, 20, 30), k = c(10, 20, 50))
-sens <- cached("pbmc3k_param_sensitivity.rds", {
+ref_cl <- pbmc$RNA_snn_res.0.5  # 参考聚类
+grid <- expand_grid(n_pc = c(5, 10, 20, 30), k = c(10, 20, 50))  # PC 数 × k 的参数网格
+sens <- cached("pbmc3k_param_sensitivity.rds", {  # 每组参数聚类一次（结果缓存）
   grid |> mutate(
     clusters = map2(n_pc, k, \(np, kk) {
       g <- FindNeighbors(pbmc, dims = 1:np, k.param = kk, verbose = FALSE)
@@ -231,19 +231,19 @@ sens <- cached("pbmc3k_param_sensitivity.rds", {
     })
   )
 })
-sens <- sens |> mutate(
+sens <- sens |> mutate(  # 每组的簇数与相对参考的 ARI
   n_clusters = map_int(clusters, n_distinct),
   ARI = map_dbl(clusters, \(cl) bluster::pairwiseRand(ref_cl, cl, mode = "index"))
 )
-sens |> dplyr::select(-clusters)
+sens |> dplyr::select(-clusters)  # 打印
 ```
 
 ```{r}
 #| fig-height: 3
-ggplot(sens, aes(factor(k), factor(n_pc), fill = ARI)) +
-  geom_tile() + geom_text(aes(label = sprintf("%.2f\n(%d)", ARI, n_clusters)), size = 3) +
-  scale_fill_viridis_c(limits = c(0, 1)) +
-  labs(x = "k.param", y = "PC 数", title = "与参考聚类的 ARI（括号内为簇数）")
+ggplot(sens, aes(factor(k), factor(n_pc), fill = ARI)) +  # ARI 热图
+  geom_tile() + geom_text(aes(label = sprintf("%.2f\n(%d)", ARI, n_clusters)), size = 3) +  # 格子 + 数字
+  scale_fill_viridis_c(limits = c(0, 1)) +  # 颜色范围 0–1
+  labs(x = "k.param", y = "PC 数", title = "与参考聚类的 ARI（括号内为簇数）")  # 标签
 ```
 
 PC 数为 10–20、k 为 10–20 时与参考高度一致（ARI ≈ 0.85–1）；PC 过少（5）或 k 过大（50）时
@@ -253,27 +253,27 @@ PC 数为 10–20、k 为 10–20 时与参考高度一致（ARI ≈ 0.85–1）
 ### 聚类质量：轮廓宽度
 
 ```{r}
-Idents(pbmc) <- "RNA_snn_res.0.5"
-sil <- approxSilhouette(Embeddings(pbmc, "pca")[, pcs], clusters = Idents(pbmc))
-as_tibble(sil) |>
-  mutate(closest_is_self = cluster == other) |>
-  ggplot(aes(cluster, width, fill = cluster)) +
-  geom_boxplot(show.legend = FALSE) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  labs(title = "近似轮廓宽度（>0：比最近的其他簇更接近本簇）")
+Idents(pbmc) <- "RNA_snn_res.0.5"  # 以 0.5 分辨率为当前标识
+sil <- approxSilhouette(Embeddings(pbmc, "pca")[, pcs], clusters = Idents(pbmc))  # 近似轮廓宽度
+as_tibble(sil) |>  # 每个簇的轮廓宽度分布
+  mutate(closest_is_self = cluster == other) |>  # 最近簇是否为自己
+  ggplot(aes(cluster, width, fill = cluster)) +  # 坐标
+  geom_boxplot(show.legend = FALSE) +  # 箱线
+  geom_hline(yintercept = 0, linetype = "dashed") +  # 0 参考线
+  labs(title = "近似轮廓宽度（>0：比最近的其他簇更接近本簇）")  # 标题
 ```
 
 ## 非线性降维：UMAP 与 t-SNE
 
 ```{r}
-pbmc <- RunUMAP(pbmc, dims = pcs, verbose = FALSE)
-pbmc <- RunTSNE(pbmc, dims = pcs)
+pbmc <- RunUMAP(pbmc, dims = pcs, verbose = FALSE)  # UMAP
+pbmc <- RunTSNE(pbmc, dims = pcs)  # t-SNE
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4.5
-DimPlot(pbmc, reduction = "umap", label = TRUE) + ggtitle("UMAP") |
+DimPlot(pbmc, reduction = "umap", label = TRUE) + ggtitle("UMAP") |  # UMAP 与 t-SNE 并排
   DimPlot(pbmc, reduction = "tsne", label = TRUE) + ggtitle("t-SNE")
 ```
 
@@ -289,7 +289,7 @@ QC 指标在 UMAP 上的分布可以帮助识别低质量簇：
 ```{r}
 #| fig-width: 11
 #| fig-height: 3.8
-FeaturePlot(pbmc, features = c("nCount_RNA", "percent.mt", "doublet_score"), ncol = 3) &
+FeaturePlot(pbmc, features = c("nCount_RNA", "percent.mt", "doublet_score"), ncol = 3) &  # QC 指标在 UMAP 上的分布
   scale_colour_viridis_c()
 ```
 
@@ -299,11 +299,11 @@ FeaturePlot(pbmc, features = c("nCount_RNA", "percent.mt", "doublet_score"), nco
 （安装 `presto` 后快几十倍）。
 
 ```{r}
-markers <- FindAllMarkers(pbmc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
-markers |>
-  as_tibble() |>
-  slice_max(avg_log2FC, n = 4, by = cluster) |>
-  dplyr::select(cluster, gene, avg_log2FC, pct.1, pct.2, p_val_adj)
+markers <- FindAllMarkers(pbmc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)  # 每个簇相对其余细胞的上调 marker
+markers |>  # 每簇前 4 个
+  as_tibble() |>  # 转 tibble
+  slice_max(avg_log2FC, n = 4, by = cluster) |>  # 按簇取 log2FC 最大的
+  dplyr::select(cluster, gene, avg_log2FC, pct.1, pct.2, p_val_adj)  # 关键列
 ```
 
 `pct.1` / `pct.2`：本簇 / 其他细胞中表达该基因的细胞比例。好的 marker 是 `pct.1` 高、`pct.2` 低。
@@ -319,40 +319,40 @@ markers |>
 
 ```{r}
 #| fig-height: 5
-top3 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 3, by = cluster) |> pull(gene) |> unique()
-DotPlot(pbmc, features = top3) + RotatedAxis() +
-  scale_colour_gradient2(low = "steelblue", mid = "grey90", high = "firebrick")
+top3 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 3, by = cluster) |> pull(gene) |> unique()  # 每簇前 3 个 marker
+DotPlot(pbmc, features = top3) + RotatedAxis() +  # 点图：大小 = 表达比例，颜色 = 平均表达
+  scale_colour_gradient2(low = "steelblue", mid = "grey90", high = "firebrick")  # 颜色
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 7
-canonical <- c("IL7R", "CCR7", "S100A4", "CD14", "LYZ", "MS4A1", "CD8A",
+canonical <- c("IL7R", "CCR7", "S100A4", "CD14", "LYZ", "MS4A1", "CD8A",  # PBMC 经典 marker
                "FCGR3A", "MS4A7", "GNLY", "NKG7", "FCER1A", "CST3", "PPBP")
-FeaturePlot(pbmc, features = canonical[c(1, 4, 6, 7, 8, 10, 12, 14)], ncol = 4, order = TRUE) &
+FeaturePlot(pbmc, features = canonical[c(1, 4, 6, 7, 8, 10, 12, 14)], ncol = 4, order = TRUE) &  # 其中 8 个画 FeaturePlot
   NoAxes()
 ```
 
 ```{r}
 #| fig-height: 6
-top10 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 8, by = cluster) |> pull(gene) |> unique()
-DoHeatmap(subset(pbmc, downsample = 100), features = top10, size = 3) +
-  theme(axis.text.y = element_text(size = 6))
+top10 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 8, by = cluster) |> pull(gene) |> unique()  # 每簇前 8 个 marker
+DoHeatmap(subset(pbmc, downsample = 100), features = top10, size = 3) +  # 每簇抽 100 个细胞画热图
+  theme(axis.text.y = element_text(size = 6))  # 缩小基因名
 ```
 
 ### 用 FetchData + ggplot 自定义
 
 ```{r}
 #| fig-height: 4
-FetchData(pbmc, vars = c("ident", "umap_1", "umap_2", "CD8A", "CCR7")) |>
-  as_tibble() |>
-  pivot_longer(c(CD8A, CCR7), names_to = "gene", values_to = "expr") |>
+FetchData(pbmc, vars = c("ident", "umap_1", "umap_2", "CD8A", "CCR7")) |>  # 取 UMAP 坐标与两个基因的表达
+  as_tibble() |>  # 转 tibble
+  pivot_longer(c(CD8A, CCR7), names_to = "gene", values_to = "expr") |>  # 转长表
   arrange(expr) |>                                    # 高表达细胞画在最上层
-  ggplot(aes(umap_1, umap_2, colour = expr)) +
-  geom_point(size = 0.4) +
-  facet_wrap(~ gene) +
-  scale_colour_viridis_c(option = "magma") +
-  coord_fixed() + theme_void()
+  ggplot(aes(umap_1, umap_2, colour = expr)) +  # 坐标
+  geom_point(size = 0.4) +  # 点
+  facet_wrap(~ gene) +  # 每个基因一个分面
+  scale_colour_viridis_c(option = "magma") +  # 颜色
+  coord_fixed() + theme_void()  # 等比例坐标、去掉背景
 ```
 
 ## 细胞类型注释
@@ -377,7 +377,7 @@ PBMC 的经典 marker：
 然后人工核对：
 
 ```{r}
-marker_sets <- list(
+marker_sets <- list(  # 各细胞类型的 marker
   "Naive CD4 T"  = c("IL7R", "CCR7", "LEF1", "TCF7"),
   "Memory CD4 T" = c("IL7R", "S100A4", "IL32", "LTB"),
   "CD8 T"        = c("CD8A", "CD8B", "GZMK"),
@@ -389,14 +389,14 @@ marker_sets <- list(
   "Platelet"     = c("PPBP", "PF4")
 )
 
-avg <- AverageExpression(pbmc, features = unique(unlist(marker_sets)), group.by = "ident")$RNA
+avg <- AverageExpression(pbmc, features = unique(unlist(marker_sets)), group.by = "ident")$RNA  # 每个簇的平均表达
 score <- sapply(marker_sets, \(g) colMeans(as.matrix(avg[g, , drop = FALSE])))   # 簇 × 类型
 score_z <- scale(score)                                                          # 每种类型在簇间标准化
 assign <- tibble(col     = rownames(score_z),                 # AverageExpression 给数字簇名加了前缀 "g"
                  cluster = sub("^g", "", col),
                  label   = colnames(score_z)[apply(score_z, 1, which.max)],
                  z       = apply(score_z, 1, max))
-assign
+assign  # 打印注释
 ```
 
 注意：两个 CD4 T 簇很可能都被标成了同一类。原因是 memory 的 marker（S100A4、IL32）在单核/NK
@@ -404,19 +404,19 @@ assign
 **内部**用区分性 marker 细分。
 
 ```{r}
-cd4 <- assign |> filter(label %in% c("Naive CD4 T", "Memory CD4 T"))
-if (nrow(cd4) > 1) {
+cd4 <- assign |> filter(label %in% c("Naive CD4 T", "Memory CD4 T"))  # 被标为 CD4 T 的簇
+if (nrow(cd4) > 1) {  # 多于一个时再细分
   # 在 CD4 T 簇内部比较：CCR7（naive）相对 S100A4（memory）
-  naive_score <- avg["CCR7", cd4$col] - avg["S100A4", cd4$col]
-  assign$label[match(cd4$col, assign$col)] <-
+  naive_score <- avg["CCR7", cd4$col] - avg["S100A4", cd4$col]  # CCR7 − S100A4
+  assign$label[match(cd4$col, assign$col)] <-  # 得分最高的为 naive，其余为 memory
     if_else(naive_score == max(naive_score), "Naive CD4 T", "Memory CD4 T")
 }
-assign
+assign  # 打印
 ```
 
 ```{r}
 #| fig-height: 4.5
-pheatmap::pheatmap(t(score_z), cluster_rows = FALSE, cluster_cols = FALSE,
+pheatmap::pheatmap(t(score_z), cluster_rows = FALSE, cluster_cols = FALSE,  # 簇 × 类型得分热图
                    color = colorRampPalette(c("navy", "white", "firebrick"))(50),
                    main = "簇 × 细胞类型 marker 得分（z）")
 ```
@@ -426,10 +426,10 @@ pheatmap::pheatmap(t(score_z), cluster_rows = FALSE, cluster_cols = FALSE,
 
 ```{r}
 #| fig-height: 5
-new_ids <- setNames(assign$label, assign$cluster)
-pbmc$celltype_manual <- unname(new_ids[as.character(Idents(pbmc))])
-DimPlot(pbmc, group.by = "celltype_manual", label = TRUE, repel = TRUE) + NoLegend() +
-  ggtitle("手动注释")
+new_ids <- setNames(assign$label, assign$cluster)  # 簇 → 类型的对照向量
+pbmc$celltype_manual <- unname(new_ids[as.character(Idents(pbmc))])  # 写入元数据
+DimPlot(pbmc, group.by = "celltype_manual", label = TRUE, repel = TRUE) + NoLegend() +  # 按手动注释着色的 UMAP
+  ggtitle("手动注释")  # 标题
 ```
 
 ### 基因集打分：均值法 vs 秩法 {#sec-signature-score}
@@ -445,38 +445,38 @@ DimPlot(pbmc, group.by = "celltype_manual", label = TRUE, repel = TRUE) + NoLege
 
 ```{r}
 #| label: rank-score
-sigs <- list(
+sigs <- list(  # 三个基因集
   NK   = c("GNLY", "NKG7", "GZMB", "PRF1", "KLRD1", "GZMA"),
   B    = c("MS4A1", "CD79A", "CD79B", "CD19", "BANK1"),
   Mono = c("CD14", "LYZ", "S100A8", "S100A9", "FCN1", "VCAN")
 )
 expr <- as.matrix(LayerData(pbmc, layer = "data"))      # 约 1.4 万 × 2.5 千，稠密约 270 MB
-max_rank <- 1500
-rank_score <- function(sig) {
-  idx <- which(rownames(expr) %in% sig)
-  apply(expr, 2, function(x) {
+max_rank <- 1500  # 名次截断值
+rank_score <- function(sig) {  # 秩法得分（类似 AUCell）
+  idx <- which(rownames(expr) %in% sig)  # 基因集在表达矩阵中的行号
+  apply(expr, 2, function(x) {  # 对每个细胞计算
     r <- rank(-x, ties.method = "average")[idx]          # 该细胞中基因集各基因的名次
     r <- pmin(r, max_rank)                                # 排名靠后（含 0 表达）统一截断
     1 - mean(r) / max_rank                                # 越接近 1：基因集越集中在顶部
   })
 }
-rank_scores <- vapply(sigs, rank_score, numeric(ncol(expr)))
-rm(expr); invisible(gc())
-pbmc <- AddModuleScore(pbmc, features = sigs, name = "mod")
-colnames(pbmc@meta.data) <- sub("^mod(\\d)$", "\\1", colnames(pbmc@meta.data))
-mean_scores <- as.matrix(pbmc@meta.data[, as.character(seq_along(sigs))])
-colnames(mean_scores) <- names(sigs)
-diag(cor(rank_scores, mean_scores, method = "spearman"))
+rank_scores <- vapply(sigs, rank_score, numeric(ncol(expr)))  # 三个基因集的秩法得分
+rm(expr); invisible(gc())  # 释放稠密矩阵
+pbmc <- AddModuleScore(pbmc, features = sigs, name = "mod")  # Seurat 的均值法模块得分
+colnames(pbmc@meta.data) <- sub("^mod(\\d)$", "\\1", colnames(pbmc@meta.data))  # 列名 mod1 → 1
+mean_scores <- as.matrix(pbmc@meta.data[, as.character(seq_along(sigs))])  # 取出均值法得分
+colnames(mean_scores) <- names(sigs)  # 列名
+diag(cor(rank_scores, mean_scores, method = "spearman"))  # 两种方法的 Spearman 相关
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 3.5
-as_tibble(rank_scores) |> mutate(celltype = pbmc$celltype_manual) |>
-  pivot_longer(-celltype, names_to = "signature", values_to = "score") |>
-  ggplot(aes(score, celltype, fill = signature)) +
-  geom_boxplot(outlier.size = 0.2) + facet_wrap(~ signature, nrow = 1) +
-  theme(legend.position = "none") + labs(x = "秩法得分", y = NULL)
+as_tibble(rank_scores) |> mutate(celltype = pbmc$celltype_manual) |>  # 各细胞类型的秩法得分分布
+  pivot_longer(-celltype, names_to = "signature", values_to = "score") |>  # 转长表
+  ggplot(aes(score, celltype, fill = signature)) +  # 坐标
+  geom_boxplot(outlier.size = 0.2) + facet_wrap(~ signature, nrow = 1) +  # 箱线 + 分面
+  theme(legend.position = "none") + labs(x = "秩法得分", y = NULL)  # 隐藏图例与标签
 ```
 
 两种得分高度一致，且每个基因集都在对应的细胞类型中最高。秩法的代价是需要对每个细胞排序（这里用稠密矩阵 + `apply`，
@@ -496,15 +496,15 @@ Wilcoxon 检验的 p 值随细胞数增大而趋于 0，几乎不提供排序信
 **AUC**：随机取本簇一个细胞和其他簇一个细胞，本簇细胞表达更高的概率（0.5 = 无区分，1 = 完美区分）：
 
 ```{r}
-Idents(pbmc) <- "celltype_manual"
-roc_nk <- FindMarkers(pbmc, ident.1 = "NK", test.use = "roc", only.pos = TRUE, verbose = FALSE) |>
-  as_tibble(rownames = "gene") |> arrange(desc(myAUC))
-wil_nk <- FindMarkers(pbmc, ident.1 = "NK", only.pos = TRUE, verbose = FALSE) |>
-  as_tibble(rownames = "gene")
-head(roc_nk, 8)
-inner_join(roc_nk |> dplyr::select(gene, myAUC), wil_nk |> dplyr::select(gene, avg_log2FC, p_val_adj),
+Idents(pbmc) <- "celltype_manual"  # 以手动注释为当前标识
+roc_nk <- FindMarkers(pbmc, ident.1 = "NK", test.use = "roc", only.pos = TRUE, verbose = FALSE) |>  # ROC 法找 NK marker
+  as_tibble(rownames = "gene") |> arrange(desc(myAUC))  # 按 AUC 排序
+wil_nk <- FindMarkers(pbmc, ident.1 = "NK", only.pos = TRUE, verbose = FALSE) |>  # Wilcoxon 法
+  as_tibble(rownames = "gene")  # 转 tibble
+head(roc_nk, 8)  # AUC 最高的 8 个
+inner_join(roc_nk |> dplyr::select(gene, myAUC), wil_nk |> dplyr::select(gene, avg_log2FC, p_val_adj),  # 比较两种方法
            join_by(gene)) |>
-  summarise(n = n(), cor_auc_lfc = cor(myAUC, avg_log2FC, method = "spearman"),
+  summarise(n = n(), cor_auc_lfc = cor(myAUC, avg_log2FC, method = "spearman"),  # AUC 与 log2FC 的相关，以及极小 p 值的个数
             n_p_below_1e_50 = sum(p_val_adj < 1e-50))
 Idents(pbmc) <- "RNA_snn_res.0.5"                     # 恢复为聚类结果
 ```
@@ -520,44 +520,44 @@ SingleR（Aran et al. 2019）把每个细胞与参考数据集（已注释的纯
 `celldex::MonacoImmuneData()`：114 个 bulk RNA-seq 样本，29 种纯化免疫细胞类型，非常适合 PBMC。
 
 ```{r}
-ref <- cached("celldex_monaco.rds", celldex::MonacoImmuneData())
-ref
-table(ref$label.main)
+ref <- cached("celldex_monaco.rds", celldex::MonacoImmuneData())  # Monaco 免疫细胞参考（结果缓存）
+ref  # 打印
+table(ref$label.main)  # 主类别计数
 ```
 
 ```{r}
-pred <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref,
+pred <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref,  # SingleR 主类别注释
                 labels = ref$label.main, de.method = "classic")
 pbmc$singler_main <- pred$pruned.labels       # 低置信度的被修剪为 NA
 
-pred_fine <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref, labels = ref$label.fine)
-pbmc$singler_fine <- pred_fine$pruned.labels
+pred_fine <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref, labels = ref$label.fine)  # 细类别注释
+pbmc$singler_fine <- pred_fine$pruned.labels  # 写入元数据
 
-table(pbmc$singler_main, useNA = "ifany")
+table(pbmc$singler_main, useNA = "ifany")  # 主类别计数
 ```
 
 ```{r}
 #| fig-height: 5
-plotScoreHeatmap(pred, show.labels = FALSE, annotation_col = data.frame(
+plotScoreHeatmap(pred, show.labels = FALSE, annotation_col = data.frame(  # 每个细胞对各参考类别的得分热图
   cluster = Idents(pbmc), row.names = colnames(pbmc)))
 ```
 
 ```{r}
 #| fig-height: 5
-tab <- table(manual = pbmc$celltype_manual, SingleR = pbmc$singler_main)
-as_tibble(tab) |>
-  mutate(prop = n / sum(n), .by = manual) |>
-  ggplot(aes(SingleR, manual, fill = prop)) +
-  geom_tile() + geom_text(aes(label = ifelse(n > 0, n, "")), size = 3) +
-  scale_fill_viridis_c() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "手动注释 vs SingleR")
+tab <- table(manual = pbmc$celltype_manual, SingleR = pbmc$singler_main)  # 手动注释 × SingleR 的交叉表
+as_tibble(tab) |>  # 可视化交叉表
+  mutate(prop = n / sum(n), .by = manual) |>  # 按手动注释行归一化
+  ggplot(aes(SingleR, manual, fill = prop)) +  # 坐标
+  geom_tile() + geom_text(aes(label = ifelse(n > 0, n, "")), size = 3) +  # 格子 + 计数
+  scale_fill_viridis_c() +  # 颜色
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # x 轴文字斜放
+  labs(title = "手动注释 vs SingleR")  # 标题
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4.5
-DimPlot(pbmc, group.by = "singler_main", label = TRUE, repel = TRUE) + NoLegend() + ggtitle("SingleR (main)") |
+DimPlot(pbmc, group.by = "singler_main", label = TRUE, repel = TRUE) + NoLegend() + ggtitle("SingleR (main)") |  # 主类别与细类别并排
   DimPlot(pbmc, group.by = "singler_fine", label = TRUE, repel = TRUE, label.size = 2.5) + NoLegend() + ggtitle("SingleR (fine)")
 ```
 
@@ -567,23 +567,23 @@ SingleR 只能使用**参考与查询共有的基因**。PBMC 3k 的基因名来
 两者的 symbol 并不完全一致：
 
 ```{r}
-q_genes <- rownames(pbmc); r_genes <- rownames(ref)
-c(query = length(q_genes), reference = length(r_genes), shared = length(intersect(q_genes, r_genes)))
+q_genes <- rownames(pbmc); r_genes <- rownames(ref)  # 查询与参考的基因名
+c(query = length(q_genes), reference = length(r_genes), shared = length(intersect(q_genes, r_genes)))  # 两者的基因数与交集
 ```
 
 查询中有表达、但在参考中找不到的基因里，有多少只是**改了名字**？用 HGNChelper 把查询的旧 symbol 更新到当前命名：
 
 ```{r}
 #| label: hgnc-update
-expressed <- q_genes[Matrix::rowSums(LayerData(pbmc, layer = "counts") > 0) >= 10]
-missing_in_ref <- setdiff(expressed, r_genes)
-length(missing_in_ref)
-upd <- cached("pbmc3k_hgnc_update.rds",
+expressed <- q_genes[Matrix::rowSums(LayerData(pbmc, layer = "counts") > 0) >= 10]  # ≥ 10 个细胞中表达的基因
+missing_in_ref <- setdiff(expressed, r_genes)  # 参考中找不到的
+length(missing_in_ref)  # 个数
+upd <- cached("pbmc3k_hgnc_update.rds",  # HGNC 更新基因名（结果缓存）
               suppressWarnings(HGNChelper::checkGeneSymbols(missing_in_ref, species = "human")))
-rescued <- upd |> filter(!is.na(Suggested.Symbol), Suggested.Symbol != x,
+rescued <- upd |> filter(!is.na(Suggested.Symbol), Suggested.Symbol != x,  # 能被救回的：有唯一新名且在参考中
                          !str_detect(Suggested.Symbol, "///"), Suggested.Symbol %in% r_genes)
-nrow(rescued)
-head(rescued, 10)
+nrow(rescued)  # 个数
+head(rescued, 10)  # 例子
 ```
 
 这几百个基因只是因为改名而"消失"（例如 `C*orf*` 开放阅读框被正式命名、`FAM` 家族重命名）。
@@ -596,29 +596,29 @@ head(rescued, 10)
 置信度用 **delta**（最佳标签得分与其余标签得分中位数之差）衡量，按标签分别用 MAD 判定离群：
 
 ```{r}
-table(pruned = is.na(pred$pruned.labels))
-summary(pred$delta.next)
+table(pruned = is.na(pred$pruned.labels))  # 被修剪的细胞数
+summary(pred$delta.next)  # 最佳与次佳得分差的分布
 ```
 
 ```{r}
 #| fig-height: 4
-plotDeltaDistribution(pred, ncol = 5, dots.on.top = FALSE)
+plotDeltaDistribution(pred, ncol = 5, dots.on.top = FALSE)  # 每个类别的 delta 分布
 ```
 
 被修剪的细胞在哪里？它们是否集中在某些簇、或者具有某种 QC 特征？
 
 ```{r}
-pbmc$singler_pruned <- is.na(pbmc$singler_main)
-pbmc@meta.data |>
-  summarise(n = n(), pct_pruned = round(100 * mean(singler_pruned), 1),
+pbmc$singler_pruned <- is.na(pbmc$singler_main)  # 标记被修剪的细胞
+pbmc@meta.data |>  # 每种手动类型中被修剪的比例
+  summarise(n = n(), pct_pruned = round(100 * mean(singler_pruned), 1),  # 汇总
             .by = celltype_manual) |> arrange(desc(pct_pruned))
-pbmc@meta.data |>
-  summarise(across(c(nCount_RNA, nFeature_RNA, percent.mt, doublet_score), median), .by = singler_pruned)
+pbmc@meta.data |>  # 被修剪与否的 QC 指标中位数
+  summarise(across(c(nCount_RNA, nFeature_RNA, percent.mt, doublet_score), median), .by = singler_pruned)  # 汇总
 ```
 
 ```{r}
 #| fig-height: 4
-DimPlot(pbmc, group.by = "singler_pruned", cols = c(`FALSE` = "grey85", `TRUE` = "red"),
+DimPlot(pbmc, group.by = "singler_pruned", cols = c(`FALSE` = "grey85", `TRUE` = "red"),  # 被修剪细胞的位置
         order = TRUE) + ggtitle("SingleR 置信度低（pruned = NA）的细胞")
 ```
 
@@ -643,9 +643,9 @@ DimPlot(pbmc, group.by = "singler_pruned", cols = c(`FALSE` = "grey85", `TRUE` =
 ## 细胞周期打分
 
 ```{r}
-pbmc <- CellCycleScoring(pbmc, s.features = cc.genes.updated.2019$s.genes,
+pbmc <- CellCycleScoring(pbmc, s.features = cc.genes.updated.2019$s.genes,  # 细胞周期打分（S 与 G2M）
                          g2m.features = cc.genes.updated.2019$g2m.genes)
-table(pbmc$Phase)
+table(pbmc$Phase)  # 各期细胞数
 ```
 
 注意运行时的警告：`cc.genes.updated.2019` 中有十几个基因"不在对象中"。它们大多不是没有表达，而是**改了名字**——
@@ -653,9 +653,9 @@ table(pbmc$Phase)
 这又是 @sec-ref-gene-overlap 的问题：任何基于基因列表的打分，都要先检查列表与数据的命名是否一致。
 
 ```{r}
-cc_all <- c(cc.genes.updated.2019$s.genes, cc.genes.updated.2019$g2m.genes)
-missing_cc <- setdiff(cc_all, rownames(pbmc))
-missing_cc
+cc_all <- c(cc.genes.updated.2019$s.genes, cc.genes.updated.2019$g2m.genes)  # 所有细胞周期基因
+missing_cc <- setdiff(cc_all, rownames(pbmc))  # 数据中缺失的
+missing_cc  # 打印
 c("FAM64A", "HN1") %in% rownames(pbmc)   # 旧名是否在数据里？
 ```
 
@@ -665,8 +665,8 @@ c("FAM64A", "HN1") %in% rownames(pbmc)   # 旧名是否在数据里？
 ## 保存
 
 ```{r}
-Idents(pbmc) <- "celltype_manual"
-saveRDS(pbmc, file.path(DATA_DIR, "pbmc3k_annotated.rds"))
+Idents(pbmc) <- "celltype_manual"  # 以手动注释为当前标识
+saveRDS(pbmc, file.path(DATA_DIR, "pbmc3k_annotated.rds"))  # 保存注释后的对象
 ```
 
 ## 练习

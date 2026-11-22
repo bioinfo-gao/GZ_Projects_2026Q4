@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -50,20 +50,20 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(DESeq2)
-library(ggrepel)
-library(patchwork)
-library(ComplexHeatmap)
-library(circlize)
-library(AnnotationDbi)
-library(org.Hs.eg.db)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(DESeq2)  # 负二项 GLM 的差异表达分析
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ComplexHeatmap)  # 功能最全的热图包
+library(circlize)  # 连续颜色映射（colorRamp2）
+library(AnnotationDbi)  # 注释数据库的统一查询接口（select/mapIds）
+library(org.Hs.eg.db)  # 人类基因 ID 对照库（ENSEMBL/ENTREZ/SYMBOL）
 ```
 
 ```{r}
 dds <- readRDS(file.path(DATA_DIR, "airway_dds.rds"))   # 第 6 章：已过滤、已设定 ~ cell + dex
-dds
-design(dds)
+dds  # 打印对象概况
+design(dds)  # 设计公式
 levels(dds$dex)       # untrt 是参照
 ```
 
@@ -89,8 +89,8 @@ $$
 设计公式 `~ cell + dex` 生成的设计矩阵：
 
 ```{r}
-mm <- model.matrix(design(dds), colData(dds))
-mm
+mm <- model.matrix(design(dds), colData(dds))  # 由设计公式生成的设计矩阵
+mm  # 打印：截距 + 3 个供者 + 处理
 ```
 
 解读：截距 = 参照细胞系（`N052611`，按字母序）的未处理样本；`cellN061011` 等 = 各细胞系
@@ -109,14 +109,14 @@ DESeq2 默认对**最后一个变量**生成结果（`results(dds)` 不加参数
 ### 1. 大小因子
 
 ```{r}
-dds <- estimateSizeFactors(dds)
-sizeFactors(dds)
+dds <- estimateSizeFactors(dds)  # 第 1 步：size factor
+sizeFactors(dds)  # 查看
 ```
 
 ### 2. 离散度估计与收缩
 
 ```{r}
-dds <- estimateDispersions(dds)
+dds <- estimateDispersions(dds)  # 第 2 步：离散度估计
 ```
 
 DESeq2 的离散度估计分三步：
@@ -127,18 +127,18 @@ DESeq2 的离散度估计分三步：
    自由度（样本数）与基因离散度围绕趋势的分散程度。远高于趋势的基因不收缩（标记为离群）。
 
 ```{r}
-disp <- as_tibble(mcols(dds)[, c("baseMean", "dispGeneEst", "dispFit", "dispersion", "dispOutlier")])
+disp <- as_tibble(mcols(dds)[, c("baseMean", "dispGeneEst", "dispFit", "dispersion", "dispOutlier")])  # 基因级、趋势、最终离散度与离群标记
 
-ggplot(disp |> filter(baseMean > 0), aes(baseMean)) +
-  geom_point(aes(y = dispGeneEst), colour = "black", size = 0.3, alpha = 0.3) +
-  geom_point(aes(y = dispersion, colour = dispOutlier), size = 0.3, alpha = 0.5) +
-  geom_line(aes(y = dispFit), colour = "red", linewidth = 1) +
-  scale_colour_manual(values = c(`FALSE` = "dodgerblue", `TRUE` = "orange"),
+ggplot(disp |> filter(baseMean > 0), aes(baseMean)) +  # 手绘离散度图
+  geom_point(aes(y = dispGeneEst), colour = "black", size = 0.3, alpha = 0.3) +  # 基因级估计
+  geom_point(aes(y = dispersion, colour = dispOutlier), size = 0.3, alpha = 0.5) +  # 最终值，离群点另色
+  geom_line(aes(y = dispFit), colour = "red", linewidth = 1) +  # 拟合趋势
+  scale_colour_manual(values = c(`FALSE` = "dodgerblue", `TRUE` = "orange"),  # 颜色与图例
                       labels = c("收缩后 (MAP)", "离群：保留基因级估计")) +
-  scale_x_log10() + scale_y_log10() +
-  labs(x = "Mean of normalized counts", y = "Dispersion", colour = NULL,
+  scale_x_log10() + scale_y_log10() +  # 双对数坐标
+  labs(x = "Mean of normalized counts", y = "Dispersion", colour = NULL,  # 标签
        title = "离散度估计：黑 = 基因级，红 = 趋势，蓝 = 最终值") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")  # 图例放底部
 ```
 
 内置版本：`plotDispEsts(dds)`。
@@ -149,8 +149,8 @@ ggplot(disp |> filter(baseMean > 0), aes(baseMean)) +
 ### 3. Wald 检验
 
 ```{r}
-dds <- nbinomWaldTest(dds)
-resultsNames(dds)
+dds <- nbinomWaldTest(dds)  # 第 3 步：Wald 检验
+resultsNames(dds)  # 可直接取的系数名
 ```
 
 实际使用时直接 `dds <- DESeq(dds)` 即可，它依次执行上述三步。
@@ -166,7 +166,7 @@ dds <- DESeq(dds, parallel = TRUE, BPPARAM = BiocParallel::MulticoreParam(4))   
 
 ```{r}
 #| fig-height: 4.5
-plotDispEsts(dds, main = "离散度估计：黑 = 基因级 MLE，红 = 趋势，蓝 = 收缩后")
+plotDispEsts(dds, main = "离散度估计：黑 = 基因级 MLE，红 = 趋势，蓝 = 收缩后")  # DESeq2 自带的离散度图
 ```
 
 读图要点：
@@ -177,9 +177,9 @@ plotDispEsts(dds, main = "离散度估计：黑 = 基因级 MLE，红 = 趋势�
 - 趋势线渐近值的平方根就是高表达基因的**生物学变异系数（BCV）**：
 
 ```{r}
-disp_fun <- dispersionFunction(dds)
-asympt <- attr(disp_fun, "coefficients")["asymptDisp"]
-c(asymptotic_dispersion = unname(asympt), BCV = sqrt(unname(asympt)))
+disp_fun <- dispersionFunction(dds)  # 离散度趋势函数
+asympt <- attr(disp_fun, "coefficients")["asymptDisp"]  # 渐近离散度
+c(asymptotic_dispersion = unname(asympt), BCV = sqrt(unname(asympt)))  # BCV = 渐近离散度的平方根
 ```
 
 细胞系实验的 BCV 通常在 0.1 左右；人体组织样本常在 0.3–0.5——这直接决定了需要多少生物学重复。
@@ -187,10 +187,10 @@ c(asymptotic_dispersion = unname(asympt), BCV = sqrt(unname(asympt)))
 ## 提取结果
 
 ```{r}
-res <- results(dds, name = "dex_trt_vs_untrt", alpha = 0.05)
-res
-summary(res)
-mcols(res)$description
+res <- results(dds, name = "dex_trt_vs_untrt", alpha = 0.05)  # 取处理效应的结果，FDR 阈值 0.05
+res  # 打印
+summary(res)  # 上下调计数概况
+mcols(res)$description  # 各列含义
 ```
 
 等价写法：`results(dds, contrast = c("dex", "trt", "untrt"))`（分子在前，分母在后）。
@@ -209,9 +209,9 @@ mcols(res)$description
 ### p 值中的 NA 从何而来
 
 ```{r}
-res_tbl <- as_tibble(res, rownames = "gene_id")
-res_tbl |>
-  summarise(
+res_tbl <- as_tibble(res, rownames = "gene_id")  # 结果转 tibble
+res_tbl |>  # 按 NA 原因计数
+  summarise(  # 全零、Cook 离群、独立过滤、已检验
     all_zero     = sum(baseMean == 0),
     cooks_outlier = sum(is.na(pvalue) & baseMean > 0),
     filtered     = sum(!is.na(pvalue) & is.na(padj)),
@@ -229,20 +229,20 @@ res_tbl |>
 （它与 p 值在零假设下独立），在一系列分位数阈值中选择**拒绝数最多**的那个：
 
 ```{r}
-fn <- metadata(res)$filterNumRej
-ggplot(fn, aes(theta, numRej)) +
-  geom_point() + geom_line() +
-  geom_vline(xintercept = metadata(res)$filterTheta, colour = "red", linetype = "dashed") +
-  labs(x = "被过滤掉的 baseMean 分位数", y = "padj < 0.05 的基因数",
+fn <- metadata(res)$filterNumRej  # 独立过滤在各阈值下的显著基因数
+ggplot(fn, aes(theta, numRej)) +  # 阈值–显著数曲线
+  geom_point() + geom_line() +  # 点和线
+  geom_vline(xintercept = metadata(res)$filterTheta, colour = "red", linetype = "dashed") +  # 所选阈值
+  labs(x = "被过滤掉的 baseMean 分位数", y = "padj < 0.05 的基因数",  # 标签
        title = sprintf("最优阈值：baseMean > %.2f", metadata(res)$filterThreshold))
 ```
 
 ### p 值分布
 
 ```{r}
-ggplot(res_tbl |> filter(baseMean > metadata(res)$filterThreshold), aes(pvalue)) +
-  geom_histogram(binwidth = 0.02, boundary = 0, fill = "grey50", colour = "white") +
-  labs(title = "通过独立过滤的基因的 p 值分布")
+ggplot(res_tbl |> filter(baseMean > metadata(res)$filterThreshold), aes(pvalue)) +  # 通过过滤的基因的 p 值直方图
+  geom_histogram(binwidth = 0.02, boundary = 0, fill = "grey50", colour = "white") +  # 直方图
+  labs(title = "通过独立过滤的基因的 p 值分布")  # 标题
 ```
 
 ### 带阈值的检验：`lfcThreshold`
@@ -251,11 +251,11 @@ ggplot(res_tbl |> filter(baseMean > metadata(res)$filterThreshold), aes(pvalue))
 正确的做法是把阈值写进零假设 $H_0: |\beta| \le 1$：
 
 ```{r}
-res_lfc1 <- results(dds, name = "dex_trt_vs_untrt", alpha = 0.05,
+res_lfc1 <- results(dds, name = "dex_trt_vs_untrt", alpha = 0.05,  # 检验 |log2FC| > 1，而不是先检验再筛
                     lfcThreshold = 1, altHypothesis = "greaterAbs")
-summary(res_lfc1)
+summary(res_lfc1)  # 概况
 
-c(
+c(  # 两种做法的显著基因数对比
   post_hoc_filter = sum(res$padj < 0.05 & abs(res$log2FoldChange) > 1, na.rm = TRUE),
   formal_test     = sum(res_lfc1$padj < 0.05, na.rm = TRUE)
 )
@@ -269,11 +269,11 @@ c(
 衡量该样本对拟合系数的影响：
 
 ```{r}
-cooks <- assays(dds)[["cooks"]]
-dim(cooks)
+cooks <- assays(dds)[["cooks"]]  # 每个基因 × 样本的 Cook 距离
+dim(cooks)  # 维度
 max_cooks <- apply(cooks, 1, max)            # 每个基因的最大 Cook 距离
-cutoff <- qf(0.99, length(resultsNames(dds)), ncol(dds) - length(resultsNames(dds)))
-cutoff
+cutoff <- qf(0.99, length(resultsNames(dds)), ncol(dds) - length(resultsNames(dds)))  # F 分布 0.99 分位数作为离群阈值
+cutoff  # 打印阈值
 sum(max_cooks > cutoff, na.rm = TRUE)        # 有离群样本的基因数
 ```
 
@@ -284,16 +284,16 @@ sum(max_cooks > cutoff, na.rm = TRUE)        # 有离群样本的基因数
 为演示，用更简单的设计 `~ dex`（p = 2，阈值约 10.9），给 *GAPDH* 的一个样本制造 5 倍的离群计数：
 
 ```{r}
-dds_out <- dds
-design(dds_out) <- ~ dex
-g_out <- rownames(dds)[which(rowData(dds)$gene_name == "GAPDH")]
-counts(dds)[g_out, ]
-assay(dds_out)[g_out, "SRR1039508"] <- assay(dds_out)[g_out, "SRR1039508"] * 5L
-dds_out <- DESeq(dds_out, quiet = TRUE)
-r_out <- results(dds_out)
+dds_out <- dds  # 复制一份做离群演示
+design(dds_out) <- ~ dex  # 简化设计
+g_out <- rownames(dds)[which(rowData(dds)$gene_name == "GAPDH")]  # GAPDH 的 ID
+counts(dds)[g_out, ]  # 原始计数
+assay(dds_out)[g_out, "SRR1039508"] <- assay(dds_out)[g_out, "SRR1039508"] * 5L  # 把一个样本的计数放大 5 倍
+dds_out <- DESeq(dds_out, quiet = TRUE)  # 重新拟合
+r_out <- results(dds_out)  # 取结果
 r_out[g_out, c("baseMean", "log2FoldChange", "pvalue", "padj")]   # p 值被置为 NA
 round(assays(dds_out)[["cooks"]][g_out, ], 2)                   # 离群样本的 Cook 距离远超其他样本
-qf(0.99, 2, ncol(dds_out) - 2)
+qf(0.99, 2, ncol(dds_out) - 2)  # 该设计下的离群阈值
 ```
 
 不处理的话，这一个离群计数会让 *GAPDH* 出现约 −1.2 的"倍数变化"。每组只有 4 个样本时，DESeq2 选择**把该基因的 p 值置为 NA**（"不可信，不报告"）；
@@ -305,14 +305,14 @@ qf(0.99, 2, ncol(dds_out) - 2)
 DESeq2 结果中有三类 NA，各有含义，下游处理也不同：
 
 ```{r}
-na_reason <- as_tibble(res, rownames = "gene_id") |>
-  mutate(reason = case_when(
+na_reason <- as_tibble(res, rownames = "gene_id") |>  # 给每个 NA 标注原因
+  mutate(reason = case_when(  # 按优先级判断
     baseMean == 0                    ~ "全零计数",
     is.na(pvalue)                    ~ "Cook 离群",
     is.na(padj)                      ~ "独立过滤",
     .default                         = "已检验"
   ))
-na_reason |> dplyr::count(reason)
+na_reason |> dplyr::count(reason)  # 各原因计数
 ```
 
 | 下游用途 | 建议 |
@@ -330,26 +330,26 @@ na_reason |> dplyr::count(reason)
 信息充足的估计几乎不变。用于**排序与可视化**（例如 GSEA 排序、火山图），不改变 p 值。
 
 ```{r}
-res_ape  <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "apeglm")
-res_ashr <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "ashr")
-res_norm <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "normal")
+res_ape  <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "apeglm")  # apeglm 收缩（推荐）
+res_ashr <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "ashr")  # ashr 收缩
+res_norm <- lfcShrink(dds, coef = "dex_trt_vs_untrt", type = "normal")  # normal 收缩（旧默认）
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 7
-ma_plot <- function(r, title) {
-  as_tibble(r) |>
-    mutate(sig = !is.na(padj) & padj < 0.05) |>
-    ggplot(aes(baseMean, log2FoldChange, colour = sig)) +
-    geom_point(size = 0.4, alpha = 0.5, show.legend = FALSE) +
-    geom_hline(yintercept = 0, colour = "grey30") +
-    scale_x_log10() +
-    scale_colour_manual(values = c(`FALSE` = "grey70", `TRUE` = "firebrick")) +
-    coord_cartesian(ylim = c(-6, 6)) +
-    labs(title = title, x = "mean of normalized counts", y = "log2 FC")
+ma_plot <- function(r, title) {  # 画 MA 图的函数
+  as_tibble(r) |>  # 结果转 tibble
+    mutate(sig = !is.na(padj) & padj < 0.05) |>  # 标记显著
+    ggplot(aes(baseMean, log2FoldChange, colour = sig)) +  # 坐标
+    geom_point(size = 0.4, alpha = 0.5, show.legend = FALSE) +  # 点
+    geom_hline(yintercept = 0, colour = "grey30") +  # 0 参考线
+    scale_x_log10() +  # 对数 x 轴
+    scale_colour_manual(values = c(`FALSE` = "grey70", `TRUE` = "firebrick")) +  # 显著为红
+    coord_cartesian(ylim = c(-6, 6)) +  # 固定 y 范围
+    labs(title = title, x = "mean of normalized counts", y = "log2 FC")  # 标签
 }
-(ma_plot(res, "MLE (未收缩)") | ma_plot(res_ape, "apeglm")) /
+(ma_plot(res, "MLE (未收缩)") | ma_plot(res_ape, "apeglm")) /  # 四种估计并排对比
   (ma_plot(res_ashr, "ashr") | ma_plot(res_norm, "normal (旧默认)"))
 ```
 
@@ -365,31 +365,31 @@ apeglm 还可以给出 s 值（类似 FDR 的"符号错误率"）：
 ## 注释结果
 
 ```{r}
-anno <- tibble(
+anno <- tibble(  # 基因注释：symbol、类型、Entrez
   gene_id = rownames(res_ape),
   symbol  = rowData(dds)$gene_name,
   biotype = rowData(dds)$gene_biotype,
   entrez  = mapIds(org.Hs.eg.db, rownames(res_ape), "ENTREZID", "ENSEMBL", multiVals = "first")
 )
 
-deg <- as_tibble(res_ape, rownames = "gene_id") |>
-  dplyr::rename(log2FC_shrunk = log2FoldChange, lfcSE_shrunk = lfcSE) |>
-  left_join(as_tibble(res, rownames = "gene_id") |> dplyr::select(gene_id, log2FC_mle = log2FoldChange, stat),
+deg <- as_tibble(res_ape, rownames = "gene_id") |>  # 合并收缩结果、MLE 与注释
+  dplyr::rename(log2FC_shrunk = log2FoldChange, lfcSE_shrunk = lfcSE) |>  # 收缩后的列改名
+  left_join(as_tibble(res, rownames = "gene_id") |> dplyr::select(gene_id, log2FC_mle = log2FoldChange, stat),  # 加上 MLE 的 log2FC 与 Wald 统计量
             join_by(gene_id)) |>
-  left_join(anno, join_by(gene_id)) |>
-  relocate(symbol, biotype, entrez, .after = gene_id) |>
-  arrange(padj)
+  left_join(anno, join_by(gene_id)) |>  # 加注释
+  relocate(symbol, biotype, entrez, .after = gene_id) |>  # 注释列移到前面
+  arrange(padj)  # 按 padj 排序
 
-deg |> head(15)
+deg |> head(15)  # 前 15 个
 ```
 
 ```{r}
-deg |>
-  filter(padj < 0.05) |>
-  mutate(direction = if_else(log2FC_shrunk > 0, "up", "down")) |>
+deg |>  # 按类型与方向统计显著基因
+  filter(padj < 0.05) |>  # 显著的
+  mutate(direction = if_else(log2FC_shrunk > 0, "up", "down")) |>  # 方向
   summarise(n = n(), .by = c(biotype, direction)) |>      # .by 只接受列名，不能现算表达式
-  arrange(desc(n)) |>
-  head(8)
+  arrange(desc(n)) |>  # 降序
+  head(8)  # 前 8 行
 ```
 
 ## 可视化
@@ -398,9 +398,9 @@ deg |>
 
 ```{r}
 #| fig-height: 6
-vol <- deg |>
-  filter(!is.na(padj)) |>
-  mutate(
+vol <- deg |>  # 火山图数据
+  filter(!is.na(padj)) |>  # 去掉未检验的
+  mutate(  # 状态与 -log10(padj)
     status = case_when(
       padj < 0.05 & log2FC_shrunk >=  1 ~ "Up",
       padj < 0.05 & log2FC_shrunk <= -1 ~ "Down",
@@ -409,24 +409,24 @@ vol <- deg |>
     nlp = pmin(-log10(padj), 100)        # 截顶，避免极端值压扁其他点
   )
 
-labs_df <- bind_rows(
+labs_df <- bind_rows(  # 要标注的基因：上调/下调/最显著各 10 个
   vol |> filter(status == "Up")   |> slice_max(log2FC_shrunk, n = 10),
   vol |> filter(status == "Down") |> slice_min(log2FC_shrunk, n = 10),
   vol |> slice_max(nlp, n = 10)
 ) |> distinct(gene_id, .keep_all = TRUE) |> filter(!is.na(symbol))
 
-n_up   <- sum(vol$status == "Up"); n_down <- sum(vol$status == "Down")
+n_up   <- sum(vol$status == "Up"); n_down <- sum(vol$status == "Down")  # 上下调数
 
-ggplot(vol, aes(log2FC_shrunk, nlp)) +
-  geom_point(aes(colour = status), size = 0.9, alpha = 0.7) +
-  geom_text_repel(data = labs_df, aes(label = symbol), size = 3, max.overlaps = Inf,
+ggplot(vol, aes(log2FC_shrunk, nlp)) +  # 火山图
+  geom_point(aes(colour = status), size = 0.9, alpha = 0.7) +  # 按状态着色
+  geom_text_repel(data = labs_df, aes(label = symbol), size = 3, max.overlaps = Inf,  # 基因名标签
                   min.segment.length = 0, box.padding = 0.35, seed = 42) +
-  geom_hline(yintercept = -log10(0.05), linetype = "dashed", colour = "grey50") +
-  geom_vline(xintercept = c(-1, 1), linetype = "dashed", colour = "grey50") +
-  annotate("text", x = Inf, y = Inf, label = paste("Up:", n_up), hjust = 1.1, vjust = 1.5, colour = "#D55E00") +
-  annotate("text", x = -Inf, y = Inf, label = paste("Down:", n_down), hjust = -0.1, vjust = 1.5, colour = "#0072B2") +
-  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey80"), guide = "none") +
-  labs(x = "log2 fold change (apeglm)", y = expression(-log[10](padj)),
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", colour = "grey50") +  # padj = 0.05 参考线
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", colour = "grey50") +  # |log2FC| = 1 参考线
+  annotate("text", x = Inf, y = Inf, label = paste("Up:", n_up), hjust = 1.1, vjust = 1.5, colour = "#D55E00") +  # 右上角标注上调数
+  annotate("text", x = -Inf, y = Inf, label = paste("Down:", n_down), hjust = -0.1, vjust = 1.5, colour = "#0072B2") +  # 左上角标注下调数
+  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey80"), guide = "none") +  # 状态颜色
+  labs(x = "log2 fold change (apeglm)", y = expression(-log[10](padj)),  # 标签
        title = "Dexamethasone vs untreated", subtitle = "airway, ~ cell + dex")
 ```
 
@@ -440,22 +440,22 @@ ggplot(vol, aes(log2FC_shrunk, nlp)) +
 
 ```{r}
 #| fig-height: 5
-top6 <- deg |> filter(!is.na(symbol)) |> slice_head(n = 6)
+top6 <- deg |> filter(!is.na(symbol)) |> slice_head(n = 6)  # 最显著的 6 个基因
 
-counts_long <- map(top6$gene_id, \(g) {
+counts_long <- map(top6$gene_id, \(g) {  # 取每个基因的归一化计数
   plotCounts(dds, gene = g, intgroup = c("dex", "cell"), returnData = TRUE) |>
     mutate(gene_id = g)
 }) |>
-  list_rbind() |>
-  left_join(top6 |> dplyr::select(gene_id, symbol, padj), join_by(gene_id)) |>
-  mutate(label = sprintf("%s\npadj = %.1e", symbol, padj) |> fct_reorder(padj))
+  list_rbind() |>  # 合并
+  left_join(top6 |> dplyr::select(gene_id, symbol, padj), join_by(gene_id)) |>  # 加 symbol 与 padj
+  mutate(label = sprintf("%s\npadj = %.1e", symbol, padj) |> fct_reorder(padj))  # 分面标签，按 padj 排序
 
-ggplot(counts_long, aes(dex, count)) +
-  geom_line(aes(group = cell), colour = "grey70") +
-  geom_point(aes(colour = cell), size = 2.5) +
-  scale_y_log10() +
-  facet_wrap(~ label, scales = "free_y", nrow = 2) +
-  labs(x = NULL, y = "normalized count (log scale)", colour = "cell line")
+ggplot(counts_long, aes(dex, count)) +  # 配对计数图
+  geom_line(aes(group = cell), colour = "grey70") +  # 供者内连线
+  geom_point(aes(colour = cell), size = 2.5) +  # 点
+  scale_y_log10() +  # 对数 y 轴
+  facet_wrap(~ label, scales = "free_y", nrow = 2) +  # 每个基因一个分面
+  labs(x = NULL, y = "normalized count (log scale)", colour = "cell line")  # 标签
 ```
 
 ### 热图：去除供者效应后展示
@@ -466,15 +466,15 @@ ggplot(counts_long, aes(dex, count)) +
 
 ```{r}
 #| fig-height: 7
-vsd <- vst(dds, blind = FALSE)
-mat <- limma::removeBatchEffect(assay(vsd), batch = vsd$cell,
+vsd <- vst(dds, blind = FALSE)  # VST 变换
+mat <- limma::removeBatchEffect(assay(vsd), batch = vsd$cell,  # 去掉供者效应（仅用于作图）
                                 design = model.matrix(~ dex, colData(vsd)))
 
-top50 <- deg |> filter(padj < 0.05, abs(log2FC_shrunk) > 1) |> slice_min(padj, n = 50)
-z <- t(scale(t(mat[top50$gene_id, ])))
-rownames(z) <- coalesce(top50$symbol, top50$gene_id)
+top50 <- deg |> filter(padj < 0.05, abs(log2FC_shrunk) > 1) |> slice_min(padj, n = 50)  # 最显著的 50 个大效应基因
+z <- t(scale(t(mat[top50$gene_id, ])))  # 行 z-score
+rownames(z) <- coalesce(top50$symbol, top50$gene_id)  # 行名用 symbol，缺失时用 ID
 
-Heatmap(
+Heatmap(  # 热图：按处理分列，右侧附 LFC 条形图
   z, name = "z-score",
   col = colorRamp2(c(-1.8, 0, 1.8), c("#2166AC", "white", "#B2182B")),
   top_annotation = HeatmapAnnotation(dex = vsd$dex, cell = vsd$cell,
@@ -491,15 +491,15 @@ Wald 检验单个系数；**LRT** 比较完整模型与简化模型，检验"去
 用途：多水平因子的整体检验（任意组间是否有差异）、时间序列、交互作用。
 
 ```{r}
-dds_lrt <- DESeq(dds, test = "LRT", reduced = ~ cell)
-res_lrt <- results(dds_lrt)
-summary(res_lrt)
+dds_lrt <- DESeq(dds, test = "LRT", reduced = ~ cell)  # LRT：完整模型 vs 去掉 dex 的简化模型
+res_lrt <- results(dds_lrt)  # 取结果
+summary(res_lrt)  # 概况
 
-tibble(wald = res$pvalue, lrt = res_lrt$pvalue) |>
-  filter(!is.na(wald), !is.na(lrt)) |>
-  ggplot(aes(-log10(wald), -log10(lrt))) +
-  geom_point(size = 0.3, alpha = 0.3) + geom_abline(colour = "red") +
-  labs(title = "单一自由度时 Wald ≈ LRT")
+tibble(wald = res$pvalue, lrt = res_lrt$pvalue) |>  # 比较 Wald 与 LRT 的 p 值
+  filter(!is.na(wald), !is.na(lrt)) |>  # 去掉 NA
+  ggplot(aes(-log10(wald), -log10(lrt))) +  # 坐标
+  geom_point(size = 0.3, alpha = 0.3) + geom_abline(colour = "red") +  # 点 + 对角线
+  labs(title = "单一自由度时 Wald ≈ LRT")  # 标题
 ```
 
 注意：LRT 结果中的 `log2FoldChange` 仍然来自完整模型的**最后一个系数**，并不代表"检验的效应"。
@@ -507,20 +507,20 @@ tibble(wald = res$pvalue, lrt = res_lrt$pvalue) |>
 ## 对比（contrast）的多种写法
 
 ```{r}
-resultsNames(dds)
+resultsNames(dds)  # 系数名
 
 # 1) 因子水平
-r1 <- results(dds, contrast = c("cell", "N61311", "N080611"))
+r1 <- results(dds, contrast = c("cell", "N61311", "N080611"))  # 两个供者之间的比较
 # 2) 系数名列表：分子列表 − 分母列表
-r2 <- results(dds, contrast = list("cell_N61311_vs_N052611", "cell_N080611_vs_N052611"))
+r2 <- results(dds, contrast = list("cell_N61311_vs_N052611", "cell_N080611_vs_N052611"))  # 用系数名列表做差
 # 3) 数值向量：与 resultsNames(dds) 一一对应
-cvec <- setNames(numeric(length(resultsNames(dds))), resultsNames(dds))
-cvec[c("cell_N61311_vs_N052611", "cell_N080611_vs_N052611")] <- c(1, -1)
-cvec
-r3 <- results(dds, contrast = cvec)
+cvec <- setNames(numeric(length(resultsNames(dds))), resultsNames(dds))  # 与系数一一对应的数值向量
+cvec[c("cell_N61311_vs_N052611", "cell_N080611_vs_N052611")] <- c(1, -1)  # +1 / −1
+cvec  # 打印
+r3 <- results(dds, contrast = cvec)  # 数值向量形式的对比
 
-all.equal(r1$log2FoldChange, r2$log2FoldChange)
-all.equal(r1$log2FoldChange, r3$log2FoldChange)
+all.equal(r1$log2FoldChange, r2$log2FoldChange)  # 三种写法结果应一致
+all.equal(r1$log2FoldChange, r3$log2FoldChange)  # 同上
 ```
 
 数值对比最灵活也最易错。推荐使用 `contrast = list(...)` 或因子水平形式。
@@ -535,14 +535,14 @@ all.equal(r1$log2FoldChange, r3$log2FoldChange)
 
 ```{r}
 #| label: power-analysis
-run_de <- function(d) {
-  d <- DESeq(d, quiet = TRUE)
-  r <- results(d, name = "dex_trt_vs_untrt", alpha = 0.05)
-  sum(r$padj < 0.05, na.rm = TRUE)
+run_de <- function(d) {  # 跑一次差异分析并返回显著基因数
+  d <- DESeq(d, quiet = TRUE)  # 拟合
+  r <- results(d, name = "dex_trt_vs_untrt", alpha = 0.05)  # 取结果
+  sum(r$padj < 0.05, na.rm = TRUE)  # 显著基因数
 }
-donors <- levels(dds$cell)
+donors <- levels(dds$cell)  # 4 个供者
 
-power_donors <- cached("airway_power_donors.rds", {
+power_donors <- cached("airway_power_donors.rds", {  # 供者数 2/3/4 的所有组合分别跑一次（结果缓存）
   combos <- unlist(lapply(2:4, \(k) combn(donors, k, simplify = FALSE)), recursive = FALSE)
   tibble(
     n_donors = lengths(combos),
@@ -554,13 +554,13 @@ power_donors <- cached("airway_power_donors.rds", {
     }, numeric(1))
   )
 })
-power_donors
+power_donors  # 打印
 ```
 
 ```{r}
 #| label: power-depth
-thin <- function(m, p) { out <- matrix(rbinom(length(m), m, p), nrow(m), dimnames = dimnames(m)); out }
-power_depth <- cached("airway_power_depth.rds", {
+thin <- function(m, p) { out <- matrix(rbinom(length(m), m, p), nrow(m), dimnames = dimnames(m)); out }  # 二项抽稀：模拟更低的测序深度
+power_depth <- cached("airway_power_depth.rds", {  # 不同深度比例下的显著基因数（结果缓存）
   set.seed(1)
   fracs <- c(0.05, 0.1, 0.25, 0.5, 1)
   tibble(frac = fracs,
@@ -571,19 +571,19 @@ power_depth <- cached("airway_power_depth.rds", {
            run_de(d)
          }, numeric(1)))
 })
-power_depth
+power_depth  # 打印
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 3.5
-p_a <- ggplot(power_donors, aes(n_donors, n_deg)) +
-  geom_point(size = 3, alpha = 0.7) + stat_summary(fun = mean, geom = "line", colour = "firebrick") +
-  scale_x_continuous(breaks = 2:4) + labs(x = "供者（配对）数", y = "padj < 0.05 的基因数", title = "重复数")
-p_b <- ggplot(power_depth, aes(median_lib_M, n_deg)) +
-  geom_point(size = 3) + geom_line(colour = "steelblue") + scale_x_log10() +
-  labs(x = "每样本 reads (M, 对数轴)", y = "padj < 0.05 的基因数", title = "测序深度")
-p_a | p_b
+p_a <- ggplot(power_donors, aes(n_donors, n_deg)) +  # 显著基因数 vs 供者数
+  geom_point(size = 3, alpha = 0.7) + stat_summary(fun = mean, geom = "line", colour = "firebrick") +  # 点 + 均值连线
+  scale_x_continuous(breaks = 2:4) + labs(x = "供者（配对）数", y = "padj < 0.05 的基因数", title = "重复数")  # 坐标轴与标签
+p_b <- ggplot(power_depth, aes(median_lib_M, n_deg)) +  # 显著基因数 vs 测序深度
+  geom_point(size = 3) + geom_line(colour = "steelblue") + scale_x_log10() +  # 点、线、对数 x 轴
+  labs(x = "每样本 reads (M, 对数轴)", y = "padj < 0.05 的基因数", title = "测序深度")  # 标签
+p_a | p_b  # 并排
 ```
 
 两条曲线的形状揭示了 RNA-seq 设计的经典结论：**增加生物学重复带来的收益远大于加深测序**。
@@ -596,18 +596,18 @@ p_a | p_b
 
 ```{r}
 #| label: jackknife
-full_sig <- rownames(res)[which(res$padj < 0.05)]
-loo <- cached("airway_loo.rds", lapply(setNames(donors, donors), function(drop) {
+full_sig <- rownames(res)[which(res$padj < 0.05)]  # 完整数据下的显著基因
+loo <- cached("airway_loo.rds", lapply(setNames(donors, donors), function(drop) {  # 逐个去掉一个供者重新分析（结果缓存）
   d <- dds[, dds$cell != drop]; d$cell <- droplevels(d$cell)
   d <- DESeq(d, quiet = TRUE)
   r <- results(d, name = "dex_trt_vs_untrt", alpha = 0.05)
   rownames(r)[which(r$padj < 0.05)]
 }))
-tibble(dropped = names(loo), n_sig = lengths(loo),
+tibble(dropped = names(loo), n_sig = lengths(loo),  # 每次去掉后的显著数、找回比例、新增数
        recovered_from_full = vapply(loo, \(s) mean(full_sig %in% s), numeric(1)),
        new_not_in_full    = vapply(loo, \(s) sum(!s %in% full_sig), integer(1)))
-stable <- Reduce(intersect, loo)
-length(stable); length(full_sig)
+stable <- Reduce(intersect, loo)  # 所有去一法结果都显著的基因
+length(stable); length(full_sig)  # 稳定基因数 vs 完整数据显著数
 ```
 
 在每次留一中都显著的 `stable` 基因是最可信的核心集合，适合用于后续验证实验。
@@ -620,50 +620,50 @@ NCBI GEO 后来用**统一流程**对所有人类 RNA-seq 重新定量：**GRCh3
 
 ```{r}
 #| label: ncbi-counts
-ncbi_file <- fetch("https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE52778&format=file&file=GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz",
+ncbi_file <- fetch("https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE52778&format=file&file=GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz",  # 下载 NCBI 用 GRCh38 重新定量的计数矩阵
                    dest = file.path(DATA_DIR, "GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz"))
-ncbi <- data.table::fread(ncbi_file) |> as.data.frame() |> column_to_rownames("GeneID") |> as.matrix()
-dim(ncbi)
-ncbi[1:3, 1:4]
+ncbi <- data.table::fread(ncbi_file) |> as.data.frame() |> column_to_rownames("GeneID") |> as.matrix()  # 读入并转为矩阵
+dim(ncbi)  # 维度
+ncbi[1:3, 1:4]  # 左上角
 ```
 
 **第 1 步：样本对齐**。airway 的 `colData` 中 `SampleName` 就是 GEO 的 GSM 编号：
 
 ```{r}
-gsm <- as.character(dds$SampleName)
-stopifnot(all(gsm %in% colnames(ncbi)))
-ncbi8 <- ncbi[, gsm]
-colnames(ncbi8) <- colnames(dds)
+gsm <- as.character(dds$SampleName)  # airway 样本的 GSM 编号
+stopifnot(all(gsm %in% colnames(ncbi)))  # 确认都能找到
+ncbi8 <- ncbi[, gsm]  # 取出这 8 个样本
+colnames(ncbi8) <- colnames(dds)  # 列名换成 SRR 编号
 ```
 
 **第 2 步：基因对齐**——Entrez ID 与 Ensembl ID 之间是多对多关系：
 
 ```{r}
-e2e <- AnnotationDbi::select(org.Hs.eg.db, keys = rownames(ncbi8), keytype = "ENTREZID",
+e2e <- AnnotationDbi::select(org.Hs.eg.db, keys = rownames(ncbi8), keytype = "ENTREZID",  # Entrez → Ensembl 映射
                              columns = "ENSEMBL")
-e2e |> dplyr::count(ENTREZID) |> dplyr::count(n_ensembl = n, name = "n_entrez")
+e2e |> dplyr::count(ENTREZID) |> dplyr::count(n_ensembl = n, name = "n_entrez")  # 统计一对多的情况
 # 只保留一对一的映射，避免重复计数
-one2one <- e2e |> filter(!is.na(ENSEMBL)) |>
-  filter(n() == 1, .by = ENTREZID) |> filter(n() == 1, .by = ENSEMBL)
-nrow(one2one)
-common <- one2one |> filter(ENSEMBL %in% rownames(dds))
-nrow(common)
+one2one <- e2e |> filter(!is.na(ENSEMBL)) |>  # 只保留一对一映射
+  filter(n() == 1, .by = ENTREZID) |> filter(n() == 1, .by = ENSEMBL)  # 两个方向都唯一
+nrow(one2one)  # 一对一的基因数
+common <- one2one |> filter(ENSEMBL %in% rownames(dds))  # airway 中也存在的
+nrow(common)  # 共有基因数
 ```
 
 **第 3 步：同一基因、同一样本，计数相关性**：
 
 ```{r}
 #| fig-height: 4
-x75 <- counts(dds)[common$ENSEMBL, ]
-x38 <- ncbi8[common$ENTREZID, ]
-lib_ratio <- colSums(x38) / colSums(x75)
+x75 <- counts(dds)[common$ENSEMBL, ]  # airway 流程的计数
+x38 <- ncbi8[common$ENTREZID, ]  # NCBI 流程的计数
+lib_ratio <- colSums(x38) / colSums(x75)  # 两套流程的总计数比
 round(lib_ratio, 3)                              # 两套流程分配到共有基因的 reads 数之比
-cors <- vapply(colnames(x75), \(s) cor(log1p(x75[, s]), log1p(x38[, s])), numeric(1))
-round(cors, 4)
-tibble(ens75 = x75[, 1] + 1, ncbi38 = x38[, 1] + 1) |>
-  ggplot(aes(ens75, ncbi38)) + geom_hex(bins = 80) + geom_abline(colour = "red") +
-  scale_x_log10() + scale_y_log10() + scale_fill_viridis_c(trans = "log10") +
-  labs(x = "Ensembl 75 / GRCh37 / HTSeq", y = "NCBI / GRCh38 / featureCounts",
+cors <- vapply(colnames(x75), \(s) cor(log1p(x75[, s]), log1p(x38[, s])), numeric(1))  # 每个样本两套计数的相关
+round(cors, 4)  # 打印
+tibble(ens75 = x75[, 1] + 1, ncbi38 = x38[, 1] + 1) |>  # 第一个样本的计数散点
+  ggplot(aes(ens75, ncbi38)) + geom_hex(bins = 80) + geom_abline(colour = "red") +  # 六边形分箱 + 对角线
+  scale_x_log10() + scale_y_log10() + scale_fill_viridis_c(trans = "log10") +  # 双对数坐标
+  labs(x = "Ensembl 75 / GRCh37 / HTSeq", y = "NCBI / GRCh38 / featureCounts",  # 标签
        title = paste("同一样本", colnames(x75)[1], "的基因计数"))
 ```
 
@@ -675,10 +675,10 @@ tibble(ens75 = x75[, 1] + 1, ncbi38 = x38[, 1] + 1) |>
 
 ```{r}
 #| fig-height: 3
-tibble(run = colnames(dds), avgLength = dds$avgLength, lib_ratio = lib_ratio) |>
-  ggplot(aes(avgLength, lib_ratio, label = run)) + geom_point(size = 3) +
-  geom_text_repel(size = 3, seed = 1) +
-  labs(x = "SRA 记录的平均读长", y = "NCBI / airway 总计数比")
+tibble(run = colnames(dds), avgLength = dds$avgLength, lib_ratio = lib_ratio) |>  # 计数比 vs 读长
+  ggplot(aes(avgLength, lib_ratio, label = run)) + geom_point(size = 3) +  # 点
+  geom_text_repel(size = 3, seed = 1) +  # 样本名
+  labs(x = "SRA 记录的平均读长", y = "NCBI / airway 总计数比")  # 轴标签
 ```
 
 我们无法从这里确定原因（可能是 NCBI 使用了不同的 run 组合，或对短读长、单端/双端的处理方式不同），
@@ -686,15 +686,15 @@ tibble(run = colnames(dds), avgLength = dds$avgLength, lib_ratio = lib_ratio) |>
 找出差异最大的基因：
 
 ```{r}
-cmp <- tibble(ensembl = common$ENSEMBL, entrez = common$ENTREZID,
+cmp <- tibble(ensembl = common$ENSEMBL, entrez = common$ENTREZID,  # 每个基因两套流程的均值
               symbol = rowData(dds)[common$ENSEMBL, "gene_name"],
               biotype = rowData(dds)[common$ENSEMBL, "gene_biotype"],
               mean75 = rowMeans(x75), mean38 = rowMeans(x38)) |>
-  mutate(log2ratio = log2((mean38 + 1) / (mean75 + 1)))
-cmp |> filter(pmax(mean75, mean38) > 100) |> slice_max(abs(log2ratio), n = 10)
-cmp |> filter(pmax(mean75, mean38) > 100) |>
-  summarise(n = n(), frac_2fold_diff = mean(abs(log2ratio) > 1), .by = biotype) |>
-  arrange(desc(n)) |> head(5)
+  mutate(log2ratio = log2((mean38 + 1) / (mean75 + 1)))  # log2 比值
+cmp |> filter(pmax(mean75, mean38) > 100) |> slice_max(abs(log2ratio), n = 10)  # 差异最大的 10 个基因
+cmp |> filter(pmax(mean75, mean38) > 100) |>  # 按类型统计相差 2 倍以上的比例
+  summarise(n = n(), frac_2fold_diff = mean(abs(log2ratio) > 1), .by = biotype) |>  # 汇总
+  arrange(desc(n)) |> head(5)  # 前 5 类
 ```
 
 差异主要来自：基因模型更新（外显子边界、新增转录本）、**多重比对 reads 的处理**（HTSeq 与 featureCounts
@@ -705,35 +705,35 @@ cmp |> filter(pmax(mean75, mean38) > 100) |>
 
 ```{r}
 #| label: ncbi-deseq
-dds38 <- DESeqDataSetFromMatrix(x38, colData(dds), design = ~ cell + dex)
-dds38 <- DESeq(dds38, quiet = TRUE)
-res38 <- results(dds38, name = "dex_trt_vs_untrt", alpha = 0.05)
-res75 <- results(dds[common$ENSEMBL, ] |> DESeq(quiet = TRUE), name = "dex_trt_vs_untrt", alpha = 0.05)
+dds38 <- DESeqDataSetFromMatrix(x38, colData(dds), design = ~ cell + dex)  # 用 NCBI 计数建 DESeq2 对象
+dds38 <- DESeq(dds38, quiet = TRUE)  # 拟合
+res38 <- results(dds38, name = "dex_trt_vs_untrt", alpha = 0.05)  # 结果
+res75 <- results(dds[common$ENSEMBL, ] |> DESeq(quiet = TRUE), name = "dex_trt_vs_untrt", alpha = 0.05)  # airway 流程在同一组基因上的结果
 
-both <- tibble(lfc75 = res75$log2FoldChange, lfc38 = res38$log2FoldChange,
+both <- tibble(lfc75 = res75$log2FoldChange, lfc38 = res38$log2FoldChange,  # 两套流程结果并排
                sig75 = res75$padj < 0.05, sig38 = res38$padj < 0.05)
-cor(both$lfc75, both$lfc38, use = "complete.obs")
-table(Ensembl75 = both$sig75, NCBI38 = both$sig38, useNA = "ifany")
+cor(both$lfc75, both$lfc38, use = "complete.obs")  # log2FC 相关
+table(Ensembl75 = both$sig75, NCBI38 = both$sig38, useNA = "ifany")  # 显著性一致性
 ```
 
 ```{r}
 #| fig-height: 4
-ggplot(both |> filter(!is.na(sig75), !is.na(sig38)),
+ggplot(both |> filter(!is.na(sig75), !is.na(sig38)),  # 两套流程的 log2FC 散点
        aes(lfc75, lfc38, colour = interaction(sig75, sig38))) +
-  geom_point(size = 0.5, alpha = 0.5) + geom_abline(colour = "grey30") +
-  scale_colour_manual(values = c("FALSE.FALSE" = "grey80", "TRUE.TRUE" = "black",
+  geom_point(size = 0.5, alpha = 0.5) + geom_abline(colour = "grey30") +  # 点 + 对角线
+  scale_colour_manual(values = c("FALSE.FALSE" = "grey80", "TRUE.TRUE" = "black",  # 按显著性组合着色
                                  "TRUE.FALSE" = "#E69F00", "FALSE.TRUE" = "#0072B2"),
                       labels = c("均不显著", "仅 Ens75", "仅 NCBI38", "均显著"), name = NULL) +
-  coord_cartesian(xlim = c(-5, 5), ylim = c(-5, 5)) +
-  labs(x = "log2FC（Ensembl 75 流程）", y = "log2FC（NCBI GRCh38 流程）")
+  coord_cartesian(xlim = c(-5, 5), ylim = c(-5, 5)) +  # 固定范围
+  labs(x = "log2FC（Ensembl 75 流程）", y = "log2FC（NCBI GRCh38 流程）")  # 轴标签
 ```
 
 LFC 估计高度一致（r ≈ 0.98），但**显著基因数相差数倍**：NCBI 计数下大量 Ensembl 流程中显著的基因不再显著。
 原因在离散度：
 
 ```{r}
-bcv <- function(d) sqrt(unname(attr(dispersionFunction(d), "coefficients")["asymptDisp"]))
-c(BCV_ensembl75 = bcv(dds), BCV_ncbi38 = bcv(dds38))
+bcv <- function(d) sqrt(unname(attr(dispersionFunction(d), "coefficients")["asymptDisp"]))  # 从 DESeq2 对象取 BCV
+c(BCV_ensembl75 = bcv(dds), BCV_ncbi38 = bcv(dds38))  # 两套流程的 BCV
 ```
 
 NCBI 计数的生物学变异系数是原来的数倍——上面那三个样本的样本特异偏差被模型当作"生物学变异"，
@@ -754,16 +754,16 @@ NCBI 计数包含全部 16 个样本：4 个供者 × {对照、地塞米松（D
 
 ```{r}
 geo_pheno <- readRDS(file.path(DATA_DIR, "GSE52778_pheno.rds"))   # 第 2 章缓存
-cd16 <- tibble(gsm = rownames(geo_pheno), title = geo_pheno$title,
+cd16 <- tibble(gsm = rownames(geo_pheno), title = geo_pheno$title,  # GEO 中全部 16 个样本的信息
                cell = geo_pheno$`cell line:ch1`,
                treatment = geo_pheno$`treatment:ch1`) |>
-  mutate(dex = factor(if_else(str_detect(treatment, "Dex"), "trt", "untrt"), levels = c("untrt", "trt")),
+  mutate(dex = factor(if_else(str_detect(treatment, "Dex"), "trt", "untrt"), levels = c("untrt", "trt")),  # 派生 dex 与 alb 两个因子
          alb = factor(if_else(str_detect(treatment, "Alb"), "trt", "untrt"), levels = c("untrt", "trt")),
          cell = factor(cell)) |>
-  column_to_rownames("gsm")
-dplyr::count(cd16, dex, alb)
-m16 <- ncbi[, rownames(cd16)]
-m16 <- m16[rowSums(m16 >= 10) >= 4, ]
+  column_to_rownames("gsm")  # gsm 作为行名
+dplyr::count(cd16, dex, alb)  # 两因子组合计数
+m16 <- ncbi[, rownames(cd16)]  # 取出这 16 个样本
+m16 <- m16[rowSums(m16 >= 10) >= 4, ]  # 低表达过滤
 ```
 
 ### 先核查标签：表达与样本表一致吗？
@@ -772,23 +772,23 @@ m16 <- m16[rowSums(m16 >= 10) >= 4, ]
 （*FKBP5*、*TSC22D3*、*KLF15*、*ZBTB16*、*PER1*）在第 6–7 章已经得到确认：
 
 ```{r}
-gc_marker <- c("FKBP5", "TSC22D3", "KLF15", "ZBTB16", "PER1")
-gc_id <- mapIds(org.Hs.eg.db, gc_marker, "ENTREZID", "SYMBOL")
-cpm16 <- t(t(ncbi[, rownames(cd16)]) / colSums(ncbi[, rownames(cd16)])) * 1e6
-gc_score <- colMeans(log2(cpm16[gc_id, ] + 1))
-cd16$gc_score <- gc_score
-cd16 |> as_tibble(rownames = "gsm") |>
-  dplyr::select(gsm, title, dex, alb, gc_score) |>
-  mutate(gc_score = round(gc_score, 2))
+gc_marker <- c("FKBP5", "TSC22D3", "KLF15", "ZBTB16", "PER1")  # 糖皮质激素经典靶基因
+gc_id <- mapIds(org.Hs.eg.db, gc_marker, "ENTREZID", "SYMBOL")  # 对应 Entrez ID
+cpm16 <- t(t(ncbi[, rownames(cd16)]) / colSums(ncbi[, rownames(cd16)])) * 1e6  # 16 个样本的 CPM
+gc_score <- colMeans(log2(cpm16[gc_id, ] + 1))  # 靶基因平均 log2 CPM 作为响应得分
+cd16$gc_score <- gc_score  # 存入样本表
+cd16 |> as_tibble(rownames = "gsm") |>  # 查看每个样本的得分
+  dplyr::select(gsm, title, dex, alb, gc_score) |>  # 选列
+  mutate(gc_score = round(gc_score, 2))  # 保留两位小数
 ```
 
 ```{r}
 #| fig-height: 3.5
-ggplot(cd16, aes(treatment, gc_score, colour = cell, group = cell)) +
-  geom_point(size = 3) + geom_line(alpha = 0.5) +
-  labs(x = NULL, y = "糖皮质激素靶基因平均 log2(CPM+1)",
+ggplot(cd16, aes(treatment, gc_score, colour = cell, group = cell)) +  # 得分按处理排列
+  geom_point(size = 3) + geom_line(alpha = 0.5) +  # 点 + 供者连线
+  labs(x = NULL, y = "糖皮质激素靶基因平均 log2(CPM+1)",  # 标签
        title = "按 GEO 标签排列：两个供者的 Alb 与 Alb_Dex 不符合预期") +
-  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))  # x 轴文字斜放
 ```
 
 N61311 与 N061011 的模式完全符合预期：含 Dex 的两个样本高、不含 Dex 的两个样本低。
@@ -811,11 +811,11 @@ N61311 与 N061011 的模式完全符合预期：含 Dex 的两个样本高、�
 保留标签与表达一致的两个供者（8 个样本），拟合 `~ cell + dex * alb`：
 
 ```{r}
-ok_cells <- c("N61311", "N061011")
-cd8 <- droplevels(cd16[cd16$cell %in% ok_cells, ])
-dds_int <- DESeqDataSetFromMatrix(m16[, rownames(cd8)], cd8, design = ~ cell + dex + alb + dex:alb)
-dds_int <- DESeq(dds_int, quiet = TRUE)
-resultsNames(dds_int)
+ok_cells <- c("N61311", "N061011")  # 标签可信的两个供者
+cd8 <- droplevels(cd16[cd16$cell %in% ok_cells, ])  # 只保留这两个供者
+dds_int <- DESeqDataSetFromMatrix(m16[, rownames(cd8)], cd8, design = ~ cell + dex + alb + dex:alb)  # 含交互项的设计
+dds_int <- DESeq(dds_int, quiet = TRUE)  # 拟合
+resultsNames(dds_int)  # 系数名
 ```
 
 在这个参数化下（两个因子都以 `untrt` 为参照）：
@@ -828,13 +828,13 @@ resultsNames(dds_int)
 | Dex 效应（有 Alb 时） | `dex_trt_vs_untrt + dextrt.albtrt` |
 
 ```{r}
-r_dex      <- results(dds_int, name = "dex_trt_vs_untrt", alpha = 0.05)
-r_alb      <- results(dds_int, name = "alb_trt_vs_untrt", alpha = 0.05)
-r_inter    <- results(dds_int, name = "dextrt.albtrt", alpha = 0.05)
-r_dex_alb  <- results(dds_int, contrast = list(c("dex_trt_vs_untrt", "dextrt.albtrt")), alpha = 0.05)
-vapply(list(dex_alone = r_dex, alb_alone = r_alb, dex_with_alb = r_dex_alb, interaction = r_inter),
+r_dex      <- results(dds_int, name = "dex_trt_vs_untrt", alpha = 0.05)  # 无 alb 时 dex 的效应
+r_alb      <- results(dds_int, name = "alb_trt_vs_untrt", alpha = 0.05)  # 无 dex 时 alb 的效应
+r_inter    <- results(dds_int, name = "dextrt.albtrt", alpha = 0.05)  # 交互项
+r_dex_alb  <- results(dds_int, contrast = list(c("dex_trt_vs_untrt", "dextrt.albtrt")), alpha = 0.05)  # 有 alb 时 dex 的效应 = 主效应 + 交互
+vapply(list(dex_alone = r_dex, alb_alone = r_alb, dex_with_alb = r_dex_alb, interaction = r_inter),  # 各项的显著基因数
        \(r) sum(r$padj < 0.05, na.rm = TRUE), numeric(1))
-cor(r_dex$log2FoldChange, r_dex_alb$log2FoldChange, use = "complete.obs")
+cor(r_dex$log2FoldChange, r_dex_alb$log2FoldChange, use = "complete.obs")  # 两种条件下 dex 效应的相关
 ```
 
 有无沙丁胺醇时，地塞米松效应的 LFC 高度相关；沙丁胺醇单独的效应和交互作用都很弱——
@@ -842,9 +842,9 @@ cor(r_dex$log2FoldChange, r_dex_alb$log2FoldChange, use = "complete.obs")
 
 ```{r}
 #| fig-height: 4
-top_int <- head(rownames(r_inter)[order(r_inter$pvalue)], 4)
-syms <- mapIds(org.Hs.eg.db, top_int, "SYMBOL", "ENTREZID")
-map(top_int, \(g) {
+top_int <- head(rownames(r_inter)[order(r_inter$pvalue)], 4)  # 交互项最显著的 4 个基因
+syms <- mapIds(org.Hs.eg.db, top_int, "SYMBOL", "ENTREZID")  # 对应 symbol
+map(top_int, \(g) {  # 每个基因画一张交互图并拼版
   plotCounts(dds_int, g, intgroup = c("dex", "alb"), returnData = TRUE) |>
     mutate(cell = cd8$cell) |>
     ggplot(aes(dex, count, colour = alb, group = interaction(cell, alb))) +
@@ -879,8 +879,8 @@ map(top_int, \(g) {
 ## 导出
 
 ```{r}
-write_tsv(deg, file.path(DATA_DIR, "airway_DESeq2_results.tsv"))
-saveRDS(list(dds = dds, res = res, res_ape = res_ape, deg = deg),
+write_tsv(deg, file.path(DATA_DIR, "airway_DESeq2_results.tsv"))  # 导出结果表
+saveRDS(list(dds = dds, res = res, res_ape = res_ape, deg = deg),  # 保存对象供后续章节使用
         file.path(DATA_DIR, "airway_de.rds"))
 ```
 

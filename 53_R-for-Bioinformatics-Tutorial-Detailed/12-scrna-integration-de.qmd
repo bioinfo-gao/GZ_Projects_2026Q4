@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -46,15 +46,15 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(Seurat)
-library(SingleCellExperiment)
-library(scuttle)
-library(DESeq2)
-library(edgeR)
-library(patchwork)
-library(ggrepel)
-library(muscData)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(Seurat)  # 单细胞分析框架：Seurat 对象、整合、聚类、可视化
+library(SingleCellExperiment)  # Bioconductor 的单细胞数据容器（SCE）
+library(scuttle)  # 单细胞工具：aggregateAcrossCells 生成伪 bulk
+library(DESeq2)  # 负二项 GLM 的差异表达分析（伪 bulk）
+library(edgeR)  # 负二项 GLM / 拟似然差异分析（伪 bulk、丰度分析）
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
+library(muscData)  # 多样本单细胞示例数据（Kang 2018 IFN-β 刺激 PBMC）
 ```
 
 ## 数据：Kang et al. 2018
@@ -68,8 +68,8 @@ library(muscData)
 
 ```{r}
 sce <- Kang18_8vs8()          # ExperimentHub 下载（约 150 MB，首次运行）
-sce
-table(sce$multiplets)
+sce  # 打印概况
+table(sce$multiplets)  # 单/双细胞计数
 ```
 
 ### 元数据审计：缺失的细胞类型与多重态 {#sec-kang-md}
@@ -77,21 +77,21 @@ table(sce$multiplets)
 过滤之前，先看看元数据里的"缺失"——`cell`（作者的细胞类型注释）为 `NA` 的细胞有多少，它们是什么：
 
 ```{r}
-md_raw <- as_tibble(as.data.frame(colData(sce))) |> mutate(umi = Matrix::colSums(counts(sce)))
-md_raw |> summarise(n = n(), celltype_NA = sum(is.na(cell)), .by = multiplets)
-md_raw |>
-  summarise(n = n(), pct_doublet = round(100 * mean(multiplets == "doublet"), 1),
+md_raw <- as_tibble(as.data.frame(colData(sce))) |> mutate(umi = Matrix::colSums(counts(sce)))  # 细胞元数据 + 每细胞 UMI
+md_raw |> summarise(n = n(), celltype_NA = sum(is.na(cell)), .by = multiplets)  # 按单/双细胞统计细胞类型缺失
+md_raw |>  # 按个体 × 条件统计
+  summarise(n = n(), pct_doublet = round(100 * mean(multiplets == "doublet"), 1),  # 双细胞与类型缺失的比例
             pct_celltype_NA = round(100 * mean(is.na(cell)), 1), .by = c(ind, stim)) |>
-  arrange(ind, stim)
+  arrange(ind, stim)  # 排序
 ```
 
 ```{r}
 #| fig-height: 3.5
-md_raw |>
-  mutate(status = case_when(multiplets == "doublet" ~ "doublet",
+md_raw |>  # 三类细胞的 UMI 分布
+  mutate(status = case_when(multiplets == "doublet" ~ "doublet",  # 分类
                             is.na(cell) ~ "celltype NA", .default = "kept")) |>
-  ggplot(aes(status, umi)) +
-  geom_violin() + scale_y_log10() + labs(x = NULL, y = "UMI / cell")
+  ggplot(aes(status, umi)) +  # 坐标
+  geom_violin() + scale_y_log10() + labs(x = NULL, y = "UMI / cell")  # 小提琴 + 对数 y 轴
 ```
 
 - `multiplets` 有三个取值：`singlet`、`doublet`（demuxlet 判定的跨个体双细胞）和 `ambs`（无法确定）。
@@ -103,22 +103,22 @@ md_raw |>
 这类信息应在方法中报告："共 N 个条形码，排除 X 个跨个体双细胞与 Y 个未注释细胞"。
 
 ```{r}
-sce <- sce[, sce$multiplets == "singlet" & !is.na(sce$cell)]
+sce <- sce[, sce$multiplets == "singlet" & !is.na(sce$cell)]  # 只保留有类型注释的单细胞
 sce <- sce[rowSums(counts(sce) > 0) >= 10, ]       # 至少在 10 个细胞中检出
-rownames(sce) <- make.unique(rownames(sce))
-sce$ind <- factor(sce$ind)
-dim(sce)
-with(colData(sce), table(cell, stim))
+rownames(sce) <- make.unique(rownames(sce))  # 基因名去重
+sce$ind <- factor(sce$ind)  # 个体转为因子
+dim(sce)  # 维度
+with(colData(sce), table(cell, stim))  # 细胞类型 × 条件计数
 ```
 
 转为 Seurat 对象：
 
 ```{r}
-md <- as.data.frame(colData(sce)) |> dplyr::rename(celltype = cell, donor = ind)
-obj <- CreateSeuratObject(counts = counts(sce), meta.data = md)
-obj$sample <- paste(obj$donor, obj$stim, sep = "_")
-obj
-rm(sce); invisible(gc())
+md <- as.data.frame(colData(sce)) |> dplyr::rename(celltype = cell, donor = ind)  # 元数据改列名
+obj <- CreateSeuratObject(counts = counts(sce), meta.data = md)  # 建 Seurat 对象
+obj$sample <- paste(obj$donor, obj$stim, sep = "_")  # 样本 = 个体_条件
+obj  # 打印
+rm(sce); invisible(gc())  # 释放 SCE
 ```
 
 ## 不整合会怎样
@@ -126,23 +126,23 @@ rm(sce); invisible(gc())
 Seurat v5 的做法：把 RNA assay 按批次 `split()` 成多个 layer，常规流程照常运行。
 
 ```{r}
-obj[["RNA"]] <- split(obj[["RNA"]], f = obj$stim)
-Layers(obj)
+obj[["RNA"]] <- split(obj[["RNA"]], f = obj$stim)  # 按条件拆分 layer（Seurat v5 整合要求）
+Layers(obj)  # 查看 layer
 
-obj <- obj |>
-  NormalizeData(verbose = FALSE) |>
-  FindVariableFeatures(nfeatures = 2000, verbose = FALSE) |>
-  ScaleData(verbose = FALSE) |>
-  RunPCA(npcs = 30, verbose = FALSE) |>
-  RunUMAP(dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated", verbose = FALSE)
+obj <- obj |>  # 标准流程（未整合）
+  NormalizeData(verbose = FALSE) |>  # 归一化
+  FindVariableFeatures(nfeatures = 2000, verbose = FALSE) |>  # 高变基因
+  ScaleData(verbose = FALSE) |>  # 标准化
+  RunPCA(npcs = 30, verbose = FALSE) |>  # PCA
+  RunUMAP(dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated", verbose = FALSE)  # 未整合的 UMAP
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4.5
-DimPlot(obj, reduction = "umap.unintegrated", group.by = "stim") + ggtitle("未整合：按条件") |
+DimPlot(obj, reduction = "umap.unintegrated", group.by = "stim") + ggtitle("未整合：按条件") |  # 未整合 UMAP：按条件与按类型
   DimPlot(obj, reduction = "umap.unintegrated", group.by = "celltype", label = TRUE, repel = TRUE) +
-  NoLegend() + ggtitle("未整合：按细胞类型")
+  NoLegend() + ggtitle("未整合：按细胞类型")  # 隐藏图例与标题
 ```
 
 同一细胞类型在 ctrl 与 stim 中分成了两团：IFN-β 诱导的大量基因（ISG）改变了几乎所有细胞的表达谱，
@@ -163,27 +163,27 @@ DimPlot(obj, reduction = "umap.unintegrated", group.by = "stim") + ggtitle("未�
 | **fastMNN**（batchelor） | 互为最近邻 + 校正向量 | Bioconductor 生态 |
 
 ```{r}
-obj <- IntegrateLayers(object = obj, method = HarmonyIntegration,
+obj <- IntegrateLayers(object = obj, method = HarmonyIntegration,  # Harmony 整合
                        orig.reduction = "pca", new.reduction = "harmony", verbose = FALSE)
 
-obj <- IntegrateLayers(object = obj, method = CCAIntegration,
+obj <- IntegrateLayers(object = obj, method = CCAIntegration,  # CCA 整合
                        orig.reduction = "pca", new.reduction = "integrated.cca", verbose = FALSE)
 ```
 
 ```{r}
-for (red in c("harmony", "integrated.cca")) {
-  obj <- RunUMAP(obj, reduction = red, dims = 1:30, reduction.name = paste0("umap.", red), verbose = FALSE)
+for (red in c("harmony", "integrated.cca")) {  # 对两种整合结果分别做 UMAP
+  obj <- RunUMAP(obj, reduction = red, dims = 1:30, reduction.name = paste0("umap.", red), verbose = FALSE)  # UMAP
 }
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 8.5
-plots <- map(c("umap.unintegrated", "umap.harmony", "umap.integrated.cca"), \(r) {
+plots <- map(c("umap.unintegrated", "umap.harmony", "umap.integrated.cca"), \(r) {  # 三种结果各两张图
   (DimPlot(obj, reduction = r, group.by = "stim", shuffle = TRUE, pt.size = 0.1) + ggtitle(r)) |
     (DimPlot(obj, reduction = r, group.by = "celltype", pt.size = 0.1) + NoLegend())
 })
-wrap_plots(plots, ncol = 1)
+wrap_plots(plots, ncol = 1)  # 纵向排列
 ```
 
 ### 量化整合效果
@@ -192,16 +192,16 @@ wrap_plots(plots, ncol = 1)
 **生物学保留**（同一位置附近应是同一细胞类型）。这里用 kNN 邻居的组成来度量：
 
 ```{r}
-knn_mixing <- function(emb, batch, label, k = 30) {
-  nn <- BiocNeighbors::findKNN(emb, k = k)$index
-  tibble(
+knn_mixing <- function(emb, batch, label, k = 30) {  # 邻域混合度与标签纯度
+  nn <- BiocNeighbors::findKNN(emb, k = k)$index  # 每个细胞的 k 近邻
+  tibble(  # 两个指标
     batch_mixing = mean(rowMeans(matrix(batch[nn], ncol = k) != batch)),   # 越接近 0.5 越好
     label_purity = mean(rowMeans(matrix(label[nn], ncol = k) == label))    # 越接近 1 越好
   )
 }
-set.seed(1)
-idx <- sample(ncol(obj), 5000)
-map(c(unintegrated = "pca", harmony = "harmony", cca = "integrated.cca"), \(r) {
+set.seed(1)  # 固定随机种子
+idx <- sample(ncol(obj), 5000)  # 抽 5000 个细胞
+map(c(unintegrated = "pca", harmony = "harmony", cca = "integrated.cca"), \(r) {  # 三种降维分别计算
   knn_mixing(Embeddings(obj, r)[idx, 1:30], obj$stim[idx], obj$celltype[idx])
 }) |> list_rbind(names_to = "method")
 ```
@@ -214,28 +214,28 @@ map(c(unintegrated = "pca", harmony = "harmony", cca = "integrated.cca"), \(r) {
 （与 LISI 思想相同）：两种条件完全混合时熵为 1 bit，完全分离时为 0。这是一个典型的"对矩阵的每一行应用一个函数"：
 
 ```{r}
-local_entropy <- function(emb, batch, k = 30) {
-  nn <- BiocNeighbors::findKNN(emb, k = k)$index
+local_entropy <- function(emb, batch, k = 30) {  # 每个细胞邻域内条件的香农熵
+  nn <- BiocNeighbors::findKNN(emb, k = k)$index  # k 近邻
   nb <- matrix(batch[nn], ncol = k)                # 每行：一个细胞的 k 个邻居的条件
-  apply(nb, 1, function(x) {
+  apply(nb, 1, function(x) {  # 逐行计算熵
     p <- table(factor(x, levels = unique(batch))) / k
     p <- p[p > 0]
     -sum(p * log2(p))
   })
 }
-ent <- map(c(unintegrated = "pca", harmony = "harmony", cca = "integrated.cca"), \(r)
+ent <- map(c(unintegrated = "pca", harmony = "harmony", cca = "integrated.cca"), \(r)  # 三种降维分别计算
   tibble(entropy = local_entropy(Embeddings(obj, r)[idx, 1:30], as.character(obj$stim[idx])),
          celltype = obj$celltype[idx])) |>
-  list_rbind(names_to = "method")
+  list_rbind(names_to = "method")  # 合并
 ```
 
 ```{r}
 #| fig-height: 4
-ent |>
-  ggplot(aes(entropy, celltype, fill = method)) +
-  geom_boxplot(outlier.shape = NA, linewidth = 0.3) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(x = "邻域条件熵（bit，1 = 完全混合）", y = NULL)
+ent |>  # 按细胞类型的熵分布
+  ggplot(aes(entropy, celltype, fill = method)) +  # 坐标
+  geom_boxplot(outlier.shape = NA, linewidth = 0.3) +  # 箱线
+  scale_fill_brewer(palette = "Set2") +  # 配色
+  labs(x = "邻域条件熵（bit，1 = 完全混合）", y = NULL)  # 标签
 ```
 
 不整合时，各细胞类型的熵都接近 0（ctrl 与 stim 完全分开）；整合后显著提高。
@@ -252,20 +252,20 @@ ent |>
 ## 在整合空间中聚类
 
 ```{r}
-obj <- FindNeighbors(obj, reduction = "harmony", dims = 1:30)
-obj <- FindClusters(obj, resolution = 0.4, verbose = FALSE)
+obj <- FindNeighbors(obj, reduction = "harmony", dims = 1:30)  # 基于 Harmony 的邻接图
+obj <- FindClusters(obj, resolution = 0.4, verbose = FALSE)  # 聚类
 obj <- JoinLayers(obj)            # 整合只改变降维；差异分析前把 ctrl/stim 的 layer 合并回来
-Layers(obj)
+Layers(obj)  # 查看 layer
 ```
 
 ```{r}
 #| fig-height: 4.5
-table(cluster = obj$seurat_clusters, celltype = obj$celltype) |>
-  as_tibble() |>
-  mutate(prop = n / sum(n), .by = cluster) |>
-  ggplot(aes(celltype, cluster, fill = prop)) + geom_tile() +
-  scale_fill_viridis_c() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Harmony 聚类 vs 作者注释")
+table(cluster = obj$seurat_clusters, celltype = obj$celltype) |>  # 聚类 × 作者注释
+  as_tibble() |>  # 转 tibble
+  mutate(prop = n / sum(n), .by = cluster) |>  # 按簇归一化
+  ggplot(aes(celltype, cluster, fill = prop)) + geom_tile() +  # 格子
+  scale_fill_viridis_c() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # 颜色与 x 轴
+  labs(title = "Harmony 聚类 vs 作者注释")  # 标题
 ```
 
 下面的差异分析直接使用作者提供的 `celltype` 注释。
@@ -274,15 +274,15 @@ table(cluster = obj$seurat_clusters, celltype = obj$celltype) |>
 
 ```{r}
 #| fig-height: 5
-isg <- c("ISG15", "IFI6", "IFIT1", "IFIT3", "MX1", "OAS1", "IFITM3", "CXCL10")
-DotPlot(obj, features = isg, group.by = "celltype", split.by = "stim",
+isg <- c("ISG15", "IFI6", "IFIT1", "IFIT3", "MX1", "OAS1", "IFITM3", "CXCL10")  # 干扰素刺激基因
+DotPlot(obj, features = isg, group.by = "celltype", split.by = "stim",  # 按类型 × 条件的点图
         cols = c("grey40", "firebrick")) + RotatedAxis()
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-FeaturePlot(obj, features = "ISG15", reduction = "umap.harmony", split.by = "stim",
+FeaturePlot(obj, features = "ISG15", reduction = "umap.harmony", split.by = "stim",  # ISG15 在两个条件下的分布
             order = TRUE) & theme(legend.position = "right")
 ```
 
@@ -294,27 +294,27 @@ FeaturePlot(obj, features = "ISG15", reduction = "umap.harmony", split.by = "sti
 **先在个体内汇总**，再在个体之间做统计，而不是把两万多个细胞直接放进 t 检验：
 
 ```{r}
-obj <- AddModuleScore(obj, features = list(isg[isg != "CXCL10"]), name = "ISG_score", seed = 1)
-cell_scores <- as_tibble(obj@meta.data) |> dplyr::select(donor, stim, celltype, ISG_score1)
+obj <- AddModuleScore(obj, features = list(isg[isg != "CXCL10"]), name = "ISG_score", seed = 1)  # ISG 模块得分
+cell_scores <- as_tibble(obj@meta.data) |> dplyr::select(donor, stim, celltype, ISG_score1)  # 取出得分与元数据
 
-donor_scores <- cell_scores |>
-  summarise(score = mean(ISG_score1), n_cells = n(), .by = c(donor, stim, celltype)) |>
-  dplyr::filter(n_cells >= 10)
+donor_scores <- cell_scores |>  # 每个个体 × 条件 × 类型的平均得分
+  summarise(score = mean(ISG_score1), n_cells = n(), .by = c(donor, stim, celltype)) |>  # 汇总
+  dplyr::filter(n_cells >= 10)  # 至少 10 个细胞
 
-response <- donor_scores |>
-  pivot_wider(id_cols = c(donor, celltype), names_from = stim, values_from = score) |>
-  mutate(delta = stim - ctrl) |> dplyr::filter(!is.na(delta))
-response |> summarise(n_donors = n(), mean_delta = mean(delta), sd = sd(delta),
+response <- donor_scores |>  # 个体内 stim − ctrl
+  pivot_wider(id_cols = c(donor, celltype), names_from = stim, values_from = score) |>  # 转宽表
+  mutate(delta = stim - ctrl) |> dplyr::filter(!is.na(delta))  # 差值，去掉缺失
+response |> summarise(n_donors = n(), mean_delta = mean(delta), sd = sd(delta),  # 每种类型的平均差值与配对 t 检验
                       p_paired = t.test(delta)$p.value, .by = celltype) |>
-  arrange(desc(mean_delta)) |> mutate(across(where(is.double), \(x) signif(x, 3)))
+  arrange(desc(mean_delta)) |> mutate(across(where(is.double), \(x) signif(x, 3)))  # 排序并保留三位有效数字
 ```
 
 ```{r}
 #| fig-height: 4
-ggplot(response, aes(reorder(celltype, delta), delta)) +
-  geom_boxplot(outlier.shape = NA, fill = "grey90") +
-  geom_point(aes(colour = donor), position = position_jitter(width = 0.15, seed = 1)) +
-  coord_flip() + labs(x = NULL, y = "ISG 得分差（stim − ctrl），每个点 = 一个个体")
+ggplot(response, aes(reorder(celltype, delta), delta)) +  # 差值箱线图
+  geom_boxplot(outlier.shape = NA, fill = "grey90") +  # 箱线
+  geom_point(aes(colour = donor), position = position_jitter(width = 0.15, seed = 1)) +  # 每个个体一个点
+  coord_flip() + labs(x = NULL, y = "ISG 得分差（stim − ctrl），每个点 = 一个个体")  # 横向显示与标签
 ```
 
 所有细胞类型都有一致的上调（每个个体都朝同一方向），单核细胞的幅度最大。
@@ -334,12 +334,12 @@ ggplot(response, aes(reorder(celltype, delta), delta)) +
 ### 常见做法：把细胞当作独立样本
 
 ```{r}
-Idents(obj) <- "celltype"
-mono <- subset(obj, idents = "CD14+ Monocytes")
-naive <- FindMarkers(mono, ident.1 = "stim", ident.2 = "ctrl", group.by = "stim",
+Idents(obj) <- "celltype"  # 以细胞类型为当前标识
+mono <- subset(obj, idents = "CD14+ Monocytes")  # 取 CD14+ 单核细胞
+naive <- FindMarkers(mono, ident.1 = "stim", ident.2 = "ctrl", group.by = "stim",  # 以细胞为重复的 Wilcoxon 检验
                      logfc.threshold = 0, min.pct = 0.05)
 nrow(naive)                       # 被检验的基因数（受 min.pct 限制）
-sum(naive$p_val_adj < 0.05)
+sum(naive$p_val_adj < 0.05)  # 显著基因数
 ```
 
 上千个细胞被当成上千个独立重复。但统计推断的对象是**个体**（我们想把结论推广到"人"），
@@ -355,32 +355,32 @@ IFN-β 的效应极强，所以这里任何方法都会找到很多基因，看�
 所有"显著"基因都是假阳性：
 
 ```{r}
-ctrl_mono <- subset(mono, subset = stim == "ctrl")
+ctrl_mono <- subset(mono, subset = stim == "ctrl")  # 只用对照组
 
-null_test <- function(seed) {
-  set.seed(seed)
-  donors <- levels(droplevels(ctrl_mono$donor))
-  fake <- setNames(sample(rep(c("A", "B"), length.out = length(donors))), donors)
-  ctrl_mono$fake <- unname(fake[as.character(ctrl_mono$donor)])
+null_test <- function(seed) {  # 随机分组的零假设检验
+  set.seed(seed)  # 固定随机种子
+  donors <- levels(droplevels(ctrl_mono$donor))  # 所有个体
+  fake <- setNames(sample(rep(c("A", "B"), length.out = length(donors))), donors)  # 随机把个体分成 A/B 两组
+  ctrl_mono$fake <- unname(fake[as.character(ctrl_mono$donor)])  # 每个细胞继承个体的假分组
 
   # 细胞水平 Wilcoxon
-  sc <- FindMarkers(ctrl_mono, ident.1 = "A", group.by = "fake",
+  sc <- FindMarkers(ctrl_mono, ident.1 = "A", group.by = "fake",  # 细胞水平检验
                     logfc.threshold = 0, min.pct = 0.05, verbose = FALSE)
   # 伪 bulk：每个个体一列
-  x <- aggregateAcrossCells(
+  x <- aggregateAcrossCells(  # 按个体求和生成伪 bulk
     SingleCellExperiment(list(counts = LayerData(ctrl_mono, layer = "counts")),
                          colData = ctrl_mono@meta.data[, c("donor", "fake")]),
     ids = ctrl_mono$donor)
-  d <- DESeqDataSet(x, ~ fake)
-  d <- DESeq(d[rowSums(counts(d) >= 10) >= 3, ], quiet = TRUE)
+  d <- DESeqDataSet(x, ~ fake)  # DESeq2 对象
+  d <- DESeq(d[rowSums(counts(d) >= 10) >= 3, ], quiet = TRUE)  # 过滤后拟合
 
-  tibble(seed = seed,
+  tibble(seed = seed,  # 两种方法的显著数
          cell_level = sum(sc$p_val_adj < 0.05),
          pseudobulk = sum(results(d)$padj < 0.05, na.rm = TRUE))
 }
 
-null_res <- cached("kang_null_split.rds", map(c(7, 11, 42), null_test) |> list_rbind())
-null_res
+null_res <- cached("kang_null_split.rds", map(c(7, 11, 42), null_test) |> list_rbind())  # 3 个随机种子（结果缓存）
+null_res  # 打印：理想情况下都应接近 0
 ```
 
 细胞水平检验在**没有任何真实效应**时，每次都报告了几十到上百个"显著"基因——它检测到的是
@@ -392,31 +392,31 @@ null_res
 然后用 DESeq2 / edgeR / limma 在**个体水平**做检验——重复数 = 个体数。
 
 ```{r}
-sce_obj <- SingleCellExperiment(
+sce_obj <- SingleCellExperiment(  # Seurat → SCE（只带计数与必要元数据）
   assays  = list(counts = LayerData(obj, layer = "counts")),
   colData = obj@meta.data[, c("donor", "stim", "celltype", "sample")]
 )
 
-pb <- aggregateAcrossCells(sce_obj, ids = colData(sce_obj)[, c("celltype", "donor", "stim")])
-pb
-colData(pb)[1:4, c("celltype", "donor", "stim", "ncells")]
+pb <- aggregateAcrossCells(sce_obj, ids = colData(sce_obj)[, c("celltype", "donor", "stim")])  # 按 类型 × 个体 × 条件 求和
+pb  # 打印
+colData(pb)[1:4, c("celltype", "donor", "stim", "ncells")]  # 前 4 个伪 bulk 样本
 ```
 
 ```{r}
 #| fig-height: 4
-as_tibble(colData(pb)) |>
-  ggplot(aes(donor, ncells, fill = stim)) +
-  geom_col(position = "dodge") +
-  facet_wrap(~ celltype, scales = "free_y", nrow = 2) +
-  scale_fill_manual(values = c(ctrl = "grey50", stim = "firebrick")) +
-  theme(axis.text.x = element_text(angle = 90, size = 6)) +
-  labs(title = "每个伪 bulk 样本包含的细胞数")
+as_tibble(colData(pb)) |>  # 每个伪 bulk 样本的细胞数
+  ggplot(aes(donor, ncells, fill = stim)) +  # 坐标
+  geom_col(position = "dodge") +  # 并排柱
+  facet_wrap(~ celltype, scales = "free_y", nrow = 2) +  # 每种类型一个分面
+  scale_fill_manual(values = c(ctrl = "grey50", stim = "firebrick")) +  # 条件颜色
+  theme(axis.text.x = element_text(angle = 90, size = 6)) +  # x 轴文字竖排
+  labs(title = "每个伪 bulk 样本包含的细胞数")  # 标题
 ```
 
 细胞太少的伪 bulk 样本噪声很大，通常要求 ≥ 10–20 个细胞：
 
 ```{r}
-pb <- pb[, pb$ncells >= 10]
+pb <- pb[, pb$ncells >= 10]  # 去掉细胞数 < 10 的伪 bulk 样本
 ```
 
 ### 缺失的伪 bulk 样本：配对还完整吗？ {#sec-pb-missing}
@@ -425,12 +425,12 @@ pb <- pb[, pb$ncells >= 10]
 **有几个个体同时拥有两个条件**——只有一个条件的个体对 `stim` 效应没有贡献，却消耗了一个自由度：
 
 ```{r}
-pb_tab <- as_tibble(colData(pb)) |>
-  dplyr::select(celltype, donor, stim, ncells) |>
+pb_tab <- as_tibble(colData(pb)) |>  # 所有 类型×个体×条件 组合的细胞数
+  dplyr::select(celltype, donor, stim, ncells) |>  # 关键列
   complete(celltype, donor, stim, fill = list(ncells = 0))   # 隐式缺失 → 显式 0
-pb_tab |>
-  pivot_wider(names_from = stim, values_from = ncells) |>
-  summarise(donors_both = sum(ctrl > 0 & stim > 0),
+pb_tab |>  # 每种类型有几个个体两种条件都有
+  pivot_wider(names_from = stim, values_from = ncells) |>  # 转宽表
+  summarise(donors_both = sum(ctrl > 0 & stim > 0),  # 分类计数
             donors_ctrl_only = sum(ctrl > 0 & stim == 0),
             donors_stim_only = sum(ctrl == 0 & stim > 0),
             donors_none = sum(ctrl == 0 & stim == 0), .by = celltype)
@@ -438,13 +438,13 @@ pb_tab |>
 
 ```{r}
 #| fig-height: 3.5
-pb_tab |>
-  mutate(present = ncells > 0) |>
-  ggplot(aes(donor, interaction(stim, celltype, sep = " · "), fill = present)) +
-  geom_tile(colour = "white") +
-  scale_fill_manual(values = c(`TRUE` = "steelblue", `FALSE` = "grey90")) +
-  labs(x = NULL, y = NULL, title = "过滤后保留的伪 bulk 样本（灰 = 缺失）") +
-  theme(axis.text.y = element_text(size = 7))
+pb_tab |>  # 保留情况的格子图
+  mutate(present = ncells > 0) |>  # 是否存在
+  ggplot(aes(donor, interaction(stim, celltype, sep = " · "), fill = present)) +  # 坐标
+  geom_tile(colour = "white") +  # 格子
+  scale_fill_manual(values = c(`TRUE` = "steelblue", `FALSE` = "grey90")) +  # 颜色
+  labs(x = NULL, y = NULL, title = "过滤后保留的伪 bulk 样本（灰 = 缺失）") +  # 标签
+  theme(axis.text.y = element_text(size = 7))  # 缩小 y 轴文字
 ```
 
 常见细胞类型 8 个个体都有完整配对；树突状细胞只有 6 对、巨核细胞只有 5 对，其余个体只剩一个条件或完全缺失。
@@ -456,14 +456,14 @@ pb_tab |>
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-mono_pb <- pb[, pb$celltype == "CD14+ Monocytes"]
-dds_m <- DESeqDataSet(mono_pb, design = ~ donor + stim)
-vsd_m <- vst(dds_m, blind = TRUE)
-plotPCA(vsd_m, intgroup = c("stim", "donor"), returnData = TRUE) |>
-  ggplot(aes(PC1, PC2, colour = stim, label = donor)) +
-  geom_point(size = 3) + geom_text_repel(size = 3, colour = "grey30") +
-  scale_colour_manual(values = c(ctrl = "grey50", stim = "firebrick")) +
-  labs(title = "CD14+ Monocytes 伪 bulk PCA")
+mono_pb <- pb[, pb$celltype == "CD14+ Monocytes"]  # 单核细胞的伪 bulk
+dds_m <- DESeqDataSet(mono_pb, design = ~ donor + stim)  # 配对设计
+vsd_m <- vst(dds_m, blind = TRUE)  # VST
+plotPCA(vsd_m, intgroup = c("stim", "donor"), returnData = TRUE) |>  # 伪 bulk PCA
+  ggplot(aes(PC1, PC2, colour = stim, label = donor)) +  # 坐标
+  geom_point(size = 3) + geom_text_repel(size = 3, colour = "grey30") +  # 点 + 个体标签
+  scale_colour_manual(values = c(ctrl = "grey50", stim = "firebrick")) +  # 条件颜色
+  labs(title = "CD14+ Monocytes 伪 bulk PCA")  # 标题
 ```
 
 ### 对每种细胞类型运行 DESeq2
@@ -471,26 +471,26 @@ plotPCA(vsd_m, intgroup = c("stim", "donor"), returnData = TRUE) |>
 设计 `~ donor + stim`：配对设计，控制个体效应。
 
 ```{r}
-run_pb_deseq <- function(ct) {
-  x <- pb[, pb$celltype == ct]
-  if (length(unique(x$stim)) < 2 || min(table(x$stim)) < 3) return(NULL)
-  dds <- DESeqDataSet(x, design = ~ donor + stim)
-  dds <- dds[rowSums(counts(dds) >= 10) >= 3, ]
-  dds <- DESeq(dds, quiet = TRUE)
-  results(dds, name = "stim_stim_vs_ctrl", alpha = 0.05) |>
-    as_tibble(rownames = "gene") |>
-    mutate(celltype = ct)
+run_pb_deseq <- function(ct) {  # 对一种细胞类型跑伪 bulk DESeq2
+  x <- pb[, pb$celltype == ct]  # 取该类型
+  if (length(unique(x$stim)) < 2 || min(table(x$stim)) < 3) return(NULL)  # 两组各至少 3 个样本才分析
+  dds <- DESeqDataSet(x, design = ~ donor + stim)  # 配对设计
+  dds <- dds[rowSums(counts(dds) >= 10) >= 3, ]  # 低表达过滤
+  dds <- DESeq(dds, quiet = TRUE)  # 拟合
+  results(dds, name = "stim_stim_vs_ctrl", alpha = 0.05) |>  # 取结果
+    as_tibble(rownames = "gene") |>  # 转 tibble
+    mutate(celltype = ct)  # 加类型列
 }
 
-pb_res <- cached("kang_pseudobulk_deseq2.rds",
+pb_res <- cached("kang_pseudobulk_deseq2.rds",  # 所有细胞类型（结果缓存）
                  map(levels(factor(pb$celltype)), run_pb_deseq) |> list_rbind())
 
-pb_res |>
-  summarise(n_tested = n(),
+pb_res |>  # 每种类型的上下调数
+  summarise(n_tested = n(),  # 汇总
             up   = sum(padj < 0.05 & log2FoldChange > 0, na.rm = TRUE),
             down = sum(padj < 0.05 & log2FoldChange < 0, na.rm = TRUE),
             .by = celltype) |>
-  arrange(desc(up + down))
+  arrange(desc(up + down))  # 排序
 ```
 
 ### "不显著"还是"没检验"？跨细胞类型的结果矩阵 {#sec-pb-na}
@@ -500,25 +500,25 @@ pb_res |>
 "B 细胞中 *CXCL10* 不变"与"B 细胞中 *CXCL10* 表达太低、无法判断"是两个不同的结论：
 
 ```{r}
-status_tbl <- pb_res |>
-  mutate(status = case_when(is.na(padj) ~ "filtered (NA)",
+status_tbl <- pb_res |>  # 每个 基因×类型 的检验状态
+  mutate(status = case_when(is.na(padj) ~ "filtered (NA)",  # 分类
                             padj < 0.05 ~ "significant",
                             .default = "tested, n.s.")) |>
-  dplyr::select(gene, celltype, status) |>
+  dplyr::select(gene, celltype, status) |>  # 关键列
   complete(gene, celltype, fill = list(status = "not tested"))   # 未进入该细胞类型分析的基因
-status_tbl |> dplyr::count(celltype, status) |>
-  pivot_wider(names_from = status, values_from = n, values_fill = 0)
+status_tbl |> dplyr::count(celltype, status) |>  # 各类型的状态计数
+  pivot_wider(names_from = status, values_from = n, values_fill = 0)  # 转宽表
 ```
 
 ```{r}
 #| fig-height: 3.5
-show <- c("ISG15", "IFIT1", "MX1", "CXCL10", "IL1RN", "CD14", "LYZ", "GNLY", "MS4A1")
-status_tbl |> dplyr::filter(gene %in% show) |>
-  ggplot(aes(celltype, factor(gene, levels = rev(show)), fill = status)) +
-  geom_tile(colour = "white") +
-  scale_fill_manual(values = c(significant = "firebrick", `tested, n.s.` = "grey70",
+show <- c("ISG15", "IFIT1", "MX1", "CXCL10", "IL1RN", "CD14", "LYZ", "GNLY", "MS4A1")  # 要展示的基因
+status_tbl |> dplyr::filter(gene %in% show) |>  # 状态格子图
+  ggplot(aes(celltype, factor(gene, levels = rev(show)), fill = status)) +  # 坐标
+  geom_tile(colour = "white") +  # 格子
+  scale_fill_manual(values = c(significant = "firebrick", `tested, n.s.` = "grey70",  # 状态颜色
                                `filtered (NA)` = "khaki", `not tested` = "white")) +
-  labs(x = NULL, y = NULL) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  labs(x = NULL, y = NULL) + theme(axis.text.x = element_text(angle = 45, hjust = 1))  # 标签与 x 轴
 ```
 
 - ISG（*ISG15*、*IFIT1*、*MX1*）在所有细胞类型中都显著；
@@ -537,28 +537,28 @@ status_tbl |> dplyr::filter(gene %in% show) |>
 
 ```{r}
 #| label: pb-three-methods
-pb_three <- function(ct) {
-  x <- pb[, pb$celltype == ct]
-  y <- DGEList(counts(x), samples = as.data.frame(colData(x)))
-  des <- model.matrix(~ donor + stim, y$samples)
-  y <- y[filterByExpr(y, des), , keep.lib.sizes = FALSE] |> normLibSizes()
-  er <- glmQLFit(y, des, robust = TRUE) |> glmQLFTest(coef = "stimstim") |> topTags(n = Inf) |>
-    as.data.frame() |> as_tibble(rownames = "gene")
-  lr <- voom(y, des) |> lmFit(des) |> eBayes(robust = TRUE) |> topTable(coef = "stimstim", n = Inf) |>
-    as_tibble(rownames = "gene")
-  dr <- pb_res |> filter(celltype == ct)
-  list(DESeq2 = dr$gene[which(dr$padj < 0.05)],
+pb_three <- function(ct) {  # 三种方法在同一伪 bulk 上的显著基因
+  x <- pb[, pb$celltype == ct]  # 取该类型
+  y <- DGEList(counts(x), samples = as.data.frame(colData(x)))  # DGEList
+  des <- model.matrix(~ donor + stim, y$samples)  # 设计矩阵
+  y <- y[filterByExpr(y, des), , keep.lib.sizes = FALSE] |> normLibSizes()  # 过滤并归一化
+  er <- glmQLFit(y, des, robust = TRUE) |> glmQLFTest(coef = "stimstim") |> topTags(n = Inf) |>  # edgeR QL
+    as.data.frame() |> as_tibble(rownames = "gene")  # 转 tibble
+  lr <- voom(y, des) |> lmFit(des) |> eBayes(robust = TRUE) |> topTable(coef = "stimstim", n = Inf) |>  # limma-voom
+    as_tibble(rownames = "gene")  # 转 tibble
+  dr <- pb_res |> filter(celltype == ct)  # DESeq2 结果
+  list(DESeq2 = dr$gene[which(dr$padj < 0.05)],  # 三者的显著基因
        edgeR  = er$gene[er$FDR < 0.05],
        limma  = lr$gene[lr$adj.P.Val < 0.05])
 }
-sig_b <- pb_three("B cells")
-lengths(sig_b)
-length(Reduce(intersect, sig_b))
+sig_b <- pb_three("B cells")  # B 细胞
+lengths(sig_b)  # 各方法显著数
+length(Reduce(intersect, sig_b))  # 三者交集
 ```
 
 ```{r}
 #| fig-height: 3.5
-ComplexHeatmap::UpSet(ComplexHeatmap::make_comb_mat(sig_b))
+ComplexHeatmap::UpSet(ComplexHeatmap::make_comb_mat(sig_b))  # UpSet 图
 ```
 
 三种方法的核心结果高度重叠；差异集中在边缘显著的基因。在伪 bulk 场景下，Squair et al. (2021) 与
@@ -567,8 +567,8 @@ Crowell et al. (2020) 的基准都发现这三种方法的表现相近，且都�
 ### 伪 bulk vs 单细胞水平检验（IFN-β 真实效应）
 
 ```{r}
-pb_mono <- pb_res |> filter(celltype == "CD14+ Monocytes")
-tibble(
+pb_mono <- pb_res |> filter(celltype == "CD14+ Monocytes")  # 单核细胞的伪 bulk 结果
+tibble(  # 细胞水平与伪 bulk 的检验数与显著数
   method   = c("FindMarkers (cells as replicates)", "Pseudobulk DESeq2 (donors as replicates)"),
   n_tested = c(nrow(naive), sum(!is.na(pb_mono$padj))),
   n_sig    = c(sum(naive$p_val_adj < 0.05), sum(pb_mono$padj < 0.05, na.rm = TRUE))
@@ -580,20 +580,20 @@ tibble(
 
 ```{r}
 #| fig-height: 4.5
-both <- inner_join(
+both <- inner_join(  # 两种方法的 p 值与 log2FC 并排
   as_tibble(naive, rownames = "gene") |> dplyr::select(gene, sc_p = p_val, sc_lfc = avg_log2FC),
   pb_mono |> dplyr::select(gene, pb_p = pvalue, pb_lfc = log2FoldChange),
   join_by(gene)
 )
-ggplot(both, aes(-log10(pb_p), -log10(sc_p + 1e-300))) +
-  geom_point(size = 0.4, alpha = 0.4) +
-  geom_abline(colour = "red") +
-  labs(x = "-log10 p (pseudobulk)", y = "-log10 p (single-cell Wilcoxon)",
+ggplot(both, aes(-log10(pb_p), -log10(sc_p + 1e-300))) +  # p 值散点
+  geom_point(size = 0.4, alpha = 0.4) +  # 点
+  geom_abline(colour = "red") +  # 对角线
+  labs(x = "-log10 p (pseudobulk)", y = "-log10 p (single-cell Wilcoxon)",  # 标签
        title = "单细胞检验的 p 值被系统性夸大")
 ```
 
 ```{r}
-cor(both$sc_lfc, both$pb_lfc, use = "complete.obs")
+cor(both$sc_lfc, both$pb_lfc, use = "complete.obs")  # log2FC 的相关
 ```
 
 两者的 LFC 高度一致（效应估计没问题），但单细胞检验的 p 值普遍小许多个数量级——
@@ -603,34 +603,34 @@ cor(both$sc_lfc, both$pb_lfc, use = "complete.obs")
 
 ```{r}
 #| fig-height: 5.5
-pb_mono_plot <- pb_mono |>
-  filter(!is.na(padj)) |>
-  mutate(sig = padj < 0.05 & abs(log2FoldChange) > 1)
+pb_mono_plot <- pb_mono |>  # 火山图数据
+  filter(!is.na(padj)) |>  # 去掉未检验的
+  mutate(sig = padj < 0.05 & abs(log2FoldChange) > 1)  # 显著且大效应
 
-ggplot(pb_mono_plot, aes(log2FoldChange, -log10(padj), colour = sig)) +
-  geom_point(size = 0.8, alpha = 0.6) +
-  geom_text_repel(data = pb_mono_plot |> filter(sig) |> slice_min(padj, n = 25),
+ggplot(pb_mono_plot, aes(log2FoldChange, -log10(padj), colour = sig)) +  # 火山图
+  geom_point(size = 0.8, alpha = 0.6) +  # 点
+  geom_text_repel(data = pb_mono_plot |> filter(sig) |> slice_min(padj, n = 25),  # 最显著的 25 个加标签
                   aes(label = gene), size = 2.8, colour = "black", max.overlaps = Inf, seed = 1) +
-  scale_colour_manual(values = c(`FALSE` = "grey75", `TRUE` = "firebrick"), guide = "none") +
-  labs(title = "CD14+ Monocytes: IFN-β vs ctrl（伪 bulk DESeq2，~ donor + stim）")
+  scale_colour_manual(values = c(`FALSE` = "grey75", `TRUE` = "firebrick"), guide = "none") +  # 颜色
+  labs(title = "CD14+ Monocytes: IFN-β vs ctrl（伪 bulk DESeq2，~ donor + stim）")  # 标题
 ```
 
 跨细胞类型比较 top ISG 的效应量：
 
 ```{r}
 #| fig-height: 6
-top_genes <- pb_res |> filter(padj < 0.05) |> slice_max(abs(log2FoldChange), n = 6, by = celltype) |>
-  pull(gene) |> unique()
+top_genes <- pb_res |> filter(padj < 0.05) |> slice_max(abs(log2FoldChange), n = 6, by = celltype) |>  # 每种类型效应最大的 6 个显著基因
+  pull(gene) |> unique()  # 合并去重
 
-pb_res |>
-  filter(gene %in% top_genes) |>
-  mutate(log2FoldChange = pmax(pmin(log2FoldChange, 8), -8)) |>
-  ggplot(aes(celltype, gene, fill = log2FoldChange)) +
-  geom_tile() +
-  geom_point(data = ~ filter(.x, padj < 0.05), shape = 20, size = 0.8) +
-  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.text.y = element_text(size = 6)) +
-  labs(x = NULL, y = NULL, title = "伪 bulk log2FC（点：padj < 0.05）")
+pb_res |>  # 跨细胞类型的 log2FC 热图
+  filter(gene %in% top_genes) |>  # 只看这些基因
+  mutate(log2FoldChange = pmax(pmin(log2FoldChange, 8), -8)) |>  # 截断到 ±8
+  ggplot(aes(celltype, gene, fill = log2FoldChange)) +  # 坐标
+  geom_tile() +  # 格子
+  geom_point(data = ~ filter(.x, padj < 0.05), shape = 20, size = 0.8) +  # 显著处加点
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +  # 发散色
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), axis.text.y = element_text(size = 6)) +  # 文字大小
+  labs(x = NULL, y = NULL, title = "伪 bulk log2FC（点：padj < 0.05）")  # 标签
 ```
 
 ### 其他工具
@@ -638,7 +638,7 @@ pb_res |>
 **Seurat 自带的伪 bulk：**
 
 ```{r}
-pb_seurat <- AggregateExpression(obj, assays = "RNA", return.seurat = TRUE,
+pb_seurat <- AggregateExpression(obj, assays = "RNA", return.seurat = TRUE,  # Seurat 自带的伪 bulk 聚合
                                  group.by = c("celltype", "donor", "stim"))
 head(Cells(pb_seurat))       # 注意：Seurat 会把值中的 "_" 替换为 "-"
 ```
@@ -647,10 +647,10 @@ head(Cells(pb_seurat))       # 注意：Seurat 会把值中的 "_" 替换为 "-"
 
 ```{r}
 #| eval: false
-library(muscat)
-sce_m <- prepSCE(sce_obj, kid = "celltype", gid = "stim", sid = "sample", drop = TRUE)
-pb_m  <- aggregateData(sce_m, assay = "counts", fun = "sum", by = c("cluster_id", "sample_id"))
-res_m <- pbDS(pb_m, method = "DESeq2", design = model.matrix(~ donor + group_id, ...))
+library(muscat)  # 多样本多条件单细胞差异分析
+sce_m <- prepSCE(sce_obj, kid = "celltype", gid = "stim", sid = "sample", drop = TRUE)  # 准备 SCE
+pb_m  <- aggregateData(sce_m, assay = "counts", fun = "sum", by = c("cluster_id", "sample_id"))  # 聚合为伪 bulk
+res_m <- pbDS(pb_m, method = "DESeq2", design = model.matrix(~ donor + group_id, ...))  # 伪 bulk 差异分析
 ```
 
 ## 差异丰度：细胞比例变化
@@ -659,34 +659,34 @@ res_m <- pbDS(pb_m, method = "DESeq2", design = model.matrix(~ donor + group_id,
 
 ```{r}
 #| fig-height: 4.5
-prop <- obj@meta.data |>
-  dplyr::count(donor, stim, celltype) |>
-  mutate(prop = n / sum(n), .by = c(donor, stim))
+prop <- obj@meta.data |>  # 每个样本中各细胞类型的比例
+  dplyr::count(donor, stim, celltype) |>  # 计数
+  mutate(prop = n / sum(n), .by = c(donor, stim))  # 样本内比例
 
-ggplot(prop, aes(stim, prop, group = donor)) +
-  geom_line(colour = "grey60") + geom_point(aes(colour = stim)) +
-  facet_wrap(~ celltype, scales = "free_y", nrow = 2) +
-  scale_colour_manual(values = c(ctrl = "grey40", stim = "firebrick"), guide = "none") +
-  scale_y_continuous(labels = scales::label_percent())
+ggplot(prop, aes(stim, prop, group = donor)) +  # 比例变化图
+  geom_line(colour = "grey60") + geom_point(aes(colour = stim)) +  # 个体连线 + 点
+  facet_wrap(~ celltype, scales = "free_y", nrow = 2) +  # 每种类型一个分面
+  scale_colour_manual(values = c(ctrl = "grey40", stim = "firebrick"), guide = "none") +  # 颜色
+  scale_y_continuous(labels = scales::label_percent())  # 百分比 y 轴
 ```
 
 用 edgeR 对"细胞类型计数矩阵"建模（每个样本是一列，总细胞数作为文库大小），这是
 Bioconductor OSCA 书推荐的差异丰度方法：
 
 ```{r}
-abund <- prop |>
-  dplyr::select(celltype, donor, stim, n) |>
-  mutate(sample = paste(donor, stim, sep = "_")) |>
-  pivot_wider(id_cols = celltype, names_from = sample, values_from = n, values_fill = 0) |>
-  column_to_rownames("celltype") |> as.matrix()
-smp <- tibble(sample = colnames(abund)) |>
-  separate_wider_delim(sample, "_", names = c("donor", "stim"), cols_remove = FALSE)
+abund <- prop |>  # 细胞类型 × 样本 的计数矩阵
+  dplyr::select(celltype, donor, stim, n) |>  # 关键列
+  mutate(sample = paste(donor, stim, sep = "_")) |>  # 样本名
+  pivot_wider(id_cols = celltype, names_from = sample, values_from = n, values_fill = 0) |>  # 转宽表
+  column_to_rownames("celltype") |> as.matrix()  # 转矩阵
+smp <- tibble(sample = colnames(abund)) |>  # 样本信息
+  separate_wider_delim(sample, "_", names = c("donor", "stim"), cols_remove = FALSE)  # 拆出个体与条件
 
-y_ab <- DGEList(abund, samples = smp)
-des  <- model.matrix(~ donor + stim, smp)
-y_ab <- estimateDisp(y_ab, des, trend = "none")
-fit_ab <- glmQLFit(y_ab, des, abundance.trend = FALSE)
-topTags(glmQLFTest(fit_ab, coef = "stimstim"))
+y_ab <- DGEList(abund, samples = smp)  # DGEList
+des  <- model.matrix(~ donor + stim, smp)  # 配对设计
+y_ab <- estimateDisp(y_ab, des, trend = "none")  # 离散度估计（不拟合趋势）
+fit_ab <- glmQLFit(y_ab, des, abundance.trend = FALSE)  # QL 拟合
+topTags(glmQLFTest(fit_ab, coef = "stimstim"))  # 差异丰度结果
 ```
 
 ### 另一种思路：比例的变换 + limma {#sec-propeller}
@@ -697,12 +697,12 @@ topTags(glmQLFTest(fit_ab, coef = "stimstim"))
 ```{r}
 prop_mat <- t(t(abund) / colSums(abund))                     # 细胞类型 × 样本 的比例
 asin_mat <- asin(sqrt(prop_mat))                              # arcsin 平方根变换
-fit_p <- lmFit(asin_mat, des) |> eBayes(robust = TRUE)
-tt_p <- topTable(fit_p, coef = "stimstim", n = Inf) |> as_tibble(rownames = "celltype")
-tt_e <- topTags(glmQLFTest(fit_ab, coef = "stimstim"), n = Inf)$table |> as_tibble(rownames = "celltype")
-inner_join(tt_p |> dplyr::select(celltype, t, p_limma = P.Value),
+fit_p <- lmFit(asin_mat, des) |> eBayes(robust = TRUE)  # 比例经变换后做 limma
+tt_p <- topTable(fit_p, coef = "stimstim", n = Inf) |> as_tibble(rownames = "celltype")  # limma 结果
+tt_e <- topTags(glmQLFTest(fit_ab, coef = "stimstim"), n = Inf)$table |> as_tibble(rownames = "celltype")  # edgeR 结果
+inner_join(tt_p |> dplyr::select(celltype, t, p_limma = P.Value),  # 两种方法并排
            tt_e |> dplyr::select(celltype, logFC, p_edgeR = PValue), join_by(celltype)) |>
-  mutate(across(starts_with("p_"), \(p) signif(p, 2))) |> arrange(p_limma)
+  mutate(across(starts_with("p_"), \(p) signif(p, 2))) |> arrange(p_limma)  # 保留两位有效数字并排序
 ```
 
 两种方法给出的排序基本一致。细胞数很少的类型（巨核细胞、树突状细胞）的比例估计不稳定，
@@ -718,7 +718,7 @@ inner_join(tt_p |> dplyr::select(celltype, t, p_limma = P.Value),
 ## 保存
 
 ```{r}
-saveRDS(pb_res, file.path(DATA_DIR, "kang_pseudobulk_results.rds"))
+saveRDS(pb_res, file.path(DATA_DIR, "kang_pseudobulk_results.rds"))  # 保存伪 bulk 结果
 ```
 
 ## 练习

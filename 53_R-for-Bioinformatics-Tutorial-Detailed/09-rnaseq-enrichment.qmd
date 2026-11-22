@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -48,19 +48,19 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(clusterProfiler)
-library(enrichplot)
-library(org.Hs.eg.db)
-library(msigdbr)
-library(fgsea)
-library(patchwork)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(clusterProfiler)  # 富集分析主力包：ORA（enrichGO 等）与 GSEA（gseGO 等）
+library(enrichplot)  # 富集结果可视化：dotplot、cnetplot、emapplot 等
+library(org.Hs.eg.db)  # 人类基因 ID 对照库（ENSEMBL/ENTREZ/SYMBOL）
+library(msigdbr)  # MSigDB 基因集（Hallmark 等）的 R 接口
+library(fgsea)  # 快速 GSEA 实现
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
 ```
 
 ```{r}
-de  <- readRDS(file.path(DATA_DIR, "airway_de.rds"))
+de  <- readRDS(file.path(DATA_DIR, "airway_de.rds"))  # 第 7 章保存的差异分析结果
 deg <- de$deg                         # 第 7 章：DESeq2 + apeglm 注释结果
-deg |> dplyr::select(gene_id, symbol, entrez, baseMean, log2FC_shrunk, stat, padj) |> head()
+deg |> dplyr::select(gene_id, symbol, entrez, baseMean, log2FC_shrunk, stat, padj) |> head()  # 查看关键列
 ```
 
 ## 两类方法
@@ -82,9 +82,9 @@ $$
 
 ```{r}
 # 手算一个例子：显著基因中，"response to glucocorticoid" 相关基因是否过多
-N <- 15000; K <- 120; n <- 800; k <- 25
-phyper(k - 1, K, N - K, n, lower.tail = FALSE)
-c(expected = n * K / N, observed = k)
+N <- 15000; K <- 120; n <- 800; k <- 25  # 总基因数、通路内基因数、显著基因数、两者交集
+phyper(k - 1, K, N - K, n, lower.tail = FALSE)  # 超几何检验上尾 p 值
+c(expected = n * K / N, observed = k)  # 期望 vs 观测
 ```
 
 ::: callout-important
@@ -96,17 +96,17 @@ c(expected = n * K / N, observed = k)
 ## 准备基因列表
 
 ```{r}
-universe <- deg |> filter(!is.na(padj), !is.na(entrez)) |> pull(entrez) |> unique()
+universe <- deg |> filter(!is.na(padj), !is.na(entrez)) |> pull(entrez) |> unique()  # 背景：所有被检验且有 Entrez ID 的基因
 
-sig_up <- deg |> filter(padj < 0.05, log2FC_shrunk >  1, !is.na(entrez)) |> pull(entrez) |> unique()
-sig_dn <- deg |> filter(padj < 0.05, log2FC_shrunk < -1, !is.na(entrez)) |> pull(entrez) |> unique()
-c(universe = length(universe), up = length(sig_up), down = length(sig_dn))
+sig_up <- deg |> filter(padj < 0.05, log2FC_shrunk >  1, !is.na(entrez)) |> pull(entrez) |> unique()  # 显著上调基因
+sig_dn <- deg |> filter(padj < 0.05, log2FC_shrunk < -1, !is.na(entrez)) |> pull(entrez) |> unique()  # 显著下调基因
+c(universe = length(universe), up = length(sig_up), down = length(sig_dn))  # 三者数量
 ```
 
 ## GO 过表征分析
 
 ```{r}
-ego_up <- enrichGO(
+ego_up <- enrichGO(  # GO BP 的 ORA
   gene          = sig_up,
   universe      = universe,
   OrgDb         = org.Hs.eg.db,
@@ -119,8 +119,8 @@ ego_up <- enrichGO(
   maxGSSize     = 500,
   readable      = TRUE           # 把 Entrez 转成 symbol 便于阅读
 )
-ego_up
-head(as.data.frame(ego_up)[, c("Description", "GeneRatio", "BgRatio", "p.adjust")], 10)
+ego_up  # 打印概况
+head(as.data.frame(ego_up)[, c("Description", "GeneRatio", "BgRatio", "p.adjust")], 10)  # 前 10 个术语
 ```
 
 `GeneRatio = k/n`，`BgRatio = K/N`。新版 clusterProfiler 还给出 `FoldEnrichment`、
@@ -131,8 +131,8 @@ head(as.data.frame(ego_up)[, c("Description", "GeneRatio", "BgRatio", "p.adjust"
 GO 是层次结构（DAG），父子术语高度重叠。`simplify()` 基于语义相似度合并冗余术语：
 
 ```{r}
-ego_up_s <- simplify(ego_up, cutoff = 0.7, by = "p.adjust", select_fun = min)
-c(before = nrow(ego_up), after = nrow(ego_up_s))
+ego_up_s <- simplify(ego_up, cutoff = 0.7, by = "p.adjust", select_fun = min)  # 合并语义相近的 GO 术语
+c(before = nrow(ego_up), after = nrow(ego_up_s))  # 去冗余前后的术语数
 ```
 
 ### 可视化
@@ -140,56 +140,56 @@ c(before = nrow(ego_up), after = nrow(ego_up_s))
 ```{r}
 #| fig-width: 11
 #| fig-height: 5.5
-dotplot(ego_up_s, showCategory = 15, x = "FoldEnrichment") + ggtitle("GO BP — up-regulated") |
+dotplot(ego_up_s, showCategory = 15, x = "FoldEnrichment") + ggtitle("GO BP — up-regulated") |  # 点图与条形图并排
   barplot(ego_up_s, showCategory = 15) + ggtitle("计数条形图")
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 7
-fc <- setNames(deg$log2FC_shrunk, deg$symbol)
-cnetplot(ego_up_s, showCategory = 6, foldChange = fc) +
-  ggtitle("基因–概念网络：哪些基因驱动了哪些术语")
+fc <- setNames(deg$log2FC_shrunk, deg$symbol)  # symbol → log2FC，用于给节点着色
+cnetplot(ego_up_s, showCategory = 6, foldChange = fc) +  # 基因–术语网络图
+  ggtitle("基因–概念网络：哪些基因驱动了哪些术语")  # 标题
 ```
 
 ```{r}
 #| fig-width: 9
 #| fig-height: 7
-ego_up_s |> pairwise_termsim() |> emapplot(showCategory = 30, node_label_size = 3) +
-  ggtitle("富集图：术语按共享基因聚成模块")
+ego_up_s |> pairwise_termsim() |> emapplot(showCategory = 30, node_label_size = 3) +  # 术语相似度网络
+  ggtitle("富集图：术语按共享基因聚成模块")  # 标题
 ```
 
 也可以把结果当作普通 tibble 用 ggplot 自由绘图：
 
 ```{r}
-as_tibble(ego_up_s) |>
-  slice_min(p.adjust, n = 12) |>
-  mutate(Description = fct_reorder(str_wrap(Description, 45), FoldEnrichment)) |>
-  ggplot(aes(FoldEnrichment, Description, size = Count, colour = -log10(p.adjust))) +
-  geom_point() +
-  scale_colour_viridis_c() +
-  labs(y = NULL, title = "GO BP（上调基因）")
+as_tibble(ego_up_s) |>  # 手绘点图
+  slice_min(p.adjust, n = 12) |>  # 最显著的 12 个
+  mutate(Description = fct_reorder(str_wrap(Description, 45), FoldEnrichment)) |>  # 长名字换行并按富集倍数排序
+  ggplot(aes(FoldEnrichment, Description, size = Count, colour = -log10(p.adjust))) +  # 坐标与映射
+  geom_point() +  # 点
+  scale_colour_viridis_c() +  # 颜色
+  labs(y = NULL, title = "GO BP（上调基因）")  # 标签
 ```
 
 ### 同时比较上调与下调：`compareCluster`
 
 ```{r}
 #| fig-height: 7
-cc <- compareCluster(
+cc <- compareCluster(  # 上调与下调同时做 ORA
   geneClusters = list(Up = sig_up, Down = sig_dn),
   fun = "enrichGO", universe = universe, OrgDb = org.Hs.eg.db,
   ont = "BP", readable = TRUE
 )
-dotplot(simplify(cc), showCategory = 8) + ggtitle("Up vs Down")
+dotplot(simplify(cc), showCategory = 8) + ggtitle("Up vs Down")  # 对比点图
 ```
 
 ## KEGG 与 Reactome
 
 ```{r}
-ekegg <- enrichKEGG(gene = sig_up, universe = universe, organism = "hsa",
+ekegg <- enrichKEGG(gene = sig_up, universe = universe, organism = "hsa",  # KEGG 通路 ORA（需联网）
                     pvalueCutoff = 0.05) |>
-  setReadable(OrgDb = org.Hs.eg.db, keyType = "ENTREZID")
-head(as.data.frame(ekegg)[, c("Description", "GeneRatio", "p.adjust", "geneID")], 6)
+  setReadable(OrgDb = org.Hs.eg.db, keyType = "ENTREZID")  # ID 转为 symbol
+head(as.data.frame(ekegg)[, c("Description", "GeneRatio", "p.adjust", "geneID")], 6)  # 前 6 个通路
 ```
 
 ::: callout-note
@@ -199,9 +199,9 @@ head(as.data.frame(ekegg)[, c("Description", "GeneRatio", "p.adjust", "geneID")]
 :::
 
 ```{r}
-library(ReactomePA)
-ereact <- enrichPathway(gene = sig_up, universe = universe, organism = "human", readable = TRUE)
-head(as.data.frame(ereact)[, c("Description", "GeneRatio", "p.adjust")], 6)
+library(ReactomePA)  # Reactome 通路富集
+ereact <- enrichPathway(gene = sig_up, universe = universe, organism = "human", readable = TRUE)  # Reactome ORA
+head(as.data.frame(ereact)[, c("Description", "GeneRatio", "p.adjust")], 6)  # 前 6 个通路
 ```
 
 ## GSEA
@@ -216,18 +216,18 @@ head(as.data.frame(ereact)[, c("Description", "GeneRatio", "p.adjust")], 6)
 | `-log10(p) × sign(LFC)` | 常见，但 p 值极小时出现大量并列 |
 
 ```{r}
-ranks_tbl <- deg |>
-  filter(!is.na(stat), !is.na(entrez)) |>
+ranks_tbl <- deg |>  # GSEA 的排序统计量
+  filter(!is.na(stat), !is.na(entrez)) |>  # 去掉缺失
   summarise(stat = stat[which.max(abs(stat))], .by = entrez) |>  # 一个 Entrez 对应多个 Ensembl 时取 |stat| 最大
-  arrange(desc(stat))
-gene_list <- setNames(ranks_tbl$stat, ranks_tbl$entrez)
-head(gene_list); tail(gene_list)
+  arrange(desc(stat))  # 降序
+gene_list <- setNames(ranks_tbl$stat, ranks_tbl$entrez)  # 命名的统计量向量
+head(gene_list); tail(gene_list)  # 两端
 ```
 
 ### GSEA：GO
 
 ```{r}
-gse_go <- gseGO(
+gse_go <- gseGO(  # GO BP 的 GSEA
   geneList     = gene_list,
   OrgDb        = org.Hs.eg.db,
   keyType      = "ENTREZID",
@@ -239,30 +239,30 @@ gse_go <- gseGO(
   seed         = TRUE
 ) |> setReadable(OrgDb = org.Hs.eg.db, keyType = "ENTREZID")
 
-as_tibble(gse_go) |>
-  dplyr::select(Description, setSize, NES, p.adjust) |>
-  arrange(desc(abs(NES))) |>
-  head(10)
+as_tibble(gse_go) |>  # NES 绝对值最大的 10 个
+  dplyr::select(Description, setSize, NES, p.adjust) |>  # 选列
+  arrange(desc(abs(NES))) |>  # 排序
+  head(10)  # 前 10 行
 ```
 
 `NES`（normalized enrichment score）> 0 表示集合在排序顶部（地塞米松上调），< 0 表示底部。
 
 ```{r}
 #| fig-height: 6
-dotplot(gse_go, showCategory = 8, split = ".sign") + facet_grid(~ .sign) +
-  ggtitle("GSEA GO BP")
+dotplot(gse_go, showCategory = 8, split = ".sign") + facet_grid(~ .sign) +  # 按方向分面的点图
+  ggtitle("GSEA GO BP")  # 标题
 ```
 
 ```{r}
 #| fig-height: 6
-top_ids <- as_tibble(gse_go) |> slice_max(NES, n = 2) |> pull(ID)
-gseaplot2(gse_go, geneSetID = top_ids, pvalue_table = TRUE,
+top_ids <- as_tibble(gse_go) |> slice_max(NES, n = 2) |> pull(ID)  # NES 最高的 2 个术语
+gseaplot2(gse_go, geneSetID = top_ids, pvalue_table = TRUE,  # 经典 GSEA 游走图
           title = "Running enrichment score")
 ```
 
 ```{r}
 #| fig-height: 7
-ridgeplot(gse_go, showCategory = 15) + labs(x = "Wald statistic 分布")
+ridgeplot(gse_go, showCategory = 15) + labs(x = "Wald statistic 分布")  # 每个术语核心基因的统计量分布
 ```
 
 ### MSigDB Hallmark + fgsea
@@ -271,32 +271,32 @@ MSigDB 的 50 个 Hallmark 基因集是"去冗余、高可信"的生物学过程
 `msigdbr` 提供离线访问（本版本 MSigDB 2026.1）：
 
 ```{r}
-hallmark <- msigdbr(species = "Homo sapiens", collection = "H")
-hallmark |> dplyr::distinct(gs_name) |> nrow()
-pathways <- split(hallmark$ncbi_gene, hallmark$gs_name)
-lengths(pathways) |> head()
+hallmark <- msigdbr(species = "Homo sapiens", collection = "H")  # 下载 Hallmark 基因集
+hallmark |> dplyr::distinct(gs_name) |> nrow()  # 基因集个数
+pathways <- split(hallmark$ncbi_gene, hallmark$gs_name)  # 转成 名字 → Entrez 的 list
+lengths(pathways) |> head()  # 各集合大小
 ```
 
 ```{r}
-fg <- fgsea(pathways = pathways, stats = gene_list, minSize = 15, maxSize = 500, eps = 0)
-fg |> as_tibble() |> arrange(padj) |> dplyr::select(pathway, size, NES, padj) |> head(12)
+fg <- fgsea(pathways = pathways, stats = gene_list, minSize = 15, maxSize = 500, eps = 0)  # fgsea 运行 Hallmark GSEA
+fg |> as_tibble() |> arrange(padj) |> dplyr::select(pathway, size, NES, padj) |> head(12)  # 最显著的 12 个
 ```
 
 ```{r}
 #| fig-height: 6
-fg |>
-  as_tibble() |>
-  filter(padj < 0.05) |>
-  mutate(pathway = str_remove(pathway, "HALLMARK_") |> fct_reorder(NES)) |>
-  ggplot(aes(NES, pathway, fill = NES > 0)) +
-  geom_col() +
-  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "#0072B2"), guide = "none") +
-  labs(y = NULL, title = "Hallmark GSEA（padj < 0.05）")
+fg |>  # 显著通路的 NES 条形图
+  as_tibble() |>  # 转 tibble
+  filter(padj < 0.05) |>  # 只看显著
+  mutate(pathway = str_remove(pathway, "HALLMARK_") |> fct_reorder(NES)) |>  # 去掉前缀并按 NES 排序
+  ggplot(aes(NES, pathway, fill = NES > 0)) +  # 坐标
+  geom_col() +  # 柱状图
+  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "#0072B2"), guide = "none") +  # 上下调颜色
+  labs(y = NULL, title = "Hallmark GSEA（padj < 0.05）")  # 标签
 ```
 
 ```{r}
-plotEnrichment(pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], gene_list) +
-  labs(title = "HALLMARK_TNFA_SIGNALING_VIA_NFKB")
+plotEnrichment(pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], gene_list) +  # 单个通路的游走图
+  labs(title = "HALLMARK_TNFA_SIGNALING_VIA_NFKB")  # 标题
 ```
 
 ::: callout-important
@@ -305,8 +305,8 @@ plotEnrichment(pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], gene_list) +
 但这里它显著**为正**。原因藏在 leading edge 里：
 
 ```{r}
-le <- fg |> as_tibble() |> filter(pathway == "HALLMARK_TNFA_SIGNALING_VIA_NFKB") |> pull(leadingEdge) |> unlist()
-deg |> filter(entrez %in% le) |> slice_max(stat, n = 12) |> dplyr::select(symbol, log2FC_shrunk, padj)
+le <- fg |> as_tibble() |> filter(pathway == "HALLMARK_TNFA_SIGNALING_VIA_NFKB") |> pull(leadingEdge) |> unlist()  # 该通路的 leading-edge 基因
+deg |> filter(entrez %in% le) |> slice_max(stat, n = 12) |> dplyr::select(symbol, log2FC_shrunk, padj)  # 其中统计量最高的 12 个
 ```
 
 驱动富集的是 DUSP1、PER1、KLF9、CEBPD、TSC22D3、NFKBIA、TNFAIP3 等——它们本身就是
@@ -325,7 +325,7 @@ deg |> filter(entrez %in% le) |> slice_max(stat, n = 12) |> dplyr::select(symbol
 
 ```{r}
 #| eval: false
-gse_h <- GSEA(gene_list, TERM2GENE = hallmark |> dplyr::select(gs_name, ncbi_gene), eps = 0, seed = TRUE)
+gse_h <- GSEA(gene_list, TERM2GENE = hallmark |> dplyr::select(gs_name, ncbi_gene), eps = 0, seed = TRUE)  # clusterProfiler 的通用 GSEA
 ```
 
 ## 富集前的必修课：ID 映射损失与重复 {#sec-enrich-id}
@@ -334,42 +334,42 @@ gse_h <- GSEA(gene_list, TERM2GENE = hallmark |> dplyr::select(gs_name, ncbi_gen
 还会制造重复：
 
 ```{r}
-deg |>
-  mutate(sig = !is.na(padj) & padj < 0.05) |>
-  summarise(n = n(), no_entrez = sum(is.na(entrez)), pct_lost = round(100 * mean(is.na(entrez)), 1),
+deg |>  # 无 Entrez ID 而丢失的基因比例
+  mutate(sig = !is.na(padj) & padj < 0.05) |>  # 标记显著
+  summarise(n = n(), no_entrez = sum(is.na(entrez)), pct_lost = round(100 * mean(is.na(entrez)), 1),  # 按显著性与类型统计
             .by = c(sig, biotype)) |>
-  filter(n > 200) |> arrange(sig, desc(n))
+  filter(n > 200) |> arrange(sig, desc(n))  # 只看大类
 ```
 
 显著基因中，蛋白编码基因几乎都能映射；lncRNA、假基因丢失率很高——但它们本来也很少出现在 GO/KEGG 中，
 影响有限。更隐蔽的是**重复**：
 
 ```{r}
-dup <- deg |> filter(!is.na(entrez), !is.na(stat)) |> dplyr::count(entrez) |> filter(n > 1)
-nrow(dup)
-deg |> filter(entrez %in% dup$entrez) |> arrange(entrez) |>
-  dplyr::select(gene_id, symbol, entrez, baseMean, stat) |> head(8)
+dup <- deg |> filter(!is.na(entrez), !is.na(stat)) |> dplyr::count(entrez) |> filter(n > 1)  # 对应多个 Ensembl 的 Entrez
+nrow(dup)  # 个数
+deg |> filter(entrez %in% dup$entrez) |> arrange(entrez) |>  # 看例子
+  dplyr::select(gene_id, symbol, entrez, baseMean, stat) |> head(8)  # 关键列
 ```
 
 同一个 Entrez ID 对应多个 Ensembl ID（常见于 patch 上的拷贝、读通转录本）。GSEA 的排序向量里**不能有重复名字**，
 否则 fgsea 会给出警告、结果不确定。几种合并策略：
 
 ```{r}
-collapse_stat <- function(d, how) {
-  d |> filter(!is.na(stat), !is.na(entrez)) |>
-    summarise(stat = switch(how,
+collapse_stat <- function(d, how) {  # 三种折叠重复 ID 的方式
+  d |> filter(!is.na(stat), !is.na(entrez)) |>  # 去掉缺失
+    summarise(stat = switch(how,  # 按方式取统计量
                             max_abs  = stat[which.max(abs(stat))],
                             mean     = mean(stat),
                             top_expr = stat[which.max(baseMean)]),
               .by = entrez) |>
-    with(sort(setNames(stat, entrez), decreasing = TRUE))
+    with(sort(setNames(stat, entrez), decreasing = TRUE))  # 转为排序后的命名向量
 }
-lists <- lapply(c(max_abs = "max_abs", mean = "mean", top_expr = "top_expr"), \(h) collapse_stat(deg, h))
-fg_by <- lapply(lists, \(gl) fgsea(pathways, gl, minSize = 15, maxSize = 500, eps = 0) |>
+lists <- lapply(c(max_abs = "max_abs", mean = "mean", top_expr = "top_expr"), \(h) collapse_stat(deg, h))  # 三种方式各生成一份排序
+fg_by <- lapply(lists, \(gl) fgsea(pathways, gl, minSize = 15, maxSize = 500, eps = 0) |>  # 分别跑 fgsea
                   as_tibble() |> dplyr::select(pathway, NES))
-Reduce(\(a, b) inner_join(a, b, by = "pathway"), fg_by) |>
-  setNames(c("pathway", names(lists))) |>
-  dplyr::select(-pathway) |> cor() |> round(4)
+Reduce(\(a, b) inner_join(a, b, by = "pathway"), fg_by) |>  # 比较三种方式的 NES 相关
+  setNames(c("pathway", names(lists))) |>  # 列名
+  dplyr::select(-pathway) |> cor() |> round(4)  # 相关矩阵
 ```
 
 只有 12 个 Entrez ID 有重复，对 Hallmark 这样的大基因集，合并策略几乎不影响结果（NES 相关 ≥ 0.98）；但对小基因集或单个基因的结论，
@@ -380,11 +380,11 @@ Reduce(\(a, b) inner_join(a, b, by = "pathway"), fg_by) |>
 ### ORA = 2 × 2 列联表
 
 ```{r}
-term <- as.data.frame(ego_up)[1, ]
-term[, c("ID", "Description", "GeneRatio", "BgRatio", "pvalue")]
-k <- as.integer(sub("/.*", "", term$GeneRatio)); n <- as.integer(sub(".*/", "", term$GeneRatio))
-K <- as.integer(sub("/.*", "", term$BgRatio));   N <- as.integer(sub(".*/", "", term$BgRatio))
-matrix(c(k, n - k, K - k, N - K - n + k), 2,
+term <- as.data.frame(ego_up)[1, ]  # 第一个富集术语
+term[, c("ID", "Description", "GeneRatio", "BgRatio", "pvalue")]  # 关键列
+k <- as.integer(sub("/.*", "", term$GeneRatio)); n <- as.integer(sub(".*/", "", term$GeneRatio))  # 解析 GeneRatio：k/n
+K <- as.integer(sub("/.*", "", term$BgRatio));   N <- as.integer(sub(".*/", "", term$BgRatio))  # 解析 BgRatio：K/N
+matrix(c(k, n - k, K - k, N - K - n + k), 2,  # 2×2 列联表
        dimnames = list(c("in_term", "not_in_term"), c("significant", "not_significant")))
 c(by_hand = phyper(k - 1, K, N - K, n, lower.tail = FALSE),   # 超几何上尾概率 P(X >= k)
   clusterProfiler = term$pvalue)
@@ -396,29 +396,29 @@ c(by_hand = phyper(k - 1, K, N - K, n, lower.tail = FALSE),   # 超几何上尾�
 ### GSEA 的游走统计量
 
 ```{r}
-gsea_walk <- function(stats, set, p = 1) {
-  stats <- sort(stats, decreasing = TRUE)
-  hit <- names(stats) %in% set
-  w <- abs(stats)^p
-  step_hit  <- ifelse(hit, w / sum(w[hit]), 0)
-  step_miss <- ifelse(!hit, 1 / sum(!hit), 0)
-  running <- cumsum(step_hit - step_miss)
-  list(running = running, ES = running[which.max(abs(running))], hit = hit)
+gsea_walk <- function(stats, set, p = 1) {  # 手写 GSEA 游走
+  stats <- sort(stats, decreasing = TRUE)  # 降序
+  hit <- names(stats) %in% set  # 是否在基因集中
+  w <- abs(stats)^p  # 权重：|stat|^p
+  step_hit  <- ifelse(hit, w / sum(w[hit]), 0)  # 命中时的上升步长
+  step_miss <- ifelse(!hit, 1 / sum(!hit), 0)  # 未命中时的下降步长
+  running <- cumsum(step_hit - step_miss)  # 累计得分
+  list(running = running, ES = running[which.max(abs(running))], hit = hit)  # ES = 离 0 最远处的值
 }
-set_tnf <- pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]]
-walk <- gsea_walk(gene_list, set_tnf)
-c(ES_by_hand = unname(walk$ES),
+set_tnf <- pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]]  # TNFα 通路
+walk <- gsea_walk(gene_list, set_tnf)  # 手算
+c(ES_by_hand = unname(walk$ES),  # 与 fgsea 的 ES 对比
   ES_fgsea   = fg$ES[fg$pathway == "HALLMARK_TNFA_SIGNALING_VIA_NFKB"])
 ```
 
 ```{r}
 #| fig-height: 3.5
-tibble(rank = seq_along(walk$running), running = walk$running, hit = walk$hit) |>
-  ggplot(aes(rank, running)) +
-  geom_line(colour = "darkgreen") +
-  geom_rug(data = \(d) filter(d, hit), sides = "b", alpha = 0.3) +
-  geom_hline(yintercept = 0) +
-  labs(x = "基因排序（按 Wald stat 从高到低）", y = "running enrichment score",
+tibble(rank = seq_along(walk$running), running = walk$running, hit = walk$hit) |>  # 手算的游走曲线
+  ggplot(aes(rank, running)) +  # 坐标
+  geom_line(colour = "darkgreen") +  # 折线
+  geom_rug(data = \(d) filter(d, hit), sides = "b", alpha = 0.3) +  # 命中位置刻度
+  geom_hline(yintercept = 0) +  # 0 参考线
+  labs(x = "基因排序（按 Wald stat 从高到低）", y = "running enrichment score",  # 标签
        title = "手写 GSEA 游走：命中时上升（按 |stat| 加权），未命中时下降")
 ```
 
@@ -432,46 +432,46 @@ ORA 会因为**长度**而不是生物学而显著（Young et al. 2010，goseq�
 
 ```{r}
 #| fig-height: 3.5
-dds_ann <- readRDS(file.path(DATA_DIR, "airway_annotated.rds"))
-len_tbl <- tibble(gene_id = rownames(dds_ann), length = SummarizedExperiment::rowData(dds_ann)$eff_length)
-bias <- deg |> filter(!is.na(padj)) |>
-  left_join(len_tbl, join_by(gene_id)) |>
-  mutate(sig = padj < 0.05, len_bin = ntile(length, 20))
-bias |>
-  summarise(p_sig = mean(sig), median_len = median(length), .by = len_bin) |>
-  ggplot(aes(median_len, p_sig)) + geom_point() + geom_smooth(se = FALSE) +
-  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +
-  labs(x = "基因有效长度（中位数，bp）", y = "显著比例", title = "长度越长，越容易显著")
+dds_ann <- readRDS(file.path(DATA_DIR, "airway_annotated.rds"))  # 第 5 章保存的对象（含有效长度）
+len_tbl <- tibble(gene_id = rownames(dds_ann), length = SummarizedExperiment::rowData(dds_ann)$eff_length)  # 基因有效长度
+bias <- deg |> filter(!is.na(padj)) |>  # 加上长度与长度分箱
+  left_join(len_tbl, join_by(gene_id)) |>  # 连接
+  mutate(sig = padj < 0.05, len_bin = ntile(length, 20))  # 20 个长度分箱
+bias |>  # 每个分箱的显著比例
+  summarise(p_sig = mean(sig), median_len = median(length), .by = len_bin) |>  # 汇总
+  ggplot(aes(median_len, p_sig)) + geom_point() + geom_smooth(se = FALSE) +  # 点 + 平滑
+  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +  # 对数 x 轴、百分比 y 轴
+  labs(x = "基因有效长度（中位数，bp）", y = "显著比例", title = "长度越长，越容易显著")  # 标签
 ```
 
 一种直接而透明的校正：对每个基因集，用逻辑回归把**长度作为协变量**——
 "在长度相同的条件下，集合内的基因是否更可能显著？"这正是 goseq 背后的思想（goseq 用 Wallenius 分布实现）：
 
 ```{r}
-bias_e <- bias |> filter(!is.na(entrez)) |> distinct(entrez, .keep_all = TRUE)
-test_set <- function(set_genes) {
-  in_set <- bias_e$entrez %in% set_genes
-  if (sum(in_set) < 15) return(c(naive = NA, length_adj = NA))
-  p_naive <- fisher.test(table(in_set, bias_e$sig), alternative = "greater")$p.value
-  fit <- glm(sig ~ in_set + splines::ns(log10(length), 3), family = binomial, data = bias_e)
-  co <- coef(summary(fit))["in_setTRUE", ]
+bias_e <- bias |> filter(!is.na(entrez)) |> distinct(entrez, .keep_all = TRUE)  # 每个 Entrez 一行
+test_set <- function(set_genes) {  # 对一个基因集做两种检验
+  in_set <- bias_e$entrez %in% set_genes  # 是否在集合中
+  if (sum(in_set) < 15) return(c(naive = NA, length_adj = NA))  # 集合太小时跳过
+  p_naive <- fisher.test(table(in_set, bias_e$sig), alternative = "greater")$p.value  # Fisher 检验（不校正长度）
+  fit <- glm(sig ~ in_set + splines::ns(log10(length), 3), family = binomial, data = bias_e)  # 逻辑回归：加入长度样条作协变量
+  co <- coef(summary(fit))["in_setTRUE", ]  # 集合效应的系数
   p_adj <- pnorm(co["z value"], lower.tail = FALSE)          # 单侧：集合内更容易显著
-  c(naive = p_naive, length_adj = unname(p_adj))
+  c(naive = p_naive, length_adj = unname(p_adj))  # 返回两个 p 值
 }
-len_res <- t(vapply(pathways, test_set, numeric(2))) |>
-  as_tibble(rownames = "pathway") |> filter(!is.na(naive)) |>
-  mutate(across(c(naive, length_adj), \(p) p.adjust(p, "BH"), .names = "{.col}_fdr"))
-len_res |> arrange(naive_fdr) |> head(10) |>
-  mutate(across(where(is.double), \(x) signif(x, 2)))
+len_res <- t(vapply(pathways, test_set, numeric(2))) |>  # 对全部 Hallmark 集合检验
+  as_tibble(rownames = "pathway") |> filter(!is.na(naive)) |>  # 转 tibble，去掉跳过的
+  mutate(across(c(naive, length_adj), \(p) p.adjust(p, "BH"), .names = "{.col}_fdr"))  # 两种 p 值分别 BH 校正
+len_res |> arrange(naive_fdr) |> head(10) |>  # 前 10 个
+  mutate(across(where(is.double), \(x) signif(x, 2)))  # 保留两位有效数字
 ```
 
 ```{r}
 #| fig-height: 3.5
-ggplot(len_res, aes(-log10(naive), -log10(length_adj))) +
-  geom_point() + geom_abline(colour = "red") +
-  ggrepel::geom_text_repel(data = \(d) slice_max(d, abs(log10(naive) - log10(length_adj)), n = 5),
+ggplot(len_res, aes(-log10(naive), -log10(length_adj))) +  # 两种 p 值的散点
+  geom_point() + geom_abline(colour = "red") +  # 点 + 对角线
+  ggrepel::geom_text_repel(data = \(d) slice_max(d, abs(log10(naive) - log10(length_adj)), n = 5),  # 差别最大的 5 个加标签
                            aes(label = str_remove(pathway, "HALLMARK_")), size = 2.8, seed = 1) +
-  labs(x = "-log10 p（Fisher，未校正长度）", y = "-log10 p（校正长度后）")
+  labs(x = "-log10 p（Fisher，未校正长度）", y = "-log10 p（校正长度后）")  # 轴标签
 ```
 
 大部分通路落在对角线附近；偏离对角线的通路就是结论受长度影响的那些。
@@ -484,29 +484,29 @@ ORA 与 GSEA 给出的是"组间比较"的通路结果。**GSVA** 把每个样�
 
 ```{r}
 #| label: gsva
-library(GSVA)
-vsd <- readRDS(file.path(DATA_DIR, "airway_vsd.rds"))
-hall_ens <- split(hallmark$ensembl_gene, hallmark$gs_name)
-param <- gsvaParam(SummarizedExperiment::assay(vsd), hall_ens, minSize = 15, maxSize = 500)
-gsva_scores <- cached("airway_gsva_hallmark.rds", gsva(param, verbose = FALSE))
-dim(gsva_scores)
-gsva_scores[1:3, 1:4]
+library(GSVA)  # 样本级基因集打分（GSVA）
+vsd <- readRDS(file.path(DATA_DIR, "airway_vsd.rds"))  # 第 6 章的 VST 数据
+hall_ens <- split(hallmark$ensembl_gene, hallmark$gs_name)  # Hallmark：名字 → Ensembl
+param <- gsvaParam(SummarizedExperiment::assay(vsd), hall_ens, minSize = 15, maxSize = 500)  # GSVA 参数对象
+gsva_scores <- cached("airway_gsva_hallmark.rds", gsva(param, verbose = FALSE))  # 计算打分并缓存
+dim(gsva_scores)  # 通路数 × 样本数
+gsva_scores[1:3, 1:4]  # 左上角
 ```
 
 对通路得分用 limma 做配对的差异检验：
 
 ```{r}
-library(limma)
-X <- model.matrix(~ cell + dex, as.data.frame(SummarizedExperiment::colData(vsd)))
-gsva_fit <- lmFit(gsva_scores, X) |> eBayes()
-gsva_tab <- topTable(gsva_fit, coef = "dextrt", n = Inf) |> as_tibble(rownames = "pathway")
-gsva_tab |> head(8) |> dplyr::select(pathway, logFC, t, adj.P.Val)
+library(limma)  # 线性模型 + 经验贝叶斯
+X <- model.matrix(~ cell + dex, as.data.frame(SummarizedExperiment::colData(vsd)))  # 设计矩阵
+gsva_fit <- lmFit(gsva_scores, X) |> eBayes()  # 对通路得分做 limma
+gsva_tab <- topTable(gsva_fit, coef = "dextrt", n = Inf) |> as_tibble(rownames = "pathway")  # 处理效应结果
+gsva_tab |> head(8) |> dplyr::select(pathway, logFC, t, adj.P.Val)  # 前 8 个
 ```
 
 ```{r}
 #| fig-height: 5
-top_pw <- head(gsva_tab$pathway, 15)
-ComplexHeatmap::Heatmap(
+top_pw <- head(gsva_tab$pathway, 15)  # 最显著的 15 个通路
+ComplexHeatmap::Heatmap(  # 通路得分热图
   t(scale(t(gsva_scores[top_pw, ]))), name = "GSVA z",
   row_labels = str_remove(top_pw, "HALLMARK_"),
   column_split = vsd$dex, row_names_gp = grid::gpar(fontsize = 8),
@@ -517,9 +517,9 @@ ComplexHeatmap::Heatmap(
 与 fgsea 的 NES 比较——两种方法回答的问题不同，但方向应大致一致：
 
 ```{r}
-inner_join(gsva_tab |> dplyr::select(pathway, t), fg |> as_tibble() |> dplyr::select(pathway, NES),
+inner_join(gsva_tab |> dplyr::select(pathway, t), fg |> as_tibble() |> dplyr::select(pathway, NES),  # GSVA t 统计量与 GSEA NES 的一致性
            join_by(pathway)) |>
-  with(cor(t, NES, method = "spearman"))
+  with(cor(t, NES, method = "spearman"))  # Spearman 相关
 ```
 
 ## 结论对阈值的敏感性 {#sec-enrich-threshold}
@@ -528,22 +528,22 @@ ORA 依赖"显著"的定义。系统地改变阈值，看前几个术语是否�
 
 ```{r}
 #| label: ora-thresholds
-grid <- expand_grid(padj_cut = c(0.01, 0.05, 0.1), lfc_cut = c(0, 0.58, 1))
-ora_runs <- cached("airway_ora_thresholds.rds", pmap(grid, function(padj_cut, lfc_cut) {
+grid <- expand_grid(padj_cut = c(0.01, 0.05, 0.1), lfc_cut = c(0, 0.58, 1))  # 显著性与倍数阈值的 9 种组合
+ora_runs <- cached("airway_ora_thresholds.rds", pmap(grid, function(padj_cut, lfc_cut) {  # 每种阈值组合各做一次 ORA（结果缓存）
   genes <- deg |> filter(padj < padj_cut, log2FC_shrunk > lfc_cut, !is.na(entrez)) |> pull(entrez) |> unique()
   e <- enrichGO(genes, universe = universe, OrgDb = org.Hs.eg.db, ont = "BP",
                 minGSSize = 15, maxGSSize = 500, pvalueCutoff = 0.05)
   tibble(padj_cut, lfc_cut, n_genes = length(genes), n_terms = nrow(e),
          top5 = list(head(as.data.frame(e)$Description, 5)))
 }) |> list_rbind())
-ora_runs |> dplyr::select(-top5)
+ora_runs |> dplyr::select(-top5)  # 每种组合的基因数与术语数
 ```
 
 ```{r}
-top_terms <- unique(unlist(ora_runs$top5))
-presence <- sapply(ora_runs$top5, \(t) top_terms %in% t)
-dimnames(presence) <- list(str_trunc(top_terms, 50), paste0("p<", ora_runs$padj_cut, ",lfc>", ora_runs$lfc_cut))
-presence[order(-rowSums(presence)), ] * 1L
+top_terms <- unique(unlist(ora_runs$top5))  # 所有组合的前 5 术语合集
+presence <- sapply(ora_runs$top5, \(t) top_terms %in% t)  # 各术语在各组合中是否出现
+dimnames(presence) <- list(str_trunc(top_terms, 50), paste0("p<", ora_runs$padj_cut, ",lfc>", ora_runs$lfc_cut))  # 行列名
+presence[order(-rowSums(presence)), ] * 1L  # 按出现次数排序
 ```
 
 出现在大多数阈值组合中的术语是可靠的；只在某一个阈值下进入前 5 的术语不应被过度解读。
@@ -568,7 +568,7 @@ presence[order(-rowSums(presence)), ] * 1L
 ## 保存
 
 ```{r}
-saveRDS(list(ego_up = ego_up_s, gse_go = gse_go, fgsea_hallmark = fg),
+saveRDS(list(ego_up = ego_up_s, gse_go = gse_go, fgsea_hallmark = fg),  # 保存富集结果
         file.path(DATA_DIR, "airway_enrichment.rds"))
 ```
 

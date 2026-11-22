@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -51,13 +51,13 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(data.table)
-library(maftools)
-library(survival)
-library(ggsurvfit)
-library(patchwork)
-library(ggrepel)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(data.table)  # 高性能表格处理：[i, j, by] 语法、fread
+library(maftools)  # 突变注释格式（MAF）的读取、汇总与可视化
+library(survival)  # 生存分析：Surv、survfit、coxph
+library(ggsurvfit)  # 基于 ggplot2 的生存曲线
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
 ```
 
 ## 背景：从测序到 MAF
@@ -104,11 +104,11 @@ nextflow run nf-core/sarek -r 3.5.1 -profile docker \
 ### VCF：在 R 中读取
 
 ```{r}
-library(VariantAnnotation)
-vcf_file <- system.file("extdata", "chr22.vcf.gz", package = "VariantAnnotation")
-vcf <- readVcf(vcf_file, genome = "hg19")
-vcf
-header(vcf)
+library(VariantAnnotation)  # VCF 文件的读取与操作
+vcf_file <- system.file("extdata", "chr22.vcf.gz", package = "VariantAnnotation")  # 包自带的示例 VCF
+vcf <- readVcf(vcf_file, genome = "hg19")  # 读入 VCF
+vcf  # 打印概况
+header(vcf)  # 头信息
 rowRanges(vcf)[1:3]                     # GRanges：位置 + REF/ALT/QUAL/FILTER
 info(vcf)[1:3, c("AF", "EUR_AF", "VT")] # INFO 字段（1000 Genomes：等位频率、变异类型）
 geno(vcf)$GT[1:3, ]                     # 每个样本的基因型（5 个样本）
@@ -136,15 +136,15 @@ MAF（Mutation Annotation Format）是**每行一个突变**的 TSV，核心列�
 ANNOVAR 注释结果可以直接转成 MAF：
 
 ```{r}
-ann <- system.file("extdata", "variants.hg19_multianno.txt", package = "maftools")
-annovarToMaf(annovar = ann, refBuild = "hg19", tsbCol = "Tumor_Sample_Barcode", table = "ensGene")[1:3, 1:8]
+ann <- system.file("extdata", "variants.hg19_multianno.txt", package = "maftools")  # 包自带的 ANNOVAR 注释结果
+annovarToMaf(annovar = ann, refBuild = "hg19", tsbCol = "Tumor_Sample_Barcode", table = "ensGene")[1:3, 1:8]  # 转为 MAF 格式
 ```
 
 ## 数据：TCGA 肺腺癌（LUAD）
 
 ```{r}
-luad <- cached("tcga_luad_mc3_maf.rds", tcgaLoad(study = "LUAD", source = "MC3"))
-luad
+luad <- cached("tcga_luad_mc3_maf.rds", tcgaLoad(study = "LUAD", source = "MC3"))  # 下载并缓存 TCGA LUAD MC3 突变数据
+luad  # 打印概况
 ```
 
 一个 `MAF` 对象包含：非同义突变（`@data`）、同义突变（`@maf.silent`）、基因/样本汇总、临床数据。
@@ -153,12 +153,12 @@ luad
 但 tibble 不允许（`as_tibble()` 会报错）。先统一修复，后面都用 `maf_all`：
 
 ```{r}
-anyDuplicated(names(luad@data))
+anyDuplicated(names(luad@data))  # 检查重复列名
 fix_names <- \(dt) setnames(copy(dt), make.unique(names(dt)))    # copy()：不原地修改 luad 内部的表
-maf_all <- rbind(fix_names(luad@data), fix_names(luad@maf.silent), fill = TRUE)
-maf_nonsyn <- as_tibble(fix_names(luad@data)) |>
-  mutate(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode))
-dim(maf_all); dim(maf_nonsyn)
+maf_all <- rbind(fix_names(luad@data), fix_names(luad@maf.silent), fill = TRUE)  # 非同义 + 同义突变合并
+maf_nonsyn <- as_tibble(fix_names(luad@data)) |>  # 只含非同义突变的 tibble
+  mutate(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode))  # 样本条形码转字符
+dim(maf_all); dim(maf_nonsyn)  # 两个表的维度
 ```
 
 ### 这个 MAF 是哪个基因组版本？ {#sec-maf-build}
@@ -169,15 +169,15 @@ MC3 的 MAF 基于 **GRCh37**，但这个信息在 `luad@data` 中并没有保�
 maftools 自带了同一套 cancerhotspots 热点在 GRCh37 与 GRCh38 上的坐标。用它们做一个"版本嗅探"：
 
 ```{r}
-hs_dir <- system.file("extdata", package = "maftools")
-read_hs <- \(f) fread(file.path(hs_dir, f), header = FALSE,
+hs_dir <- system.file("extdata", package = "maftools")  # maftools 自带数据目录
+read_hs <- \(f) fread(file.path(hs_dir, f), header = FALSE,  # 读取热点文件的函数
                       col.names = c("chr", "pos", "ref", "alt", "gene", "class", "aa", "sift"))
-hs37 <- read_hs("cancerhotspots_v2_GRCh37.tsv")
-hs38 <- read_hs("cancerhotspots_v2_GRCh38.tsv")
+hs37 <- read_hs("cancerhotspots_v2_GRCh37.tsv")  # GRCh37 坐标的热点
+hs38 <- read_hs("cancerhotspots_v2_GRCh38.tsv")  # GRCh38 坐标的热点
 hs37[gene == "KRAS" & aa == "G12C"]; hs38[gene == "KRAS" & aa == "G12C"]   # 同一个热点，两个坐标
 
-luad_pos <- unique(maf_all[, .(chr = as.character(Chromosome), pos = Start_Position)])
-c(match_GRCh37 = nrow(merge(luad_pos, unique(hs37[, .(chr = as.character(chr), pos)]))),
+luad_pos <- unique(maf_all[, .(chr = as.character(Chromosome), pos = Start_Position)])  # LUAD 中所有突变位置
+c(match_GRCh37 = nrow(merge(luad_pos, unique(hs37[, .(chr = as.character(chr), pos)]))),  # 分别用两个版本的热点坐标匹配
   match_GRCh38 = nrow(merge(luad_pos, unique(hs38[, .(chr = as.character(chr), pos)]))))
 ```
 
@@ -189,10 +189,10 @@ c(match_GRCh37 = nrow(merge(luad_pos, unique(hs37[, .(chr = as.character(chr), p
 还要检查参考碱基是否一致（`Reference_Allele` 与新参考的碱基比对）——极少数位点在版本间改变了参考碱基。
 
 ```{r}
-getSampleSummary(luad) |> head(3)
-getGeneSummary(luad) |> head(10) |> dplyr::select(Hugo_Symbol, total, MutatedSamples, AlteredSamples)
-clin_raw <- getClinicalData(luad)
-dim(clin_raw)
+getSampleSummary(luad) |> head(3)  # 每个样本的突变汇总
+getGeneSummary(luad) |> head(10) |> dplyr::select(Hugo_Symbol, total, MutatedSamples, AlteredSamples)  # 突变最多的 10 个基因
+clin_raw <- getClinicalData(luad)  # 临床信息
+dim(clin_raw)  # 维度
 ```
 
 ::: callout-tip
@@ -212,9 +212,9 @@ TCGA 的临床表有数百列且杂乱。**TCGA-CDR**（Liu et al. 2018, *Cell*�
 | DSS | 疾病特异生存 | `CDR_DSS`, `CDR_DSS.time` |
 
 ```{r}
-clin <- clin_raw |>
-  as_tibble() |>
-  transmute(
+clin <- clin_raw |>  # 整理临床变量
+  as_tibble() |>  # 转 tibble
+  transmute(  # 只保留新定义的列
     Tumor_Sample_Barcode,
     patient   = str_sub(Tumor_Sample_Barcode, 1, 12),
     age       = as.numeric(CDR_age_at_initial_pathologic_diagnosis),
@@ -231,7 +231,7 @@ clin <- clin_raw |>
     pfi_status = as.integer(CDR_PFI),
     pfi_months = as.numeric(CDR_PFI.time) / 30.44
   )
-summary(clin |> dplyr::select(age, sex, stage, smoking, os_status, os_months))
+summary(clin |> dplyr::select(age, sex, stage, smoking, os_status, os_months))  # 关键变量概况
 ```
 
 `str_extract(..., "IV|III|II|I")` 把 IA/IB/IIIA 等亚期合并为主分期——注意正则中**长的写在前面**，
@@ -242,10 +242,10 @@ summary(clin |> dplyr::select(age, sex, stage, smoking, os_status, os_months))
 TCGA 条形码第 4 段的前两位是样本类型（第 1 章 @sec-strings）。LUAD 队列中并不都是"一个患者一个原发肿瘤"：
 
 ```{r}
-bc_tab <- tibble(barcode = as.character(clin_raw$Tumor_Sample_Barcode)) |>
-  mutate(patient = str_sub(barcode, 1, 12), sample_type = str_sub(barcode, 14, 16))
-dplyr::count(bc_tab, sample_type)
-bc_tab |> filter(n() > 1, .by = patient)
+bc_tab <- tibble(barcode = as.character(clin_raw$Tumor_Sample_Barcode)) |>  # 条形码中的病人 ID 与样本类型
+  mutate(patient = str_sub(barcode, 1, 12), sample_type = str_sub(barcode, 14, 16))  # 截取对应字段
+dplyr::count(bc_tab, sample_type)  # 样本类型计数
+bc_tab |> filter(n() > 1, .by = patient)  # 同一病人多个样本的情况
 ```
 
 `01B` 是同一原发肿瘤的另一份样本（另一管），`02A` 是**复发**肿瘤。生存分析中一个患者只能出现一次，
@@ -259,7 +259,7 @@ bc_tab |> filter(n() > 1, .by = patient)
 ```{r}
 #| fig-width: 11
 #| fig-height: 6
-plotmafSummary(maf = luad, rmOutlier = TRUE, addStat = "median", dashboard = TRUE, titvRaw = FALSE)
+plotmafSummary(maf = luad, rmOutlier = TRUE, addStat = "median", dashboard = TRUE, titvRaw = FALSE)  # MAF 汇总仪表盘
 ```
 
 ### 瀑布图 / Oncoplot
@@ -270,7 +270,7 @@ plotmafSummary(maf = luad, rmOutlier = TRUE, addStat = "median", dashboard = TRU
 ```{r}
 #| fig-width: 11
 #| fig-height: 7
-oncoplot(maf = luad, top = 20, draw_titv = TRUE)
+oncoplot(maf = luad, top = 20, draw_titv = TRUE)  # 前 20 个基因的瀑布图
 ```
 
 注意：前 20 位中有很多 TTN、MUC16 之类的长基因（见下文"共突变与互斥"一节的讨论）。
@@ -281,11 +281,11 @@ oncoplot(maf = luad, top = 20, draw_titv = TRUE)
 ```{r}
 #| fig-width: 11
 #| fig-height: 7.5
-luad_c <- read.maf(maf = maf_all,
+luad_c <- read.maf(maf = maf_all,  # 带临床信息重新读入 MAF
                    clinicalData = as.data.table(clin |> mutate(across(c(stage, smoking), as.character))),
                    verbose = FALSE)
 
-oncoplot(
+oncoplot(  # 带临床注释的瀑布图
   maf = luad_c, top = 15,
   genes = c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "NF1", "BRAF", "SMARCA4", "RBM10", "SETD2",
             "ATM", "ARID1A", "CDKN2A", "PIK3CA", "MET"),
@@ -309,49 +309,49 @@ oncoplot(
 ```{r}
 #| fig-width: 11
 #| fig-height: 6.5
-genes_show <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "NF1", "BRAF", "SMARCA4", "RBM10", "PIK3CA")
-all_samples <- as.character(unique(getSampleSummary(luad)$Tumor_Sample_Barcode))
+genes_show <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "NF1", "BRAF", "SMARCA4", "RBM10", "PIK3CA")  # 要展示的基因
+all_samples <- as.character(unique(getSampleSummary(luad)$Tumor_Sample_Barcode))  # 所有样本
 
-mut <- maf_nonsyn |>
-  dplyr::filter(Hugo_Symbol %in% genes_show) |>
-  summarise(type = if (n_distinct(Variant_Classification) > 1) "Multi_Hit" else as.character(dplyr::first(Variant_Classification)),
+mut <- maf_nonsyn |>  # 每个 基因×样本 的突变类型
+  dplyr::filter(Hugo_Symbol %in% genes_show) |>  # 只看这些基因
+  summarise(type = if (n_distinct(Variant_Classification) > 1) "Multi_Hit" else as.character(dplyr::first(Variant_Classification)),  # 多种类型时记为 Multi_Hit
             .by = c(Hugo_Symbol, Tumor_Sample_Barcode))
 
 # 基因按频率排序；样本按 0/1 突变矩阵的"字典序"排序 → 瀑布形状
-gene_order <- mut |> dplyr::count(Hugo_Symbol, sort = TRUE) |> pull(Hugo_Symbol)
-bin <- mut |>
-  mutate(v = 1L) |>
-  pivot_wider(id_cols = Tumor_Sample_Barcode, names_from = Hugo_Symbol, values_from = v, values_fill = 0L) |>
-  right_join(tibble(Tumor_Sample_Barcode = all_samples), join_by(Tumor_Sample_Barcode)) |>
-  mutate(across(-Tumor_Sample_Barcode, \(x) coalesce(x, 0L)))
-sample_order <- bin$Tumor_Sample_Barcode[do.call(order, c(map(gene_order, \(g) -bin[[g]]), list(decreasing = FALSE)))]
+gene_order <- mut |> dplyr::count(Hugo_Symbol, sort = TRUE) |> pull(Hugo_Symbol)  # 按突变样本数排序的基因
+bin <- mut |>  # 0/1 突变矩阵
+  mutate(v = 1L) |>  # 突变标记
+  pivot_wider(id_cols = Tumor_Sample_Barcode, names_from = Hugo_Symbol, values_from = v, values_fill = 0L) |>  # 转宽表
+  right_join(tibble(Tumor_Sample_Barcode = all_samples), join_by(Tumor_Sample_Barcode)) |>  # 补上没有这些突变的样本
+  mutate(across(-Tumor_Sample_Barcode, \(x) coalesce(x, 0L)))  # 缺失填 0
+sample_order <- bin$Tumor_Sample_Barcode[do.call(order, c(map(gene_order, \(g) -bin[[g]]), list(decreasing = FALSE)))]  # 按基因顺序对样本做字典序排序
 
-tmb_df <- getSampleSummary(luad) |> as_tibble() |>
-  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), total) |>
-  mutate(Tumor_Sample_Barcode = factor(Tumor_Sample_Barcode, levels = sample_order))
+tmb_df <- getSampleSummary(luad) |> as_tibble() |>  # 每个样本的突变总数
+  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), total) |>  # 关键列
+  mutate(Tumor_Sample_Barcode = factor(Tumor_Sample_Barcode, levels = sample_order))  # 按样本顺序设因子
 
-vc_cols <- c(Missense_Mutation = "#33A02C", Nonsense_Mutation = "#E31A1C", Frame_Shift_Del = "#1F78B4",
+vc_cols <- c(Missense_Mutation = "#33A02C", Nonsense_Mutation = "#E31A1C", Frame_Shift_Del = "#1F78B4",  # 突变类型颜色
              Frame_Shift_Ins = "#6A3D9A", In_Frame_Del = "#FFFF99", In_Frame_Ins = "#B15928",
              Splice_Site = "#FF7F00", Translation_Start_Site = "#A6CEE3", Nonstop_Mutation = "#FB9A99",
              Multi_Hit = "black")
 
-p_top <- ggplot(tmb_df, aes(Tumor_Sample_Barcode, total)) +
-  geom_col(width = 1, fill = "grey40") + scale_y_log10() +
-  labs(x = NULL, y = "Mutations") + theme_classic() +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+p_top <- ggplot(tmb_df, aes(Tumor_Sample_Barcode, total)) +  # 上方的突变负荷条形图
+  geom_col(width = 1, fill = "grey40") + scale_y_log10() +  # 柱状 + 对数 y 轴
+  labs(x = NULL, y = "Mutations") + theme_classic() +  # 标签与主题
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())  # 去掉 x 轴文字
 
-p_main <- tidyr::expand_grid(Hugo_Symbol = gene_order, Tumor_Sample_Barcode = sample_order) |>
-  left_join(mut, join_by(Hugo_Symbol, Tumor_Sample_Barcode)) |>
-  mutate(Hugo_Symbol = factor(Hugo_Symbol, levels = rev(gene_order)),
+p_main <- tidyr::expand_grid(Hugo_Symbol = gene_order, Tumor_Sample_Barcode = sample_order) |>  # 主体：基因 × 样本 的格子图
+  left_join(mut, join_by(Hugo_Symbol, Tumor_Sample_Barcode)) |>  # 加突变类型
+  mutate(Hugo_Symbol = factor(Hugo_Symbol, levels = rev(gene_order)),  # 设定因子顺序
          Tumor_Sample_Barcode = factor(Tumor_Sample_Barcode, levels = sample_order)) |>
-  ggplot(aes(Tumor_Sample_Barcode, Hugo_Symbol, fill = type)) +
-  geom_tile(colour = NA) +
-  scale_fill_manual(values = vc_cols, na.value = "grey92", na.translate = FALSE, name = NULL) +
-  labs(x = sprintf("%d samples", length(sample_order)), y = NULL) +
-  theme_minimal() +
-  theme(axis.text.x = element_blank(), panel.grid = element_blank(), legend.position = "bottom")
+  ggplot(aes(Tumor_Sample_Barcode, Hugo_Symbol, fill = type)) +  # 坐标
+  geom_tile(colour = NA) +  # 格子
+  scale_fill_manual(values = vc_cols, na.value = "grey92", na.translate = FALSE, name = NULL) +  # 颜色，无突变为灰
+  labs(x = sprintf("%d samples", length(sample_order)), y = NULL) +  # 标签
+  theme_minimal() +  # 主题
+  theme(axis.text.x = element_blank(), panel.grid = element_blank(), legend.position = "bottom")  # 去掉网格与 x 轴文字
 
-p_top / p_main + plot_layout(heights = c(1, 4))
+p_top / p_main + plot_layout(heights = c(1, 4))  # 上下拼版
 ```
 
 ### Lollipop 图：突变在蛋白上的分布
@@ -359,13 +359,13 @@ p_top / p_main + plot_layout(heights = c(1, 4))
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-lollipopPlot(maf = luad, gene = "KRAS", AACol = "HGVSp_Short", showMutationRate = TRUE, labelPos = "all")
+lollipopPlot(maf = luad, gene = "KRAS", AACol = "HGVSp_Short", showMutationRate = TRUE, labelPos = "all")  # KRAS 棒棒糖图
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-lollipopPlot(maf = luad, gene = "EGFR", AACol = "HGVSp_Short", showMutationRate = TRUE,
+lollipopPlot(maf = luad, gene = "EGFR", AACol = "HGVSp_Short", showMutationRate = TRUE,  # EGFR 棒棒糖图
              labelPos = c(746, 858), repel = TRUE)
 ```
 
@@ -378,23 +378,23 @@ lollipopPlot(maf = luad, gene = "EGFR", AACol = "HGVSp_Short", showMutationRate 
 ```{r}
 #| fig-width: 11
 #| fig-height: 5
-luad_titv <- titv(maf = luad, plot = FALSE, useSyn = TRUE)
-plotTiTv(res = luad_titv)
+luad_titv <- titv(maf = luad, plot = FALSE, useSyn = TRUE)  # 转换/颠换统计
+plotTiTv(res = luad_titv)  # 画图
 ```
 
 吸烟导致的 C>A（G>T）颠换是 LUAD 中最突出的替换类型。按吸烟状态比较：
 
 ```{r}
-ca <- luad_titv$fraction.contribution |>
-  as_tibble() |>
-  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), CA = `C>A`) |>
-  inner_join(clin |> dplyr::select(Tumor_Sample_Barcode, smoking), join_by(Tumor_Sample_Barcode)) |>
-  dplyr::filter(!is.na(smoking))
+ca <- luad_titv$fraction.contribution |>  # 每个样本的 C>A 比例 + 吸烟史
+  as_tibble() |>  # 转 tibble
+  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), CA = `C>A`) |>  # 关键列
+  inner_join(clin |> dplyr::select(Tumor_Sample_Barcode, smoking), join_by(Tumor_Sample_Barcode)) |>  # 加吸烟史
+  dplyr::filter(!is.na(smoking))  # 去掉缺失
 
-ggplot(ca, aes(smoking, CA, fill = smoking)) +
-  geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
-  geom_jitter(width = 0.2, size = 0.6, alpha = 0.4) +
-  labs(y = "C>A fraction", x = NULL, title = "吸烟者的 C>A 颠换比例更高",
+ggplot(ca, aes(smoking, CA, fill = smoking)) +  # 按吸烟史的箱线图
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) +  # 箱线
+  geom_jitter(width = 0.2, size = 0.6, alpha = 0.4) +  # 散点
+  labs(y = "C>A fraction", x = NULL, title = "吸烟者的 C>A 颠换比例更高",  # 标签与 Wilcoxon p 值
        subtitle = sprintf("Wilcoxon p = %.1e", wilcox.test(CA ~ smoking, data = ca)$p.value))
 ```
 
@@ -421,7 +421,7 @@ TMB = 每 Mb 编码区的非同义突变数。它是免疫检查点抑制剂的�
 ```{r}
 #| fig-height: 4
 tmb_tbl <- tmb(maf = luad, captureSize = 38, logScale = TRUE)    # MC3 外显子捕获区约 38 Mb
-head(tmb_tbl)
+head(tmb_tbl)  # 前几行
 ```
 
 与 TCGA 其他癌种对比：
@@ -429,7 +429,7 @@ head(tmb_tbl)
 ```{r}
 #| fig-width: 11
 #| fig-height: 4.5
-tcgaCompare(maf = luad, cohortName = "LUAD (this chapter)", logscale = TRUE, capture_size = 38)
+tcgaCompare(maf = luad, cohortName = "LUAD (this chapter)", logscale = TRUE, capture_size = 38)  # 与 TCGA 各癌种 TMB 比较
 ```
 
 LUAD 与 LUSC、SKCM（黑色素瘤，UV 印记）同属 TMB 最高的癌种。
@@ -438,22 +438,22 @@ LUAD 与 LUSC、SKCM（黑色素瘤，UV 印记）同属 TMB 最高的癌种。
 
 ```{r}
 #| fig-height: 3.8
-pack <- clin_raw |> as_tibble() |>
-  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode),
+pack <- clin_raw |> as_tibble() |>  # 包年数与吸烟史原始字段
+  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode),  # 转换类型
             pack_years = suppressWarnings(as.numeric(number_pack_years_smoked)),
             smoking_raw = tobacco_smoking_history)
-tmb_clin <- tmb_tbl |> as_tibble() |>
-  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), tmb = total_perMB) |>
-  left_join(clin |> dplyr::select(Tumor_Sample_Barcode, smoking), join_by(Tumor_Sample_Barcode)) |>
-  left_join(pack, join_by(Tumor_Sample_Barcode)) |>
+tmb_clin <- tmb_tbl |> as_tibble() |>  # TMB + 吸烟信息
+  transmute(Tumor_Sample_Barcode = as.character(Tumor_Sample_Barcode), tmb = total_perMB) |>  # 关键列
+  left_join(clin |> dplyr::select(Tumor_Sample_Barcode, smoking), join_by(Tumor_Sample_Barcode)) |>  # 加吸烟分类
+  left_join(pack, join_by(Tumor_Sample_Barcode)) |>  # 加包年数
   mutate(pack_years = if_else(smoking == "Never" & is.na(pack_years), 0, pack_years))   # 结构性缺失 → 0
-tmb_clin |> summarise(n = n(), median_tmb = median(tmb), pack_years_missing = sum(is.na(pack_years)), .by = smoking)
-cor.test(log2(tmb_clin$tmb + 1), tmb_clin$pack_years, method = "spearman", exact = FALSE)
+tmb_clin |> summarise(n = n(), median_tmb = median(tmb), pack_years_missing = sum(is.na(pack_years)), .by = smoking)  # 按吸烟史汇总
+cor.test(log2(tmb_clin$tmb + 1), tmb_clin$pack_years, method = "spearman", exact = FALSE)  # TMB 与包年数的 Spearman 相关
 
-ggplot(tmb_clin |> dplyr::filter(!is.na(pack_years)), aes(pack_years + 1, tmb + 0.1, colour = smoking)) +
-  geom_point(alpha = 0.6) + geom_smooth(aes(group = 1), method = "loess", colour = "black", se = FALSE) +
-  scale_x_log10() + scale_y_log10() +
-  labs(x = "包年数 + 1（对数轴）", y = "TMB（/Mb，对数轴）", title = "吸烟暴露与 TMB")
+ggplot(tmb_clin |> dplyr::filter(!is.na(pack_years)), aes(pack_years + 1, tmb + 0.1, colour = smoking)) +  # 包年数 vs TMB
+  geom_point(alpha = 0.6) + geom_smooth(aes(group = 1), method = "loess", colour = "black", se = FALSE) +  # 点 + 整体平滑
+  scale_x_log10() + scale_y_log10() +  # 双对数坐标
+  labs(x = "包年数 + 1（对数轴）", y = "TMB（/Mb，对数轴）", title = "吸烟暴露与 TMB")  # 标签
 ```
 
 从不吸烟者的 TMB 中位数远低于吸烟者，且在吸烟者中 TMB 随包年数增加——经典的剂量—反应关系，
@@ -476,7 +476,7 @@ VAF 受肿瘤纯度和拷贝数影响，严格的克隆分析需要 PyClone-VI�
 先看一个陷阱：按突变频率取前 25 个基因：
 
 ```{r}
-head(getGeneSummary(luad)$Hugo_Symbol, 25)
+head(getGeneSummary(luad)$Hugo_Symbol, 25)  # 突变最频繁的 25 个基因
 ```
 
 TTN、MUC16、CSMD3、RYR2、LRP1B、USH2A……这些是**超长基因**或位于晚复制、低表达区域的基因，
@@ -488,13 +488,13 @@ MutSigCV、dNdScv、`oncodrive()` 等方法会根据基因长度、背景突变�
 ```{r}
 #| fig-width: 8
 #| fig-height: 8
-luad_drivers <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "NF1", "BRAF", "SMARCA4", "RBM10",
+luad_drivers <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1", "NF1", "BRAF", "SMARCA4", "RBM10",  # LUAD 驱动基因
                   "SETD2", "ATM", "ARID1A", "CDKN2A", "PIK3CA", "MET", "ERBB2", "U2AF1", "RB1")
-si <- somaticInteractions(maf = luad, genes = luad_drivers, pvalue = c(0.05, 0.01))
+si <- somaticInteractions(maf = luad, genes = luad_drivers, pvalue = c(0.05, 0.01))  # 基因对的共突变/互斥分析
 ```
 
 ```{r}
-si |> as_tibble() |> arrange(pValue) |> dplyr::select(gene1, gene2, Event, pValue, oddsRatio) |> head(10)
+si |> as_tibble() |> arrange(pValue) |> dplyr::select(gene1, gene2, Event, pValue, oddsRatio) |> head(10)  # 最显著的 10 对
 ```
 
 关键模式：
@@ -509,13 +509,13 @@ si |> as_tibble() |> arrange(pValue) |> dplyr::select(gene1, gene2, Event, pValu
 
 ```{r}
 #| fig-height: 5
-pws <- pathways(maf = luad, plotType = "treemap")
+pws <- pathways(maf = luad, plotType = "treemap")  # 按通路统计突变
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 5
-plotPathways(maf = luad, pathlist = pws)
+plotPathways(maf = luad, pathlist = pws)  # 通路突变图
 ```
 
 ### 突变与临床特征的关联
@@ -524,25 +524,25 @@ plotPathways(maf = luad, pathlist = pws)
 
 ```{r}
 #| fig-height: 5
-never <- subsetMaf(luad_c, clinQuery = "smoking == 'Never'")
-ever  <- subsetMaf(luad_c, clinQuery = "smoking == 'Ever'")
-cmp <- mafCompare(m1 = never, m2 = ever, m1Name = "Never", m2Name = "Ever", minMut = 10)
-cmp$results |> head(8)
-forestPlot(mafCompareRes = cmp, pVal = 0.01)
+never <- subsetMaf(luad_c, clinQuery = "smoking == 'Never'")  # 从不吸烟者
+ever  <- subsetMaf(luad_c, clinQuery = "smoking == 'Ever'")  # 吸烟者
+cmp <- mafCompare(m1 = never, m2 = ever, m1Name = "Never", m2Name = "Ever", minMut = 10)  # 两组间各基因突变频率比较
+cmp$results |> head(8)  # 前 8 个
+forestPlot(mafCompareRes = cmp, pVal = 0.01)  # 森林图
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 5
-coOncoplot(m1 = never, m2 = ever, m1Name = "Never smokers", m2Name = "Ever smokers",
+coOncoplot(m1 = never, m2 = ever, m1Name = "Never smokers", m2Name = "Ever smokers",  # 两组并排瀑布图
            genes = c("EGFR", "KRAS", "TP53", "STK11", "KEAP1", "RBM10", "BRAF", "NF1"))
 ```
 
 **任意分类临床变量的富集**（多组 Fisher 检验）：
 
 ```{r}
-ce <- clinicalEnrichment(maf = luad_c, clinicalFeature = "stage")
-ce$groupwise_comparision[p_value < 0.05]
+ce <- clinicalEnrichment(maf = luad_c, clinicalFeature = "stage")  # 突变与分期的关联
+ce$groupwise_comparision[p_value < 0.05]  # 显著的组间比较
 ```
 
 ### 驱动基因：突变的位置聚集性 {#sec-oncodrive}
@@ -553,14 +553,14 @@ ce$groupwise_comparision[p_value < 0.05]
 
 ```{r}
 #| label: oncodrive
-od <- cached("luad_oncodrive.rds", oncodrive(maf = luad, minMut = 5, pvalMethod = "zscore"))
-od |> as_tibble() |> arrange(fdr) |>
-  dplyr::select(Hugo_Symbol, total, clusters, muts_in_clusters, clusterScores, fdr) |> head(10)
+od <- cached("luad_oncodrive.rds", oncodrive(maf = luad, minMut = 5, pvalMethod = "zscore"))  # 检测突变位置聚集的驱动基因（结果缓存）
+od |> as_tibble() |> arrange(fdr) |>  # 按 FDR 排序
+  dplyr::select(Hugo_Symbol, total, clusters, muts_in_clusters, clusterScores, fdr) |> head(10)  # 前 10 个
 ```
 
 ```{r}
 #| fig-height: 4.5
-plotOncodrive(res = od, fdrCutOff = 0.1, useFraction = TRUE, labelSize = 0.7)
+plotOncodrive(res = od, fdrCutOff = 0.1, useFraction = TRUE, labelSize = 0.7)  # 画图
 ```
 
 FDR < 0.1 的只有 *KRAS*（152/161 个错义突变集中在 G12/G13 一个簇）和 *U2AF1*（S34 热点，一个已知的剪接因子驱动突变）。
@@ -575,14 +575,14 @@ FDR < 0.1 的只有 *KRAS*（152/161 个错义突变集中在 G12/G13 一个簇�
 
 ```{r}
 #| fig-height: 4
-dgi <- drugInteractions(maf = luad, fontSize = 0.75)
+dgi <- drugInteractions(maf = luad, fontSize = 0.75)  # 突变基因的可成药性分类
 ```
 
 ```{r}
-egfr_drugs <- drugInteractions(genes = c("EGFR", "KRAS", "BRAF"), drugs = TRUE)
-egfr_drugs |> as_tibble() |> dplyr::select(Gene, interaction_types, drug_name) |>
-  dplyr::filter(!is.na(drug_name), drug_name != "") |>
-  slice_head(n = 5, by = Gene)
+egfr_drugs <- drugInteractions(genes = c("EGFR", "KRAS", "BRAF"), drugs = TRUE)  # 具体药物–基因相互作用
+egfr_drugs |> as_tibble() |> dplyr::select(Gene, interaction_types, drug_name) |>  # 关键列
+  dplyr::filter(!is.na(drug_name), drug_name != "") |>  # 去掉空药名
+  slice_head(n = 5, by = Gene)  # 每个基因前 5 个
 ```
 
 注意 *KRAS* 一栏里出现了吉非替尼（gefitinib）——它其实是 EGFR 抑制剂，KRAS 突变预示的是对它**耐药**。
@@ -596,21 +596,21 @@ maftools 附带 TCGA 急性髓系白血病（LAML）的 GISTIC2 输出与分段�
 ```{r}
 #| fig-width: 11
 #| fig-height: 4
-laml_gistic <- readGistic(
+laml_gistic <- readGistic(  # 读入 GISTIC 拷贝数结果（AML 示例）
   gisticAllLesionsFile = system.file("extdata", "all_lesions.conf_99.txt", package = "maftools"),
   gisticAmpGenesFile   = system.file("extdata", "amp_genes.conf_99.txt",   package = "maftools"),
   gisticDelGenesFile   = system.file("extdata", "del_genes.conf_99.txt",   package = "maftools"),
   gisticScoresFile     = system.file("extdata", "scores.gistic",           package = "maftools"),
   isTCGA = TRUE, verbose = FALSE
 )
-laml_gistic
-gisticChromPlot(gistic = laml_gistic, markBands = "all")
+laml_gistic  # 打印
+gisticChromPlot(gistic = laml_gistic, markBands = "all")  # 染色体上的扩增/缺失
 ```
 
 ```{r}
 #| fig-width: 11
 #| fig-height: 3.5
-plotCBSsegments(cbsFile = system.file("extdata", "TCGA.AB.3009.hg19.seg.txt", package = "maftools"))
+plotCBSsegments(cbsFile = system.file("extdata", "TCGA.AB.3009.hg19.seg.txt", package = "maftools"))  # 单个样本的分段拷贝数
 ```
 
 GISTIC 结果也可以作为 `cnTable` 并入 `read.maf()`，在 oncoplot 中同时显示扩增/缺失。
@@ -634,27 +634,27 @@ GISTIC 结果也可以作为 `cnTable` 并入 `read.maf()`，在 oncoplot 中同
 ### 构建分析表
 
 ```{r}
-drivers <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1")
-status <- maf_nonsyn |>
-  dplyr::filter(Hugo_Symbol %in% drivers) |>
-  distinct(Tumor_Sample_Barcode, Hugo_Symbol) |>
-  mutate(mut = 1L) |>
-  pivot_wider(names_from = Hugo_Symbol, values_from = mut)
+drivers <- c("TP53", "KRAS", "EGFR", "STK11", "KEAP1")  # 5 个驱动基因
+status <- maf_nonsyn |>  # 每个样本这些基因是否突变
+  dplyr::filter(Hugo_Symbol %in% drivers) |>  # 只看驱动基因
+  distinct(Tumor_Sample_Barcode, Hugo_Symbol) |>  # 去重
+  mutate(mut = 1L) |>  # 突变标记
+  pivot_wider(names_from = Hugo_Symbol, values_from = mut)  # 转宽表
 
-surv_df <- clin |>
-  left_join(status, join_by(Tumor_Sample_Barcode)) |>
-  mutate(across(all_of(drivers), \(x) factor(if_else(is.na(x), "WT", "Mut"), levels = c("WT", "Mut")))) |>
-  dplyr::filter(!is.na(os_months), os_months > 0, !is.na(os_status)) |>
+surv_df <- clin |>  # 临床 + 突变状态
+  left_join(status, join_by(Tumor_Sample_Barcode)) |>  # 连接
+  mutate(across(all_of(drivers), \(x) factor(if_else(is.na(x), "WT", "Mut"), levels = c("WT", "Mut")))) |>  # 缺失为 WT
+  dplyr::filter(!is.na(os_months), os_months > 0, !is.na(os_status)) |>  # 去掉无生存信息的
   distinct(patient, .keep_all = TRUE)              # 一个患者只保留一个肿瘤样本
 
 # 行政删失在 5 年：TCGA 长期随访稀少且不完整
-surv_df <- surv_df |>
-  mutate(os5_status = if_else(os_months > 60, 0L, os_status),
+surv_df <- surv_df |>  # 截断在 5 年
+  mutate(os5_status = if_else(os_months > 60, 0L, os_status),  # 5 年后的事件计为删失
          os5_months = pmin(os_months, 60))
 
-nrow(surv_df)
-dplyr::count(surv_df, os5_status)
-surv_df |> dplyr::select(all_of(drivers)) |> map(table)
+nrow(surv_df)  # 样本数
+dplyr::count(surv_df, os5_status)  # 事件数
+surv_df |> dplyr::select(all_of(drivers)) |> map(table)  # 各基因突变数
 ```
 
 ### 生存数据的质量审计 {#sec-surv-audit}
@@ -662,8 +662,8 @@ surv_df |> dplyr::select(all_of(drivers)) |> map(table)
 拟合任何生存模型之前，先检查时间与事件变量本身：
 
 ```{r}
-clin |>
-  summarise(
+clin |>  # 生存数据的缺失与异常值概况
+  summarise(  # 汇总
     n               = n(),
     os_time_NA      = sum(is.na(os_months)),
     os_status_NA    = sum(is.na(os_status)),
@@ -682,8 +682,8 @@ clin |>
 （后者会因为早期死亡而被低估）：
 
 ```{r}
-fu <- survfit(Surv(os_months, 1 - os_status) ~ 1, data = clin |> dplyr::filter(os_months > 0))
-c(median_follow_up_months = unname(summary(fu)$table["median"]),
+fu <- survfit(Surv(os_months, 1 - os_status) ~ 1, data = clin |> dplyr::filter(os_months > 0))  # 反向 KM 估计中位随访时间
+c(median_follow_up_months = unname(summary(fu)$table["median"]),  # 与直接取中位数的对比
   naive_median = median(clin$os_months, na.rm = TRUE))
 ```
 
@@ -692,26 +692,26 @@ c(median_follow_up_months = unname(summary(fu)$table["median"]),
 
 ```{r}
 #| fig-height: 3
-clin |> dplyr::filter(os_status == 0, !is.na(stage)) |>
-  ggplot(aes(os_months, stage)) + geom_boxplot() +
-  labs(x = "删失患者的随访时间（月）", y = "分期", title = "各分期删失患者的随访时长")
+clin |> dplyr::filter(os_status == 0, !is.na(stage)) |>  # 删失患者的随访时间分布
+  ggplot(aes(os_months, stage)) + geom_boxplot() +  # 箱线
+  labs(x = "删失患者的随访时间（月）", y = "分期", title = "各分期删失患者的随访时长")  # 标签
 ```
 
 ### Kaplan–Meier 曲线
 
 ```{r}
 #| fig-height: 5.5
-km_stage <- survfit2(Surv(os5_months, os5_status) ~ stage, data = surv_df)
-km_stage
+km_stage <- survfit2(Surv(os5_months, os5_status) ~ stage, data = surv_df)  # 按分期的 KM 曲线
+km_stage  # 打印
 
-km_stage |>
-  ggsurvfit(linewidth = 0.8) +
-  add_confidence_interval() +
-  add_censor_mark(size = 2, alpha = 0.6) +
-  add_risktable(risktable_stats = "n.risk") +
-  add_pvalue(caption = "Log-rank {p.value}") +
-  scale_ggsurvfit(x_scales = list(breaks = seq(0, 60, 12))) +
-  labs(x = "Months since diagnosis", y = "Overall survival", title = "TCGA-LUAD：按病理分期")
+km_stage |>  # 画 KM 曲线
+  ggsurvfit(linewidth = 0.8) +  # 曲线
+  add_confidence_interval() +  # 置信区间
+  add_censor_mark(size = 2, alpha = 0.6) +  # 删失标记
+  add_risktable(risktable_stats = "n.risk") +  # 风险表
+  add_pvalue(caption = "Log-rank {p.value}") +  # log-rank p 值
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 60, 12))) +  # x 轴每 12 个月一格
+  labs(x = "Months since diagnosis", y = "Overall survival", title = "TCGA-LUAD：按病理分期")  # 标签
 ```
 
 分期是最强的预后因素——这是一个很好的"阳性对照"，说明终点数据整理正确。
@@ -719,7 +719,7 @@ km_stage |>
 ```{r}
 summary(km_stage, times = c(12, 36, 60))$table |> head()         # 中位生存
 summary(km_stage, times = c(12, 36, 60)) |>                       # 1/3/5 年生存率
-  (\(s) tibble(stage = s$strata, time = s$time, surv = round(s$surv, 3), lower = round(s$lower, 3)))()
+  (\(s) tibble(stage = s$strata, time = s$time, surv = round(s$surv, 3), lower = round(s$lower, 3)))()  # 整理成表
 ```
 
 ### 按突变状态比较
@@ -727,21 +727,21 @@ summary(km_stage, times = c(12, 36, 60)) |>                       # 1/3/5 年生
 ```{r}
 #| fig-width: 11
 #| fig-height: 8
-km_plot <- function(gene) {
-  survfit2(as.formula(paste("Surv(os5_months, os5_status) ~", gene)), data = surv_df) |>
-    ggsurvfit() +
-    add_censor_mark(size = 1.5, alpha = 0.5) +
-    add_pvalue(location = "annotation", x = 40, y = 0.95) +
-    scale_colour_manual(values = c("grey40", "firebrick")) +
-    scale_fill_manual(values = c("grey40", "firebrick")) +
-    labs(title = gene, x = "Months", y = "OS") +
-    coord_cartesian(ylim = c(0, 1))
+km_plot <- function(gene) {  # 单个基因的 KM 曲线函数
+  survfit2(as.formula(paste("Surv(os5_months, os5_status) ~", gene)), data = surv_df) |>  # 按突变状态拟合
+    ggsurvfit() +  # 曲线
+    add_censor_mark(size = 1.5, alpha = 0.5) +  # 删失标记
+    add_pvalue(location = "annotation", x = 40, y = 0.95) +  # p 值
+    scale_colour_manual(values = c("grey40", "firebrick")) +  # 线条颜色
+    scale_fill_manual(values = c("grey40", "firebrick")) +  # 置信带颜色
+    labs(title = gene, x = "Months", y = "OS") +  # 标签
+    coord_cartesian(ylim = c(0, 1))  # 固定 y 范围
 }
-wrap_plots(map(drivers, km_plot), ncol = 3)
+wrap_plots(map(drivers, km_plot), ncol = 3)  # 5 个基因拼版
 ```
 
 ```{r}
-map(drivers, \(g) {
+map(drivers, \(g) {  # 每个基因的 log-rank 检验与 BH 校正
   sd <- survdiff(as.formula(paste("Surv(os5_months, os5_status) ~", g)), data = surv_df)
   tibble(gene = g, n_mut = sd$n[2], chisq = sd$chisq, p = pchisq(sd$chisq, df = 1, lower.tail = FALSE))
 }) |> list_rbind() |> mutate(p_BH = p.adjust(p, "BH")) |> arrange(p)
@@ -759,48 +759,48 @@ maftools 也提供了快捷函数（基于 `@clinical.data`）：
 
 ```{r}
 #| eval: false
-mafSurvival(maf = luad_c, genes = "STK11", time = "os_months", Status = "os_status", isTCGA = TRUE)
+mafSurvival(maf = luad_c, genes = "STK11", time = "os_months", Status = "os_status", isTCGA = TRUE)  # maftools 自带的生存分析
 ```
 
 ### Cox 比例风险模型
 
 ```{r}
-cox_df <- surv_df |>
-  dplyr::filter(!is.na(stage), !is.na(age), !is.na(sex)) |>
-  mutate(stage2 = fct_collapse(stage, "I" = "I", "II" = "II", "III/IV" = c("III", "IV")),
+cox_df <- surv_df |>  # Cox 模型数据
+  dplyr::filter(!is.na(stage), !is.na(age), !is.na(sex)) |>  # 去掉协变量缺失
+  mutate(stage2 = fct_collapse(stage, "I" = "I", "II" = "II", "III/IV" = c("III", "IV")),  # 合并分期、年龄每 10 岁
          age10 = age / 10)
 
-cox_uni <- coxph(Surv(os5_months, os5_status) ~ STK11, data = cox_df)
-summary(cox_uni)$conf.int
+cox_uni <- coxph(Surv(os5_months, os5_status) ~ STK11, data = cox_df)  # 单因素 Cox
+summary(cox_uni)$conf.int  # HR 与置信区间
 
-cox_multi <- coxph(Surv(os5_months, os5_status) ~ age10 + sex + stage2 + TP53 + KRAS + EGFR + STK11 + KEAP1,
+cox_multi <- coxph(Surv(os5_months, os5_status) ~ age10 + sex + stage2 + TP53 + KRAS + EGFR + STK11 + KEAP1,  # 多因素 Cox
                    data = cox_df)
-cox_multi
+cox_multi  # 打印
 ```
 
 用 broom 整理，画森林图：
 
 ```{r}
 #| fig-height: 4.5
-broom::tidy(cox_multi, exponentiate = TRUE, conf.int = TRUE) |>
-  mutate(term = fct_rev(fct_inorder(term)),
+broom::tidy(cox_multi, exponentiate = TRUE, conf.int = TRUE) |>  # HR 森林图
+  mutate(term = fct_rev(fct_inorder(term)),  # 顺序与文字标签
          label = sprintf("%.2f (%.2f–%.2f)", estimate, conf.low, conf.high)) |>
-  ggplot(aes(estimate, term)) +
-  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  ggplot(aes(estimate, term)) +  # 坐标
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +  # HR = 1 参考线
   geom_errorbar(aes(xmin = conf.low, xmax = conf.high), width = 0.2, orientation = "y") +   # ggplot2 4.0：取代 geom_errorbarh()
-  geom_point(aes(colour = p.value < 0.05), size = 2.5) +
-  geom_text(aes(x = max(conf.high, na.rm = TRUE) * 1.1, label = label), hjust = 0, size = 3) +
-  scale_x_log10() +
-  scale_colour_manual(values = c(`FALSE` = "grey40", `TRUE` = "firebrick"), guide = "none") +
-  coord_cartesian(clip = "off") +
-  theme(plot.margin = margin(5, 80, 5, 5)) +
-  labs(x = "Hazard ratio (log scale)", y = NULL, title = "多因素 Cox 模型（5 年 OS）")
+  geom_point(aes(colour = p.value < 0.05), size = 2.5) +  # 点
+  geom_text(aes(x = max(conf.high, na.rm = TRUE) * 1.1, label = label), hjust = 0, size = 3) +  # 右侧文字
+  scale_x_log10() +  # 对数 x 轴
+  scale_colour_manual(values = c(`FALSE` = "grey40", `TRUE` = "firebrick"), guide = "none") +  # 颜色
+  coord_cartesian(clip = "off") +  # 允许画到面板外
+  theme(plot.margin = margin(5, 80, 5, 5)) +  # 右侧留白
+  labs(x = "Hazard ratio (log scale)", y = NULL, title = "多因素 Cox 模型（5 年 OS）")  # 标签
 ```
 
 `gtsummary` 可以直接生成发表格式的回归表：
 
 ```{r}
-gtsummary::tbl_regression(cox_multi, exponentiate = TRUE)
+gtsummary::tbl_regression(cox_multi, exponentiate = TRUE)  # 发表格式的回归表
 ```
 
 ### 缺失协变量：完整病例分析 vs 多重插补 {#sec-surv-mi}
@@ -808,10 +808,10 @@ gtsummary::tbl_regression(cox_multi, exponentiate = TRUE)
 多因素 Cox 模型默认删除任何协变量缺失的患者（完整病例分析，complete-case）。先看删掉了谁：
 
 ```{r}
-cc_flag <- surv_df |>
-  mutate(complete = !is.na(stage) & !is.na(age) & !is.na(sex) & !is.na(smoking))
-dplyr::count(cc_flag, complete)
-cc_flag |> summarise(n = n(), events = sum(os5_status), median_months = median(os5_months), .by = complete)
+cc_flag <- surv_df |>  # 是否为完整病例
+  mutate(complete = !is.na(stage) & !is.na(age) & !is.na(sex) & !is.na(smoking))  # 协变量都不缺失
+dplyr::count(cc_flag, complete)  # 计数
+cc_flag |> summarise(n = n(), events = sum(os5_status), median_months = median(os5_months), .by = complete)  # 完整与不完整病例的结局对比
 ```
 
 34 位被排除的患者事件率更低、（截断后的）中位随访更长——他们与保留的患者**并不相似**。
@@ -822,28 +822,28 @@ cc_flag |> summarise(n = n(), events = sum(os5_status), median_months = median(o
 
 ```{r}
 #| label: mice-cox
-library(mice)
-mi_df <- surv_df |>
-  transmute(os5_months, os5_status, age, sex = factor(sex), stage, smoking,
+library(mice)  # 多重插补
+mi_df <- surv_df |>  # 插补用数据
+  transmute(os5_months, os5_status, age, sex = factor(sex), stage, smoking,  # 关键变量
             TP53, KRAS, EGFR, STK11, KEAP1) |>
-  mutate(H0 = nelsonaalen(pick(everything()), os5_months, os5_status))
-md.pattern(mi_df |> dplyr::select(age, stage, smoking), plot = FALSE)
+  mutate(H0 = nelsonaalen(pick(everything()), os5_months, os5_status))  # 累计风险作为插补预测变量
+md.pattern(mi_df |> dplyr::select(age, stage, smoking), plot = FALSE)  # 缺失模式
 
-pred <- make.predictorMatrix(mi_df)
+pred <- make.predictorMatrix(mi_df)  # 预测变量矩阵
 pred[, "os5_months"] <- 0                    # 不直接用时间，用 H0 + 事件代替
-imp <- cached("luad_mice_imp.rds", mice(mi_df, m = 20, predictorMatrix = pred, seed = 2026, printFlag = FALSE))
+imp <- cached("luad_mice_imp.rds", mice(mi_df, m = 20, predictorMatrix = pred, seed = 2026, printFlag = FALSE))  # 20 次插补（结果缓存）
 imp$method[imp$method != ""]                 # 每个变量用了什么插补方法
 ```
 
 ```{r}
-fit_mi <- with(imp, coxph(Surv(os5_months, os5_status) ~ I(age / 10) + sex + stage + smoking + TP53 + KRAS + EGFR + STK11 + KEAP1))
-mi_tab <- summary(pool(fit_mi), conf.int = TRUE, exponentiate = TRUE) |>
-  as_tibble() |> transmute(term = as.character(term), HR_MI = estimate, p_MI = p.value)
-cc_fit <- coxph(Surv(os5_months, os5_status) ~ I(age / 10) + sex + stage + smoking + TP53 + KRAS + EGFR + STK11 + KEAP1,
+fit_mi <- with(imp, coxph(Surv(os5_months, os5_status) ~ I(age / 10) + sex + stage + smoking + TP53 + KRAS + EGFR + STK11 + KEAP1))  # 每个插补数据集拟合 Cox
+mi_tab <- summary(pool(fit_mi), conf.int = TRUE, exponentiate = TRUE) |>  # Rubin 规则合并
+  as_tibble() |> transmute(term = as.character(term), HR_MI = estimate, p_MI = p.value)  # 整理
+cc_fit <- coxph(Surv(os5_months, os5_status) ~ I(age / 10) + sex + stage + smoking + TP53 + KRAS + EGFR + STK11 + KEAP1,  # 完整病例分析
                 data = mi_df)
-cc_tab <- broom::tidy(cc_fit, exponentiate = TRUE) |> transmute(term, HR_CC = estimate, p_CC = p.value)
-c(n_complete_case = cc_fit$n, n_MI = nrow(mi_df))
-inner_join(cc_tab, mi_tab, join_by(term)) |> mutate(across(where(is.double), \(x) signif(x, 3)))
+cc_tab <- broom::tidy(cc_fit, exponentiate = TRUE) |> transmute(term, HR_CC = estimate, p_CC = p.value)  # 整理
+c(n_complete_case = cc_fit$n, n_MI = nrow(mi_df))  # 两种分析的样本量
+inner_join(cc_tab, mi_tab, join_by(term)) |> mutate(across(where(is.double), \(x) signif(x, 3)))  # HR 与 p 值并排
 ```
 
 缺失比例只有约 7%，大多数 HR 两种方法很接近，STK11 的结论非常稳健。但注意 **TP53**：
@@ -860,36 +860,36 @@ inner_join(cc_tab, mi_tab, join_by(term)) |> mutate(across(where(is.double), \(x
 
 ```{r}
 #| label: surv-scan
-gene_freq <- maf_nonsyn |> distinct(Tumor_Sample_Barcode, Hugo_Symbol) |>
-  dplyr::count(Hugo_Symbol, name = "n_mut") |>
-  dplyr::filter(n_mut >= 0.05 * n_distinct(maf_nonsyn$Tumor_Sample_Barcode))
-nrow(gene_freq)
-mut_sets <- maf_nonsyn |> dplyr::filter(Hugo_Symbol %in% gene_freq$Hugo_Symbol) |>
-  distinct(Hugo_Symbol, Tumor_Sample_Barcode) |>
-  (\(d) split(d$Tumor_Sample_Barcode, d$Hugo_Symbol))()
+gene_freq <- maf_nonsyn |> distinct(Tumor_Sample_Barcode, Hugo_Symbol) |>  # 突变频率 ≥ 5% 的基因
+  dplyr::count(Hugo_Symbol, name = "n_mut") |>  # 每个基因的突变样本数
+  dplyr::filter(n_mut >= 0.05 * n_distinct(maf_nonsyn$Tumor_Sample_Barcode))  # 按频率过滤
+nrow(gene_freq)  # 基因数
+mut_sets <- maf_nonsyn |> dplyr::filter(Hugo_Symbol %in% gene_freq$Hugo_Symbol) |>  # 每个基因的突变样本
+  distinct(Hugo_Symbol, Tumor_Sample_Barcode) |>  # 去重
+  (\(d) split(d$Tumor_Sample_Barcode, d$Hugo_Symbol))()  # 拆成 list
 
-scan <- t(vapply(mut_sets, function(bc) {
+scan <- t(vapply(mut_sets, function(bc) {  # 每个基因校正分期与年龄后的 Cox
   d <- cox_df |> mutate(mut = as.integer(Tumor_Sample_Barcode %in% bc))
   if (sum(d$mut) < 10) return(c(HR = NA, p = NA))
   fit <- coxph(Surv(os5_months, os5_status) ~ mut + stage2 + age10, data = d)
   co <- summary(fit)$coefficients["mut", ]
   c(HR = unname(co["exp(coef)"]), p = unname(co["Pr(>|z|)"]))
 }, numeric(2))) |>
-  as_tibble(rownames = "gene") |> dplyr::filter(!is.na(p)) |>
-  mutate(fdr = p.adjust(p, "BH"))
-c(genes_tested = nrow(scan), p_lt_0.05 = sum(scan$p < 0.05), fdr_lt_0.1 = sum(scan$fdr < 0.1),
+  as_tibble(rownames = "gene") |> dplyr::filter(!is.na(p)) |>  # 转 tibble，去掉跳过的
+  mutate(fdr = p.adjust(p, "BH"))  # BH 校正
+c(genes_tested = nrow(scan), p_lt_0.05 = sum(scan$p < 0.05), fdr_lt_0.1 = sum(scan$fdr < 0.1),  # 检验数、显著数与预期假阳性数
   expected_false_pos_at_0.05 = round(0.05 * nrow(scan)))
-scan |> arrange(p) |> head(8) |> mutate(across(c(HR, p, fdr), \(x) signif(x, 3)))
+scan |> arrange(p) |> head(8) |> mutate(across(c(HR, p, fdr), \(x) signif(x, 3)))  # 最显著的 8 个
 ```
 
 ```{r}
 #| fig-height: 4
-ggplot(scan, aes(log2(HR), -log10(p))) +
-  geom_point(aes(colour = fdr < 0.1)) +
-  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
-  geom_text_repel(data = \(d) slice_min(d, p, n = 8), aes(label = gene), size = 3, seed = 1) +
-  scale_colour_manual(values = c(`FALSE` = "grey50", `TRUE` = "firebrick")) +
-  labs(title = "突变频率 ≥ 5% 的基因：校正分期与年龄后的 Cox 扫描", x = "log2 HR")
+ggplot(scan, aes(log2(HR), -log10(p))) +  # Cox 扫描的火山图
+  geom_point(aes(colour = fdr < 0.1)) +  # 点
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +  # p = 0.05 参考线
+  geom_text_repel(data = \(d) slice_min(d, p, n = 8), aes(label = gene), size = 3, seed = 1) +  # 前 8 个加标签
+  scale_colour_manual(values = c(`FALSE` = "grey50", `TRUE` = "firebrick")) +  # 颜色
+  labs(title = "突变频率 ≥ 5% 的基因：校正分期与年龄后的 Cox 扫描", x = "log2 HR")  # 标签
 ```
 
 名义 p < 0.05 的基因数与"纯随机时期望的假阳性数"相差不大；FDR 校正后能留下的寥寥无几——
@@ -903,14 +903,14 @@ ggplot(scan, aes(log2(HR), -log10(p))) +
 Cox 模型假设 HR 不随时间变化。用 Schoenfeld 残差检验：
 
 ```{r}
-zph <- cox.zph(cox_multi)
-zph
+zph <- cox.zph(cox_multi)  # 比例风险假设检验
+zph  # 打印
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-par(mfrow = c(1, 3)); plot(zph[c("stage2", "STK11", "KEAP1")]); par(mfrow = c(1, 1))
+par(mfrow = c(1, 3)); plot(zph[c("stage2", "STK11", "KEAP1")]); par(mfrow = c(1, 1))  # 三个变量的 Schoenfeld 残差图
 ```
 
 `p < 0.05` 的变量违反比例风险假设（其效应随时间变化）。对策：用 `strata()` 分层、加入与时间的交互项
@@ -921,17 +921,17 @@ par(mfrow = c(1, 3)); plot(zph[c("stage2", "STK11", "KEAP1")]); par(mfrow = c(1,
 TCGA-CDR 同时提供了**疾病特异生存**（DSS）。总死亡中，有一部分不是死于肿瘤：
 
 ```{r}
-cr_df <- clin |>
-  dplyr::filter(!is.na(os_months), os_months > 0) |>
-  mutate(dss = as.integer(clin_raw$CDR_DSS[match(Tumor_Sample_Barcode, clin_raw$Tumor_Sample_Barcode)]),
+cr_df <- clin |>  # 竞争风险数据
+  dplyr::filter(!is.na(os_months), os_months > 0) |>  # 有生存时间的
+  mutate(dss = as.integer(clin_raw$CDR_DSS[match(Tumor_Sample_Barcode, clin_raw$Tumor_Sample_Barcode)]),  # 按疾病特异生存区分死因
          cause = case_when(
            os_status == 0 ~ "censored",
            dss == 1       ~ "cancer death",
            dss == 0       ~ "other death",
            .default       = NA_character_         # 死亡但死因未知
          )) |>
-  distinct(patient, .keep_all = TRUE)
-dplyr::count(cr_df, cause)
+  distinct(patient, .keep_all = TRUE)  # 每个病人一行
+dplyr::count(cr_df, cause)  # 各结局计数
 ```
 
 注意 `NA`——有死亡记录但死因未知的患者。在 DSS 分析中，它们**既不能当作肿瘤死亡、也不能当作删失**；
@@ -942,29 +942,29 @@ dplyr::count(cr_df, cause)
 
 ```{r}
 #| fig-height: 4
-library(cmprsk)
-cr_use <- cr_df |> dplyr::filter(!is.na(cause), !is.na(stage)) |>
-  mutate(time = pmin(os_months, 60),
+library(cmprsk)  # 竞争风险分析：累积发生率函数
+cr_use <- cr_df |> dplyr::filter(!is.na(cause), !is.na(stage)) |>  # 竞争风险分析用数据
+  mutate(time = pmin(os_months, 60),  # 截断在 5 年、编码结局、合并分期
          status = if_else(os_months > 60, 0L, c(censored = 0L, `cancer death` = 1L, `other death` = 2L)[cause]),
          stage2 = fct_collapse(stage, "I–II" = c("I", "II"), "III–IV" = c("III", "IV")))
-ci <- cuminc(cr_use$time, cr_use$status, group = cr_use$stage2, cencode = 0)
+ci <- cuminc(cr_use$time, cr_use$status, group = cr_use$stage2, cencode = 0)  # 按分期的累积发生率
 ci$Tests                                            # Gray 检验：各组 CIF 是否不同
 
-ci_df <- map(names(ci)[names(ci) != "Tests"], \(nm) {
+ci_df <- map(names(ci)[names(ci) != "Tests"], \(nm) {  # 整理 CIF 曲线
   tibble(curve = nm, time = ci[[nm]]$time, cif = ci[[nm]]$est)
 }) |> list_rbind() |>
-  separate_wider_delim(curve, " ", names = c("stage", "cause")) |>
-  mutate(cause = c(`1` = "cancer death", `2` = "other death")[cause])
+  separate_wider_delim(curve, " ", names = c("stage", "cause")) |>  # 拆出分期与死因
+  mutate(cause = c(`1` = "cancer death", `2` = "other death")[cause])  # 死因编码转文字
 
-km_naive <- survfit(Surv(time, status == 1) ~ stage2, data = cr_use)
-naive_df <- tibble(time = km_naive$time, cif = 1 - km_naive$surv,
+km_naive <- survfit(Surv(time, status == 1) ~ stage2, data = cr_use)  # 错误做法：把其他死因当删失做 KM
+naive_df <- tibble(time = km_naive$time, cif = 1 - km_naive$surv,  # 1 − KM 曲线
                    stage = rep(sub("stage2=", "", names(km_naive$strata)), km_naive$strata),
                    cause = "1 − KM（错误）")
 
-ggplot(bind_rows(ci_df, naive_df), aes(time, cif, colour = stage, linetype = cause)) +
-  geom_step() +
-  scale_linetype_manual(values = c("cancer death" = "solid", "other death" = "dotted", "1 − KM（错误）" = "dashed")) +
-  labs(x = "Months", y = "累积发生率", title = "竞争风险：CIF vs 1 − KM")
+ggplot(bind_rows(ci_df, naive_df), aes(time, cif, colour = stage, linetype = cause)) +  # CIF 与 1 − KM 对比
+  geom_step() +  # 阶梯线
+  scale_linetype_manual(values = c("cancer death" = "solid", "other death" = "dotted", "1 − KM（错误）" = "dashed")) +  # 线型
+  labs(x = "Months", y = "累积发生率", title = "竞争风险：CIF vs 1 − KM")  # 标签
 ```
 
 虚线（把其他死亡当删失的 1 − KM）始终高于实线（真正的肿瘤死亡 CIF）；在其他原因死亡多的人群（老年患者）中差距更大。
@@ -976,22 +976,22 @@ HR 和 p 值说明"有没有关联"，但不说明"预测得好不好"。**Harre
 随机取一对可比较的患者，模型预测风险更高者确实更早发生事件的概率：
 
 ```{r}
-m_stage <- coxph(Surv(os5_months, os5_status) ~ stage2 + age10, data = cox_df)
-m_full  <- coxph(Surv(os5_months, os5_status) ~ stage2 + age10 + TP53 + KRAS + EGFR + STK11 + KEAP1, data = cox_df)
-c(stage_age = concordance(m_stage)$concordance, plus_genes = concordance(m_full)$concordance)
+m_stage <- coxph(Surv(os5_months, os5_status) ~ stage2 + age10, data = cox_df)  # 只含分期与年龄
+m_full  <- coxph(Surv(os5_months, os5_status) ~ stage2 + age10 + TP53 + KRAS + EGFR + STK11 + KEAP1, data = cox_df)  # 再加驱动基因
+c(stage_age = concordance(m_stage)$concordance, plus_genes = concordance(m_full)$concordance)  # 两个模型的 C 指数
 anova(m_stage, m_full)                        # 似然比检验：突变是否带来额外信息
 ```
 
 ```{r}
 #| fig-height: 3.5
-library(timeROC)
-lp_stage <- predict(m_stage, type = "lp"); lp_full <- predict(m_full, type = "lp")
-troc <- map(list(stage_age = lp_stage, plus_genes = lp_full), \(lp)
+library(timeROC)  # 时间依赖 ROC
+lp_stage <- predict(m_stage, type = "lp"); lp_full <- predict(m_full, type = "lp")  # 两个模型的线性预测值
+troc <- map(list(stage_age = lp_stage, plus_genes = lp_full), \(lp)  # 1–4 年的时间依赖 AUC
   timeROC(T = cox_df$os5_months, delta = cox_df$os5_status, marker = lp, cause = 1,
           times = c(12, 24, 36, 48), iid = FALSE))
-map(troc, \(r) tibble(month = r$times, AUC = r$AUC)) |> list_rbind(names_to = "model") |>
-  ggplot(aes(month, AUC, colour = model)) + geom_line() + geom_point() +
-  coord_cartesian(ylim = c(0.5, 0.8)) + labs(title = "时间依赖 AUC")
+map(troc, \(r) tibble(month = r$times, AUC = r$AUC)) |> list_rbind(names_to = "model") |>  # 画 AUC 随时间变化
+  ggplot(aes(month, AUC, colour = model)) + geom_line() + geom_point() +  # 折线 + 点
+  coord_cartesian(ylim = c(0.5, 0.8)) + labs(title = "时间依赖 AUC")  # 固定范围与标题
 ```
 
 加入驱动基因突变后 C 指数只有小幅提升——分期仍是最主要的预后信息。注意这里的 C 指数是在**同一数据**上

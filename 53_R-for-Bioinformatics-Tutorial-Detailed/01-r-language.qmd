@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # fallback/fail-safe mechanism 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
@@ -70,32 +70,32 @@ source("_common.R")
 R 有 6 种原子类型（atomic types），日常使用其中 4 种：
 
 ```{r}
-lgl <- c(TRUE, FALSE, NA)
+lgl <- c(TRUE, FALSE, NA)  # 逻辑型原子向量
 int <- c(1L, 2L, NA)          # L 后缀表示整数
 dbl <- c(1, 2.5, NA, Inf, NaN) # 双精度浮点型（double）原子向量；NA 表示缺失值，Inf 表示正无穷，NaN 表示非数值
-chr <- c("ACGT", "TTGA", NA)
+chr <- c("ACGT", "TTGA", NA)  # 字符型原子向量
 
-sapply(list(lgl, int, dbl, chr), typeof)
+sapply(list(lgl, int, dbl, chr), typeof)  # 查看每个向量的底层类型
 ```
 
 **没有标量**：`42` 是长度为 1 的 double 向量。
 
 ```{r}
-length(42)
-is.vector(42)
+length(42)  # 单个数字也是长度为 1 的向量
+is.vector(42)  # 验证它确实是向量
 ```
 
 向量要求元素同类型，混合时会**隐式向上转换**：logical \< integer \< double \< character。
 
 ```{r}
-c(TRUE, 2L, 3.5)
-c(1, "a")
+c(TRUE, 2L, 3.5)  # 混合类型被强制转换为最宽的类型（double）
+c(1, "a")  # 数字与字符混合 → 全部变成字符
 ```
 
 这一规则带来一个非常实用的惯用法：对逻辑向量求和/求均值就是计数/比例。
 
 ```{r}
-pvals <- c(0.001, 0.2, 0.03, 0.8, 0.04)
+pvals <- c(0.001, 0.2, 0.03, 0.8, 0.04)  # 一组示例 p 值
 sum(pvals < 0.05)    # 显著个数
 mean(pvals < 0.05)   # 显著比例
 ```
@@ -105,7 +105,7 @@ mean(pvals < 0.05)   # 显著比例
 `NA`（未知）、`NaN`（无定义）、`NULL`（不存在）是三个不同的东西，详见 @sec-missing。
 
 ```{r}
-NA > 1; NA & FALSE; length(NULL); 0 / 0
+NA > 1; NA & FALSE; length(NULL); 0 / 0  # NA 参与比较/逻辑运算、NULL 的长度、0/0 的结果
 ```
 
 ### 向量化与循环补齐（recycling）
@@ -113,8 +113,8 @@ NA > 1; NA & FALSE; length(NULL); 0 / 0
 算术和比较运算逐元素执行，短向量会被**循环补齐**：
 
 ```{r}
-counts <- c(10, 0, 250, 37)
-log2(counts + 1)
+counts <- c(10, 0, 250, 37)  # 示例计数向量
+log2(counts + 1)  # 逐元素向量化运算：log2(count + 1)
 counts * c(1, 10)    # c(1,10) 被补齐为 c(1,10,1,10)
 ```
 
@@ -125,18 +125,18 @@ counts * c(1, 10)    # c(1,10) 被补齐为 c(1,10,1,10)
 名字、维度、类都是**属性**（attributes）。矩阵就是带 `dim` 属性的向量（**列优先**存储）：
 
 ```{r}
-m <- 1:6
-dim(m) <- c(2, 3)
-m
-attributes(m)
+m <- 1:6  # 1 到 6 的整数向量
+dim(m) <- c(2, 3)  # 加上 dim 属性 → 变成 2×3 矩阵
+m  # 打印矩阵
+attributes(m)  # 查看属性：矩阵只是带 dim 的向量
 ```
 
 因子（factor）是带 `levels` 和 `class` 属性的整数向量——它是统计建模中 "分类变量"的表示，在 DESeq2 设计公式中至关重要：
 
 ```{r}
-treatment <- factor(c("untrt", "trt", "untrt", "trt"), levels = c("untrt", "trt"))
-typeof(treatment)
-unclass(treatment)
+treatment <- factor(c("untrt", "trt", "untrt", "trt"), levels = c("untrt", "trt"))  # 因子：显式指定水平顺序
+typeof(treatment)  # 因子的底层类型是整数
+unclass(treatment)  # 去掉类属性，看到整数编码
 levels(treatment)      # 第一个水平是"参照组"
 ```
 
@@ -151,7 +151,7 @@ DESeq2/edgeR/limma 都以因子的**第一个水平**为参照。务必显式写
 R 的取子集语法很丰富，掌握它就掌握了一半的 base R。
 
 ```{r}
-x <- c(a = 1.5, b = -2, c = 0, d = 8)
+x <- c(a = 1.5, b = -2, c = 0, d = 8)  # 带名字的数值向量
 
 x[c(1, 3)]          # 正整数：选取
 x[-c(1, 3)]         # 负整数：排除
@@ -164,7 +164,7 @@ x[0]                # 零：空向量
 列表（list）是**异质容器**，`[` 返回子列表，`[[` 返回元素本身：
 
 ```{r}
-sample_info <- list(id = "SRR1039508", reads = 2.06e7, paired = TRUE,
+sample_info <- list(id = "SRR1039508", reads = 2.06e7, paired = TRUE,  # list 可以存放不同类型、不同长度的元素
                     genes = c("DUSP1", "PER1"))
 str(sample_info["genes"])    # 仍是 list
 str(sample_info[["genes"]])  # 字符向量
@@ -176,7 +176,7 @@ sample_info$reads            # $ 是 [[ 的简写（支持部分匹配，不建�
 矩阵/数据框用 `[i, j]`。注意 **`drop` 陷阱**：
 
 ```{r}
-mat <- matrix(rpois(12, 50), nrow = 3,
+mat <- matrix(rpois(12, 50), nrow = 3,  # 3×4 泊松随机计数矩阵，带行名列名
               dimnames = list(c("geneA", "geneB", "geneC"), paste0("S", 1:4)))
 mat[1, ]                 # 降维成了命名向量！
 mat[1, , drop = FALSE]   # 保持 1×4 矩阵
@@ -189,15 +189,15 @@ mat[1, , drop = FALSE]   # 保持 1×4 矩阵
 数据框是**等长向量组成的列表**，每列一个类型：
 
 ```{r}
-df <- data.frame(
+df <- data.frame(  # 构造样本信息 data.frame
   sample = paste0("SRR10395", 08:11),
   cell   = c("N61311", "N61311", "N052611", "N052611"),
   dex    = factor(c("untrt", "trt", "untrt", "trt"), levels = c("untrt", "trt")),
   depth  = c(20.6, 18.8, 25.3, 15.2)
 )
-str(df)
-typeof(df)
-df[df$dex == "trt", c("sample", "depth")]
+str(df)  # 查看每列类型
+typeof(df)  # data.frame 的底层是 list
+df[df$dex == "trt", c("sample", "depth")]  # 按行条件、按列名取子集
 ```
 
 后续章节主要使用 tibble（tidyverse 的数据框变体，打印更友好、不做隐式转换）， 以及 Bioconductor 的 `DataFrame`（可以存放任意向量类对象，例如 `GRanges`）。
@@ -216,15 +216,15 @@ df[df$dex == "trt", c("sample", "depth")]
 | `""`、`"NA"`、`"[Unknown]"` | **不是**缺失值，只是普通字符串 | character | 1 | `FALSE` |
 
 ```{r}
-typeof(NA); typeof(NA_integer_); typeof(NA_real_); typeof(NA_character_)
+typeof(NA); typeof(NA_integer_); typeof(NA_real_); typeof(NA_character_)  # NA 有四种类型版本
 c(1L, NA)              # NA 会被转换成相应类型的 NA
 is.na(c(1, NA, NaN))   # NaN 也是 NA
 is.nan(c(1, NA, NaN))  # 但 NA 不是 NaN
 is.na(c("", "NA", NA)) # 只有真正的 NA 才算
-x <- list(a = 1, b = NULL, c = NA)
+x <- list(a = 1, b = NULL, c = NA)  # list 中的 NULL 与 NA
 length(x)              # list() 里写 NULL 会占一个位置
 x$b <- NULL            # 而给元素赋值 NULL 是删除它
-names(x)
+names(x)  # b 已被删除，只剩 a 和 c
 ```
 
 ### `NA` 的传播规则（三值逻辑）
@@ -260,8 +260,8 @@ addNA(factor(c("a", NA, "b")))            # 需要时把 NA 变成显式水平
 `if (NA)` 是错误而不是警告，这在数据驱动的分支里很常见：
 
 ```{r}
-padj <- NA
-try(if (padj < 0.05) "sig")
+padj <- NA  # 模拟一个缺失的 padj
+try(if (padj < 0.05) "sig")  # if() 遇到 NA 会报错，try() 让文档继续
 if (isTRUE(padj < 0.05)) "sig" else "not sig / unknown"   # 安全写法
 ```
 
@@ -272,7 +272,7 @@ if (isTRUE(padj < 0.05)) "sig" else "not sig / unknown"   # 安全写法
 :::
 
 ```{r}
-ann <- data.frame(id = c("ENSG01", "ENSG02", "ENSG03"), symbol = c("TP53", NA, "KRAS"))
+ann <- data.frame(id = c("ENSG01", "ENSG02", "ENSG03"), symbol = c("TP53", NA, "KRAS"))  # 注释表：第 2 个基因 symbol 缺失
 ann[ann$symbol == "TP53", ]          # 多出一行全 NA
 ann[which(ann$symbol == "TP53"), ]   # 正确
 ann[ann$symbol %in% "TP53", ]        # 正确：%in% 永远返回 TRUE/FALSE
@@ -281,7 +281,7 @@ ann[ann$symbol %in% "TP53", ]        # 正确：%in% 永远返回 TRUE/FALSE
 ### 定位缺失：在哪里？
 
 ```{r}
-v <- c(5, NA, 7, NA, NA, 2)
+v <- c(5, NA, 7, NA, NA, 2)  # 含缺失值的示例向量
 anyNA(v)                       # 有没有（比 any(is.na(v)) 更快，遇到第一个就返回）
 which(is.na(v))                # 位置
 sum(is.na(v)); mean(is.na(v))  # 个数与比例
@@ -291,14 +291,14 @@ rle(is.na(v))                  # 连续缺失的"段"：长度 1 的缺失和长
 矩阵中用 `arr.ind = TRUE` 得到 (行, 列) 坐标：
 
 ```{r}
-m_na <- matrix(c(1, NA, 3, 4, 5, NA, NA, 8, 9), nrow = 3,
+m_na <- matrix(c(1, NA, 3, 4, 5, NA, NA, 8, 9), nrow = 3,  # 含缺失值的 3×3 矩阵
                dimnames = list(paste0("gene", 1:3), paste0("S", 1:3)))
-m_na
-which(is.na(m_na), arr.ind = TRUE)
+m_na  # 打印矩阵
+which(is.na(m_na), arr.ind = TRUE)  # NA 所在的行列坐标
 colSums(is.na(m_na))           # 每个样本缺几个
 rowSums(is.na(m_na))           # 每个基因缺几个
 complete.cases(m_na)           # 哪些行没有任何缺失
-m_na[complete.cases(m_na), , drop = FALSE]
+m_na[complete.cases(m_na), , drop = FALSE]  # 只保留完整行（drop = FALSE 保持矩阵）
 ```
 
 ### 真实数据：TCGA 肺腺癌临床表有多乱？
@@ -307,44 +307,44 @@ TCGA MC3 随附的临床表是**泛癌**统一表：517 位 LUAD 患者 × 780 �
 
 ```{r}
 #| label: tcga-clinical-raw
-luad_maf <- cached("tcga_luad_mc3_maf.rds",
+luad_maf <- cached("tcga_luad_mc3_maf.rds",  # 下载并缓存 TCGA LUAD 的 MC3 突变数据
                    maftools::tcgaLoad(study = "LUAD", source = "MC3"))
-clin_raw <- as.data.frame(luad_maf@clinical.data)
-dim(clin_raw)
+clin_raw <- as.data.frame(luad_maf@clinical.data)  # 取出临床信息表
+dim(clin_raw)  # 行数 × 列数
 table(vapply(clin_raw, \(col) class(col)[1], character(1)))   # 绝大多数列是字符
 ```
 
 第一步：**看看所有"像缺失"的取值**。把整张表展平成一个字符向量，统计各种可疑记号：
 
 ```{r}
-all_values <- unlist(lapply(clin_raw, as.character), use.names = FALSE)
-length(all_values)
+all_values <- unlist(lapply(clin_raw, as.character), use.names = FALSE)  # 所有单元格拉平成一个字符向量
+length(all_values)  # 单元格总数
 sum(is.na(all_values))                         # 真正的 NA 其实很少
-suspicious <- grepl("^\\[.*\\]$|^$|^(NA|N/A|null|none|unknown|-+|\\.)$",
+suspicious <- grepl("^\\[.*\\]$|^$|^(NA|N/A|null|none|unknown|-+|\\.)$",  # 正则匹配"伪缺失"写法：[..]、空串、NA/unknown 等
                     all_values, ignore.case = TRUE)
-sort(table(all_values[suspicious]), decreasing = TRUE)
+sort(table(all_values[suspicious]), decreasing = TRUE)  # 按出现次数列出这些可疑取值
 ```
 
 可以看到 TCGA 用方括号记号区分了**不同原因的缺失**：`[Not Available]`（应该有但没收集到）、 `[Not Applicable]`（这个问题对该患者不适用）、`[Unknown]`、`[Not Evaluated]`、`[Discrepancy]`（数据矛盾）， 外加大量空字符串（这一列属于别的癌种）。对统计模型来说它们都应该变成 `NA`， 但在**清洗之前先记录原因**通常是值得的——例如"未评估"与"评估为阴性"不是一回事。
 
 ```{r}
-na_tokens <- c("", "NA", "[Not Available]", "[Not Applicable]", "[Unknown]",
+na_tokens <- c("", "NA", "[Not Available]", "[Not Applicable]", "[Unknown]",  # TCGA 中表示缺失的各种占位符
                "[Not Evaluated]", "[Discrepancy]", "[Completed]")
-to_na <- function(x) {
-  if (is.character(x)) x[x %in% na_tokens] <- NA
-  x
+to_na <- function(x) {  # 把占位符替换为 NA 的函数
+  if (is.character(x)) x[x %in% na_tokens] <- NA  # 只处理字符列
+  x  # 返回处理后的列
 }
-clin <- clin_raw
+clin <- clin_raw  # 复制一份再修改
 clin[] <- lapply(clin, to_na)           # clin[] <- 保持 data.frame 结构与列名
-c(before = sum(is.na(clin_raw)), after = sum(is.na(clin)))
+c(before = sum(is.na(clin_raw)), after = sum(is.na(clin)))  # 替换前后的 NA 总数
 ```
 
 第二步：**每列缺失率**——这是决定"哪些变量可以用"的第一张表：
 
 ```{r}
-col_na <- colMeans(is.na(clin))
-summary(col_na)
-table(cut(col_na, c(-Inf, 0, 0.2, 0.5, 0.99, 1),
+col_na <- colMeans(is.na(clin))  # 每列缺失比例
+summary(col_na)  # 缺失比例的分布概况
+table(cut(col_na, c(-Inf, 0, 0.2, 0.5, 0.99, 1),  # 按缺失比例分箱计数
           labels = c("0", "(0,20%]", "(20%,50%]", "(50%,99%]", "100%")))
 head(sort(col_na[col_na > 0]), 15)       # 缺失最少的非完整列
 ```
@@ -353,18 +353,18 @@ head(sort(col_na[col_na > 0]), 15)       # 缺失最少的非完整列
 
 ```{r}
 #| fig-height: 3.5
-clin <- clin[, col_na < 1]
-dim(clin)
-hist(colMeans(is.na(clin)), breaks = 40, main = "LUAD 临床表：每列缺失率",
+clin <- clin[, col_na < 1]  # 删除完全缺失的列
+dim(clin)  # 删除后的维度
+hist(colMeans(is.na(clin)), breaks = 40, main = "LUAD 临床表：每列缺失率",  # 每列缺失率的直方图
      xlab = "缺失比例", col = "grey70", border = "white")
 ```
 
 第三步：**每位患者缺失多少**——检查是否有个别患者几乎没有随访数据：
 
 ```{r}
-row_na <- rowMeans(is.na(clin))
-summary(row_na)
-clin$Tumor_Sample_Barcode[order(row_na, decreasing = TRUE)[1:5]]
+row_na <- rowMeans(is.na(clin))  # 每行（每个病人）缺失比例
+summary(row_na)  # 行缺失比例的分布
+clin$Tumor_Sample_Barcode[order(row_na, decreasing = TRUE)[1:5]]  # 缺失最多的 5 个样本
 ```
 
 第四步：**缺失是不是随机的？** 统计学把缺失机制分为三类：
@@ -376,7 +376,7 @@ clin$Tumor_Sample_Barcode[order(row_na, decreasing = TRUE)[1:5]]
 很多临床缺失是**结构性**的。看死亡时间：
 
 ```{r}
-table(vital_status = clin$CDR_vital_status,
+table(vital_status = clin$CDR_vital_status,  # 存活状态 × 死亡天数是否缺失：结构性缺失
       death_days_missing = is.na(clin$CDR_death_days_to))
 ```
 
@@ -385,7 +385,7 @@ table(vital_status = clin$CDR_vital_status,
 吸烟史与吸烟包年数的关系是另一个结构性缺失的例子：
 
 ```{r}
-table(smoking = clin$tobacco_smoking_history,
+table(smoking = clin$tobacco_smoking_history,  # 吸烟史 × 包年数是否缺失
       pack_years_missing = is.na(clin$number_pack_years_smoked), useNA = "ifany")
 ```
 
@@ -394,20 +394,20 @@ table(smoking = clin$tobacco_smoking_history,
 第五步：**缺失模式**——哪些变量**同时**缺失？对少量关键变量，把每行的缺失状态拼成字符串计数：
 
 ```{r}
-key_vars <- c("CDR_age_at_initial_pathologic_diagnosis", "CDR_ajcc_pathologic_tumor_stage",
+key_vars <- c("CDR_age_at_initial_pathologic_diagnosis", "CDR_ajcc_pathologic_tumor_stage",  # 选 6 个关键临床变量
               "tobacco_smoking_history", "number_pack_years_smoked",
               "CDR_last_contact_days_to", "CDR_death_days_to")
 # 每行得到一个 6 位 0/1 字符串，位置顺序与 key_vars 相同（1 = 缺失）
-pattern <- apply(is.na(clin[key_vars]), 1, \(r) paste(as.integer(r), collapse = ""))
-sort(table(pattern), decreasing = TRUE)
+pattern <- apply(is.na(clin[key_vars]), 1, \(r) paste(as.integer(r), collapse = ""))  # 每行的缺失模式编码
+sort(table(pattern), decreasing = TRUE)  # 各种缺失模式的频数
 ```
 
 `mice::md.pattern()` 用同样的思想画出缺失模式图（行 = 模式，列 = 变量，蓝 = 观测，红 = 缺失）：
 
 ```{r}
 #| fig-height: 4.5
-short <- setNames(clin[key_vars], c("age", "stage", "smoking", "pack_years", "last_contact", "death_days"))
-invisible(mice::md.pattern(short, rotate.names = TRUE))
+short <- setNames(clin[key_vars], c("age", "stage", "smoking", "pack_years", "last_contact", "death_days"))  # 改成短列名便于作图
+invisible(mice::md.pattern(short, rotate.names = TRUE))  # mice 画缺失模式图
 ```
 
 ### 读文件时就把缺失处理好
@@ -421,7 +421,7 @@ KRAS,S2,NA,-
 EGFR,S3,,[Not Available]
 NA,S4,3.1,"
 read.csv(text = txt)                                     # 默认只有 "NA" 被识别（字符列中的空串保留为 ""）
-read.csv(text = txt, na.strings = c("", "NA", "-", "[Not Available]"))
+read.csv(text = txt, na.strings = c("", "NA", "-", "[Not Available]"))  # 显式声明哪些字符串算缺失
 ```
 
 ::: callout-caution
@@ -433,9 +433,9 @@ read.csv(text = txt, na.strings = c("", "NA", "-", "[Not Available]"))
 ### 处理缺失：删除、替换还是建模？
 
 ```{r}
-y <- c(3.2, NA, 4.1, 5.0, NA)
+y <- c(3.2, NA, 4.1, 5.0, NA)  # 含 NA 的数值向量
 na.omit(y)                     # 删除，并在属性中记录被删位置
-attr(na.omit(y), "na.action")
+attr(na.omit(y), "na.action")  # na.omit 记录的被删位置
 replace(y, is.na(y), 0)        # 替换（只在 0 有明确含义时这样做！）
 dplyr::coalesce(y, c(9, 9, 9, 9, 9))   # 逐元素取第一个非缺失
 ```
@@ -443,7 +443,7 @@ dplyr::coalesce(y, c(9, 9, 9, 9, 9))   # 逐元素取第一个非缺失
 统计模型的 `na.action` 决定缺失行如何处理；`na.exclude` 会让残差/拟合值 **与原数据对齐**（缺失位置填 `NA`），这在把结果写回数据框时非常重要：
 
 ```{r}
-d <- data.frame(x = 1:5, y = y)
+d <- data.frame(x = 1:5, y = y)  # 构造回归用的数据框（y 含 NA）
 length(residuals(lm(y ~ x, d)))                          # 3：与 d 的行数不一致
 length(residuals(lm(y ~ x, d, na.action = na.exclude)))  # 5：可以直接 d$resid <- ...
 ```
@@ -462,18 +462,18 @@ length(residuals(lm(y ~ x, d, na.action = na.exclude)))  # 5：可以直接 d$re
 ### 函数是一等对象
 
 ```{r}
-summarise_vec <- function(x, fun = mean, ...) {
-  fun(x, ...)
+summarise_vec <- function(x, fun = mean, ...) {  # 把汇总函数作为参数传入
+  fun(x, ...)  # ... 原样转发给 fun
 }
-summarise_vec(c(1, 5, NA), median, na.rm = TRUE)
+summarise_vec(c(1, 5, NA), median, na.rm = TRUE)  # 传入 median 并转发 na.rm
 
 # R 4.1+ 的匿名函数简写
-sq <- \(x) x^2
-sq(1:4)
+sq <- \(x) x^2  # 匿名函数简写 \(x)
+sq(1:4)  # 向量化平方
 
 # 函数也有自己的结构
-formals(summarise_vec)
-body(sq)
+formals(summarise_vec)  # 查看形参列表
+body(sq)  # 查看函数体
 ```
 
 R 函数**总是返回最后一个表达式的值**；`return()` 只用于提前返回。
@@ -483,13 +483,13 @@ R 函数**总是返回最后一个表达式的值**；`return()` 只用于提前
 调用时参数按 **精确名 → 部分名 → 位置** 匹配。`...` 收集其余参数， 是 R 中"转发参数"的方式（类似 Python 的 `*args, **kwargs`）：
 
 ```{r}
-my_plot_args <- function(...) {
-  args <- list(...)
-  names(args)
+my_plot_args <- function(...) {  # 演示 ... 收集任意参数
+  args <- list(...)  # 把 ... 转成 list
+  names(args)  # 返回参数名
 }
-my_plot_args(1, col = "red", lwd = 2)
+my_plot_args(1, col = "red", lwd = 2)  # 无名参数名字为空串
 
-dots_demo <- function(...) {
+dots_demo <- function(...) {  # 演示 ... 的惰性求值
   ...length()       # 不求值地获取 ... 的长度
 }
 dots_demo(a, b, c)  # a b c 并不存在，但不会报错（因为没有被求值）
@@ -500,18 +500,18 @@ dots_demo(a, b, c)  # a b c 并不存在，但不会报错（因为没有被求�
 参数在**首次被使用时**才求值。它们以 *promise* 的形式存在：表达式 + 环境 + 缓存值。
 
 ```{r}
-f <- function(x, y) {
-  if (missing(y)) "y 未提供" else x
+f <- function(x, y) {  # 惰性求值示例函数
+  if (missing(y)) "y 未提供" else x  # missing() 判断参数是否传入
 }
 f(1, stop("永远不会执行"))   # y 从未被使用 → 不会报错
-f(stop("哦？"))
+f(stop("哦？"))  # x 被使用 → stop() 被执行而报错
 ```
 
 这也意味着**默认参数可以引用其他参数，甚至函数体内后定义的变量**：
 
 ```{r}
-normalize <- function(x, total = sum(x)) x / total * 1e6
-normalize(c(10, 30, 60))
+normalize <- function(x, total = sum(x)) x / total * 1e6  # 默认参数可引用其他参数，调用时才求值
+normalize(c(10, 30, 60))  # 归一化到每百万（CPM 思路）
 ```
 
 惰性求值是 R 中大量"魔法"的基础：`library(DESeq2)` 不用加引号、 `dplyr::filter(df, depth > 20)`、`ggplot(df, aes(x = depth))`， 函数都在**参数被求值之前**拿到了表达式本身（见 @sec-metaprog）。
@@ -529,13 +529,13 @@ R ≥ 3.2 的 `lapply` 已经会强制求值；但你自己写的函数工厂里
 ### `on.exit`：确定性清理
 
 ```{r}
-with_tempfile <- function() {
-  tmp <- tempfile(fileext = ".tsv")
+with_tempfile <- function() {  # on.exit 清理临时文件的示例
+  tmp <- tempfile(fileext = ".tsv")  # 创建临时文件路径
   on.exit(unlink(tmp), add = TRUE)      # 无论是否报错都会执行
-  write.table(head(df), tmp, sep = "\t")
-  file.exists(tmp)
+  write.table(head(df), tmp, sep = "\t")  # 写入示例数据
+  file.exists(tmp)  # 返回文件是否存在
 }
-with_tempfile()
+with_tempfile()  # 调用；函数退出后临时文件已被删除
 ```
 
 `withr` 包提供了 `withr::local_*()` 系列函数，把"临时修改全局状态"变得更安全 （例如 `withr::local_seed(1)`、`withr::local_options(...)`）。
@@ -547,10 +547,10 @@ with_tempfile()
 环境（environment）是**名字 → 对象的映射 + 一个父环境指针**。R 的作用域就是沿着 父环境链向上查找名字。和列表不同，环境**不会被复制**（引用语义）。
 
 ```{r}
-e <- new.env()
-e$counter <- 0
-increment <- function(env) env$counter <- env$counter + 1
-increment(e); increment(e)
+e <- new.env()  # 新建环境
+e$counter <- 0  # 在环境中创建变量
+increment <- function(env) env$counter <- env$counter + 1  # 修改环境中的变量（引用语义）
+increment(e); increment(e)  # 调用两次
 e$counter                # 2：环境是按引用传递的
 
 environment()            # 当前（全局）环境
@@ -560,32 +560,32 @@ environment(mean)        # mean 定义在 base 命名空间中
 查找链：函数执行环境 → 函数定义处环境 → … → 全局环境 → 已 attach 的包 （`search()`） → base。
 
 ```{r}
-search()
+search()  # 查看搜索路径：符号按此顺序查找
 ```
 
 ### 闭包与函数工厂
 
 ```{r}
-make_counter <- function() {
-  i <- 0
-  function() {
+make_counter <- function() {  # 闭包：返回的函数记住了 i
+  i <- 0  # 计数器初值（存在闭包环境里）
+  function() {  # 返回内部函数
     i <<- i + 1     # <<- 在父环境链中查找并修改 i
-    i
+    i  # 返回当前计数
   }
 }
-next_id <- make_counter()
-next_id(); next_id(); next_id()
+next_id <- make_counter()  # 生成一个计数器
+next_id(); next_id(); next_id()  # 每次调用递增
 ```
 
 生信中典型的函数工厂：生成一组带不同阈值的过滤器。
 
 ```{r}
-make_filter <- function(min_count, min_samples) {
-  force(min_count); force(min_samples)
-  function(mat) mat[rowSums(mat >= min_count) >= min_samples, , drop = FALSE]
+make_filter <- function(min_count, min_samples) {  # 函数工厂：根据阈值生成过滤函数
+  force(min_count); force(min_samples)  # 立即求值参数，避免惰性求值陷阱
+  function(mat) mat[rowSums(mat >= min_count) >= min_samples, , drop = FALSE]  # 保留在 ≥min_samples 个样本中计数 ≥min_count 的行
 }
-keep_expressed <- make_filter(10, 2)
-keep_expressed(mat)
+keep_expressed <- make_filter(10, 2)  # 生成具体的过滤器
+keep_expressed(mat)  # 应用到示例矩阵
 ```
 
 ### 命名空间与 `::`
@@ -594,10 +594,10 @@ keep_expressed(mat)
 
 ```{r}
 #| eval: false
-library(dplyr)
+library(dplyr)  # 数据框操作的"语法"包
 library(AnnotationDbi)   # AnnotationDbi::select 遮蔽了 dplyr::select！
 select(df, sample)       # 报错：unable to find an inherited method...
-dplyr::select(df, sample)
+dplyr::select(df, sample)  # 用 包::函数 显式指定，避免遮蔽
 ```
 
 推荐使用 `conflicted` 包或在脚本中明确写 `dplyr::select`。
@@ -605,22 +605,22 @@ dplyr::select(df, sample)
 ## Copy-on-modify：值语义的错觉
 
 ```{r}
-a <- c(1, 2, 3)
+a <- c(1, 2, 3)  # 示例向量
 b <- a              # 此时 a 和 b 指向同一块内存
-lobstr::obj_addr(a) == lobstr::obj_addr(b)
+lobstr::obj_addr(a) == lobstr::obj_addr(b)  # 比较两者的内存地址：相同
 b[1] <- 100         # 修改时才复制
-a
-lobstr::obj_addr(a) == lobstr::obj_addr(b)
+a  # a 不受影响
+lobstr::obj_addr(a) == lobstr::obj_addr(b)  # 复制后地址不同
 ```
 
 函数参数同理：在函数中修改参数**不会影响**调用者。好处是推理简单；代价是 如果你在循环中不断"增长"一个向量，每次都会复制：
 
 ```{r}
-grow <- function(n) { x <- c(); for (i in seq_len(n)) x <- c(x, i); x }
-prealloc <- function(n) { x <- numeric(n); for (i in seq_len(n)) x[i] <- i; x }
-vectorised <- function(n) seq_len(n)
+grow <- function(n) { x <- c(); for (i in seq_len(n)) x <- c(x, i); x }  # 反复 c() 追加：每次都复制，最慢
+prealloc <- function(n) { x <- numeric(n); for (i in seq_len(n)) x[i] <- i; x }  # 预分配长度再填充
+vectorised <- function(n) seq_len(n)  # 直接向量化
 
-bench::mark(grow(1e4), prealloc(1e4), vectorised(1e4), check = TRUE)[, 1:5]
+bench::mark(grow(1e4), prealloc(1e4), vectorised(1e4), check = TRUE)[, 1:5]  # 基准测试三种写法
 ```
 
 ::: callout-note
@@ -657,13 +657,13 @@ apply 家族是 base R 的"高阶函数"工具箱。它们**不会**比写得好
 
 ```{r}
 #| label: airway-counts
-library(SummarizedExperiment)
-data(airway, package = "airway")
-cnt <- assay(airway, "counts")
-dim(cnt)
-cnt[1:3, 1:4]
-coldat <- as.data.frame(colData(airway))[, c("cell", "dex")]
-coldat
+library(SummarizedExperiment)  # Bioconductor 的表达矩阵容器
+data(airway, package = "airway")  # 加载 airway 示例数据（气道平滑肌细胞 ± 地塞米松）
+cnt <- assay(airway, "counts")  # 取出原始计数矩阵
+dim(cnt)  # 基因数 × 样本数
+cnt[1:3, 1:4]  # 看左上角
+coldat <- as.data.frame(colData(airway))[, c("cell", "dex")]  # 样本信息：细胞系与处理
+coldat  # 打印样本信息
 ```
 
 ### `apply()`：矩阵的行与列
@@ -672,15 +672,15 @@ coldat
 
 ```{r}
 lib_size <- apply(cnt, 2, sum)          # 每个样本的总 reads
-lib_size
+lib_size  # 打印文库大小
 n_detected <- apply(cnt > 0, 2, sum)    # 每个样本检测到的基因数（逻辑矩阵也是矩阵）
-n_detected
+n_detected  # 打印检测到的基因数
 ```
 
 额外参数通过 `...` 传给函数：
 
 ```{r}
-apply(cnt[1:5, ], 1, quantile, probs = c(0.25, 0.75))
+apply(cnt[1:5, ], 1, quantile, probs = c(0.25, 0.75))  # 每个基因的四分位数：结果是 2×5（被转置了）
 ```
 
 ::: callout-warning
@@ -690,8 +690,8 @@ apply(cnt[1:5, ], 1, quantile, probs = c(0.25, 0.75))
 :::
 
 ```{r}
-q <- t(apply(cnt[1:5, ], 1, quantile, probs = c(0.25, 0.75)))
-q
+q <- t(apply(cnt[1:5, ], 1, quantile, probs = c(0.25, 0.75)))  # t() 转回 基因 × 统计量
+q  # 打印
 ```
 
 ::: callout-warning
@@ -701,7 +701,7 @@ q
 :::
 
 ```{r}
-df_mixed <- data.frame(gene = c("A", "B"), s1 = c(9, 10), s2 = c(100, 2))
+df_mixed <- data.frame(gene = c("A", "B"), s1 = c(9, 10), s2 = c(100, 2))  # 含字符列的数据框
 apply(df_mixed, 1, max)            # "9" > "10" 按字典序！
 apply(df_mixed[, -1], 1, max)      # 先去掉字符列
 ```
@@ -709,14 +709,14 @@ apply(df_mixed[, -1], 1, max)      # 先去掉字符列
 **同一个任务，越专门的函数越快**。计算每个基因的均值、方差：
 
 ```{r}
-small <- cnt[rowSums(cnt) > 0, ]
-bench::mark(
+small <- cnt[rowSums(cnt) > 0, ]  # 去掉全零基因
+bench::mark(  # apply 与专用函数 rowMeans 的速度对比
   apply      = apply(small, 1, mean),
   rowMeans   = rowMeans(small),
   check = TRUE, iterations = 10
 )[, c("expression", "median", "mem_alloc")]
 
-bench::mark(
+bench::mark(  # 行方差：三种实现的速度对比
   apply       = apply(small, 1, var),
   matrixStats = matrixStats::rowVars(small, useNames = TRUE),
   vectorized  = rowSums((small - rowMeans(small))^2) / (ncol(small) - 1),
@@ -727,9 +727,9 @@ bench::mark(
 用 `apply()` 找每个样本中表达最高的基因——返回的是一个名字（长度 1），结果就是普通向量：
 
 ```{r}
-top_gene <- apply(cnt, 2, \(col) names(which.max(col)))
-top_gene
-rowData(airway)[unique(top_gene), "gene_name", drop = FALSE]
+top_gene <- apply(cnt, 2, \(col) names(which.max(col)))  # 每个样本计数最高的基因
+top_gene  # 打印
+rowData(airway)[unique(top_gene), "gene_name", drop = FALSE]  # 查这些基因的 symbol
 ```
 
 ### `sweep()` 与 `scale()`：按行/列做运算
@@ -737,24 +737,24 @@ rowData(airway)[unique(top_gene), "gene_name", drop = FALSE]
 计算 CPM（counts per million）需要"每一列除以该列的总和"。直接写 `cnt / colSums(cnt)` 是**错误的**，因为循环补齐沿着列优先方向进行，`colSums` 会被逐行补齐：
 
 ```{r}
-toy <- matrix(1:6, nrow = 2, dimnames = list(c("g1", "g2"), c("A", "B", "C")))
-toy
+toy <- matrix(1:6, nrow = 2, dimnames = list(c("g1", "g2"), c("A", "B", "C")))  # 2×3 小矩阵用于演示补齐规则
+toy  # 打印
 toy / colSums(toy)                         # 错！除数被补齐为 c(3,7,11,3,7,11) 按列填充
 sweep(toy, 2, colSums(toy), "/")           # 对：沿第 2 维（列）
 t(t(toy) / colSums(toy))                   # 也对：两次转置的经典写法
 ```
 
 ```{r}
-cpm <- sweep(cnt, 2, colSums(cnt), "/") * 1e6
+cpm <- sweep(cnt, 2, colSums(cnt), "/") * 1e6  # CPM：每列除以列和再乘 1e6
 colSums(cpm)[1:3]                          # 每列和为 1e6
 ```
 
 `scale()` 对**列**做 z-score。基因表达热图通常需要对**行**（基因）标准化，所以要转置两次：
 
 ```{r}
-logcpm <- log2(cpm[rowSums(cnt) > 100, ] + 1)
-z <- t(scale(t(logcpm)))
-round(rowMeans(z)[1:3], 10); apply(z[1:3, ], 1, sd)
+logcpm <- log2(cpm[rowSums(cnt) > 100, ] + 1)  # 过滤低表达后取 log2(CPM + 1)
+z <- t(scale(t(logcpm)))  # 按基因（行）做 z-score
+round(rowMeans(z)[1:3], 10); apply(z[1:3, ], 1, sd)  # 验证：每行均值≈0、标准差=1
 attributes(scale(t(logcpm)))$`scaled:center`[1:3]   # scale 把中心与尺度存在属性里
 ```
 
@@ -763,14 +763,14 @@ attributes(scale(t(logcpm)))$`scaled:center`[1:3]   # scale 把中心与尺度�
 数据框就是列表，所以 `lapply` 天然遍历列：
 
 ```{r}
-lapply(coldat, class)
-sapply(coldat, nlevels)
+lapply(coldat, class)  # 每列的类
+sapply(coldat, nlevels)  # 每个因子的水平数
 ```
 
 `sapply` 的"简化"规则：每个结果长度都是 1 → 向量；长度都相同且 \> 1 → 矩阵；否则 → list。 **结果的形状取决于数据**，这在脚本里是危险的：
 
 ```{r}
-gene_sets <- list(
+gene_sets <- list(  # 示例基因集
   glucocorticoid = c("DUSP1", "PER1", "TSC22D3", "KLF15", "FKBP5"),
   inflammation   = c("IL6", "CXCL8", "PTGS2"),
   housekeeping   = c("ACTB", "GAPDH")
@@ -784,23 +784,23 @@ sapply(list(), length)               # 空输入 → list()！而不是 integer(
 `vapply` 要求声明每个结果的类型与长度（`FUN.VALUE`），不符合就立刻报错：
 
 ```{r}
-vapply(gene_sets, length, integer(1))
+vapply(gene_sets, length, integer(1))  # vapply 必须声明返回类型
 vapply(list(), length, integer(1))                 # integer(0)：空输入也类型稳定
 try(vapply(gene_sets, \(g) g[1:2], character(1)))  # 长度不符：报错而不是悄悄变形
-vapply(gene_sets, \(g) c(n = length(g), max_nchar = max(nchar(g))), numeric(2))
+vapply(gene_sets, \(g) c(n = length(g), max_nchar = max(nchar(g))), numeric(2))  # 每个元素返回长度 2 的命名数值 → 2×3 矩阵
 ```
 
 一个真实用途：把基因 symbol 映射到 airway 的行，统计每个基因集在每个样本的平均 log-CPM：
 
 ```{r}
-symbol2id <- setNames(rownames(airway), rowData(airway)$gene_name)
-set_score <- vapply(gene_sets, function(g) {
+symbol2id <- setNames(rownames(airway), rowData(airway)$gene_name)  # symbol → Ensembl ID 的查找向量
+set_score <- vapply(gene_sets, function(g) {  # 每个基因集在每个样本中的平均 log2 CPM
   ids <- symbol2id[g]
   ids <- ids[!is.na(ids)]
   colMeans(log2(cpm[ids, , drop = FALSE] + 1))
 }, numeric(ncol(cpm)))
-round(set_score, 2)
-cbind(coldat, round(set_score, 2))[order(coldat$dex), ]
+round(set_score, 2)  # 保留两位小数
+cbind(coldat, round(set_score, 2))[order(coldat$dex), ]  # 与样本信息并排，按处理排序
 ```
 
 糖皮质激素应答基因集在 `trt`（地塞米松处理）样本中明显升高，而管家基因不变——这正是第 7 章差异分析要正式检验的内容。
@@ -808,16 +808,16 @@ cbind(coldat, round(set_score, 2))[order(coldat$dex), ]
 ### `mapply()` / `Map()`：并行遍历多个参数
 
 ```{r}
-samples <- colnames(cnt)
-depths  <- colSums(cnt)
-mapply(\(s, d) sprintf("%s: %.1f M reads", s, d / 1e6), samples, depths)
-Map(\(name, g) paste(name, length(g)), names(gene_sets), gene_sets) |> unlist()
+samples <- colnames(cnt)  # 样本名
+depths  <- colSums(cnt)  # 每个样本的总计数
+mapply(\(s, d) sprintf("%s: %.1f M reads", s, d / 1e6), samples, depths)  # mapply 并行遍历两个向量
+Map(\(name, g) paste(name, length(g)), names(gene_sets), gene_sets) |> unlist()  # Map 是 mapply 的 list 版本
 ```
 
 `MoreArgs` 传入不参与遍历的固定参数；`SIMPLIFY = FALSE` 等价于 `Map`：
 
 ```{r}
-mapply(\(gene, sample, mat) mat[symbol2id[gene], sample],
+mapply(\(gene, sample, mat) mat[symbol2id[gene], sample],  # 逐对取 (基因, 样本) 的计数，固定参数用 MoreArgs
        c("DUSP1", "PER1", "KLF15"), c("SRR1039508", "SRR1039509", "SRR1039509"),
        MoreArgs = list(mat = cnt))
 ```
@@ -827,36 +827,36 @@ mapply(\(gene, sample, mat) mat[symbol2id[gene], sample],
 `tapply(值, 分组, 函数)` 是最基本的分组统计：
 
 ```{r}
-dusp1 <- cnt[symbol2id["DUSP1"], ]
-tapply(dusp1, coldat$dex, mean)
+dusp1 <- cnt[symbol2id["DUSP1"], ]  # DUSP1 在各样本的计数
+tapply(dusp1, coldat$dex, mean)  # 按处理分组求均值
 tapply(dusp1, coldat[c("cell", "dex")], mean)       # 两个分组 → 矩阵
 ```
 
 `split()` + `lapply()` 是更通用的"分组—应用—合并"（split-apply-combine）：
 
 ```{r}
-by_dex <- split(as.data.frame(t(log2(cpm[symbol2id[c("DUSP1", "PER1", "ACTB")], ] + 1))),
+by_dex <- split(as.data.frame(t(log2(cpm[symbol2id[c("DUSP1", "PER1", "ACTB")], ] + 1))),  # 3 个基因的 log2 CPM，按处理拆成两个数据框
                 coldat$dex)
-str(by_dex, max.level = 1)
-do.call(rbind, lapply(by_dex, colMeans))
+str(by_dex, max.level = 1)  # 查看拆分结果结构
+do.call(rbind, lapply(by_dex, colMeans))  # 每组求列均值后按行合并
 ```
 
 `aggregate()` 的公式接口：
 
 ```{r}
-d_long <- data.frame(dusp1 = dusp1, coldat)
-aggregate(dusp1 ~ dex, data = d_long, FUN = \(x) c(mean = mean(x), sd = sd(x)))
+d_long <- data.frame(dusp1 = dusp1, coldat)  # 整理成长格式数据框
+aggregate(dusp1 ~ dex, data = d_long, FUN = \(x) c(mean = mean(x), sd = sd(x)))  # 公式接口分组汇总：均值与标准差
 ```
 
 **`rowsum()` 是最被低估的函数之一**：按分组对矩阵的行求和，C 实现，非常快。 一个真实需求：airway 以 Ensembl ID 为行，同一个 symbol 可能对应多个 Ensembl 基因 （例如大量 `Y_RNA`、`snoU13` 拷贝），如果下游工具要求以 symbol 为行，就需要合并：
 
 ```{r}
-sym <- rowData(airway)$gene_name
+sym <- rowData(airway)$gene_name  # 每个基因的 symbol
 sum(duplicated(sym))                               # 重复 symbol 的个数
-head(sort(table(sym), decreasing = TRUE))
+head(sort(table(sym), decreasing = TRUE))  # 重复最多的 symbol
 cnt_by_symbol <- rowsum(cnt, group = sym)           # 相同 symbol 的计数相加
-dim(cnt); dim(cnt_by_symbol)
-cnt_by_symbol["Y_RNA", 1:4]
+dim(cnt); dim(cnt_by_symbol)  # 合并前后的维度
+cnt_by_symbol["Y_RNA", 1:4]  # 合并后的 Y_RNA 计数
 ```
 
 ::: callout-note
@@ -868,10 +868,10 @@ cnt_by_symbol["Y_RNA", 1:4]
 ### `outer()`：所有组合
 
 ```{r}
-jaccard <- function(a, b) length(intersect(a, b)) / length(union(a, b))
-sets <- list(A = c("DUSP1", "PER1", "KLF15"), B = c("PER1", "KLF15", "FKBP5"), C = c("IL6", "DUSP1"))
-outer(names(sets), names(sets), Vectorize(\(i, j) jaccard(sets[[i]], sets[[j]]))) |>
-  `dimnames<-`(list(names(sets), names(sets))) |> round(2)
+jaccard <- function(a, b) length(intersect(a, b)) / length(union(a, b))  # Jaccard 相似度：交集/并集
+sets <- list(A = c("DUSP1", "PER1", "KLF15"), B = c("PER1", "KLF15", "FKBP5"), C = c("IL6", "DUSP1"))  # 三个示例基因集
+outer(names(sets), names(sets), Vectorize(\(i, j) jaccard(sets[[i]], sets[[j]]))) |>  # outer + Vectorize 计算两两相似度矩阵
+  `dimnames<-`(list(names(sets), names(sets))) |> round(2)  # 加上行列名并保留两位小数
 ```
 
 `outer` 要求函数本身是向量化的，所以对标量函数要先用 `Vectorize()` 包一层。
@@ -879,24 +879,24 @@ outer(names(sets), names(sets), Vectorize(\(i, j) jaccard(sets[[i]], sets[[j]]))
 样本间相关矩阵本质上也是"所有组合"，但 `cor()` 已经向量化了：
 
 ```{r}
-round(cor(log2(cpm[rowSums(cnt) > 100, ] + 1), method = "spearman"), 3)[1:4, 1:4]
+round(cor(log2(cpm[rowSums(cnt) > 100, ] + 1), method = "spearman"), 3)[1:4, 1:4]  # 样本间 Spearman 相关（取前 4×4）
 ```
 
 ### `Reduce` / `Filter` / `Position` / `Find`
 
 ```{r}
 Reduce(union, gene_sets) |> length()                    # 所有基因的并集
-Reduce(intersect, list(c(1, 2, 3), c(2, 3, 4), c(3, 4, 5)))
+Reduce(intersect, list(c(1, 2, 3), c(2, 3, 4), c(3, 4, 5)))  # 多个集合的交集
 Reduce(`+`, 1:5, accumulate = TRUE)                     # 累积和
-Filter(\(g) length(g) > 2, gene_sets) |> names()
+Filter(\(g) length(g) > 2, gene_sets) |> names()  # 筛选成员数 > 2 的基因集
 Position(\(g) "IL6" %in% g, gene_sets)                  # 第一个包含 IL6 的集合的位置
-Find(\(g) "IL6" %in% g, gene_sets)
+Find(\(g) "IL6" %in% g, gene_sets)  # 返回第一个满足条件的元素本身
 ```
 
 `Reduce` 最常见的生信用途是**合并多张表**：
 
 ```{r}
-tabs <- list(
+tabs <- list(  # 三个基因列表部分重叠的表
   data.frame(gene = c("A", "B", "C"), s1 = 1:3),
   data.frame(gene = c("A", "C", "D"), s2 = 4:6),
   data.frame(gene = c("B", "C", "D"), s3 = 7:9)
@@ -909,11 +909,11 @@ Reduce(\(x, y) merge(x, y, by = "gene", all = TRUE), tabs)   # 全外连接，�
 API 返回的 JSON 通常被解析成嵌套 list，`rapply` 可以对所有叶子节点做同一个操作：
 
 ```{r}
-meta <- list(sample = "SRR1039508",
+meta <- list(sample = "SRR1039508",  # 嵌套 list 形式的样本元数据
              qc = list(reads = 20637971, mapped = 0.9213, dup = 0.1534),
              tags = list(cell = "N61311", treatment = list(drug = "dex", dose_nM = 1000)))
-rapply(meta, \(x) round(x, 2), classes = "numeric", how = "replace") |> str()
-rapply(meta, toupper, classes = "character", how = "unlist")
+rapply(meta, \(x) round(x, 2), classes = "numeric", how = "replace") |> str()  # 递归地对所有数值元素取两位小数
+rapply(meta, toupper, classes = "character", how = "unlist")  # 递归地把字符元素转大写并拉平
 ```
 
 ### 与 purrr 的对应关系
@@ -934,15 +934,15 @@ rapply(meta, toupper, classes = "character", how = "unlist")
 ```{r}
 #| eval: false
 # 1) base R：fork 方式（Linux/macOS），Windows 上只能单核
-parallel::mclapply(files, read_one, mc.cores = 4)
+parallel::mclapply(files, read_one, mc.cores = 4)  # fork 多进程并行读取
 
 # 2) Bioconductor 标准：统一接口，后端可切换
-library(BiocParallel)
-bplapply(files, read_one, BPPARAM = MulticoreParam(workers = 4))
+library(BiocParallel)  # Bioconductor 统一的并行接口
+bplapply(files, read_one, BPPARAM = MulticoreParam(workers = 4))  # 多核后端并行读取
 
 # 3) future 生态：同一份代码可在本机多进程、集群上运行
-future::plan(future::multisession, workers = 4)
-future.apply::future_lapply(files, read_one)
+future::plan(future::multisession, workers = 4)  # 设置 future 后端：多个 R 会话
+future.apply::future_lapply(files, read_one)  # future 版的 lapply
 ```
 
 ::: callout-tip
@@ -956,76 +956,76 @@ future.apply::future_lapply(files, read_one)
 一个最常见的任务：上游流程（featureCounts / HTSeq）为**每个样本输出一个计数文件**， 需要合并成一个矩阵。我们先用 airway 数据模拟出 8 个 HTSeq 风格的文件—— 包括 HTSeq 在文件末尾附加的 `__no_feature` 等统计行，以及某个文件**缺少几个基因**的真实情况：
 
 ```{r}
-counts_dir <- file.path(tempdir(), "htseq")
-dir.create(counts_dir, showWarnings = FALSE)
-genes_keep <- rownames(cnt)[rowSums(cnt) > 0][1:2000]
-for (s in colnames(cnt)) {
-  g <- genes_keep
+counts_dir <- file.path(tempdir(), "htseq")  # 临时目录中模拟 HTSeq 输出
+dir.create(counts_dir, showWarnings = FALSE)  # 创建目录
+genes_keep <- rownames(cnt)[rowSums(cnt) > 0][1:2000]  # 取 2000 个有表达的基因
+for (s in colnames(cnt)) {  # 每个样本写一个计数文件
+  g <- genes_keep  # 该样本要写出的基因
   if (s == "SRR1039512") g <- g[-(1:3)]          # 模拟：该样本的注释版本少了 3 个基因
-  out <- data.frame(g, cnt[g, s])
-  extra <- data.frame(c("__no_feature", "__ambiguous", "__too_low_aQual",
+  out <- data.frame(g, cnt[g, s])  # 基因名 + 计数两列
+  extra <- data.frame(c("__no_feature", "__ambiguous", "__too_low_aQual",  # HTSeq 文件末尾的统计行
                         "__not_aligned", "__alignment_not_unique"),
                       c(1523411L, 89233L, 0L, 0L, 1022931L))
-  write.table(rbind(setNames(out, c("a", "b")), setNames(extra, c("a", "b"))),
+  write.table(rbind(setNames(out, c("a", "b")), setNames(extra, c("a", "b"))),  # 合并后写成无表头的制表符文件
               file.path(counts_dir, paste0(s, ".htseq.txt")),
               sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
 }
-list.files(counts_dir)
-readLines(file.path(counts_dir, "SRR1039508.htseq.txt"), n = 3)
+list.files(counts_dir)  # 列出生成的文件
+readLines(file.path(counts_dir, "SRR1039508.htseq.txt"), n = 3)  # 看文件前 3 行
 ```
 
 **第 1 步：列出文件，提取样本名**
 
 ```{r}
-files <- list.files(counts_dir, pattern = "\\.htseq\\.txt$", full.names = TRUE)
-names(files) <- sub("\\.htseq\\.txt$", "", basename(files))
-files[1:2]
+files <- list.files(counts_dir, pattern = "\\.htseq\\.txt$", full.names = TRUE)  # 按扩展名列出全部计数文件
+names(files) <- sub("\\.htseq\\.txt$", "", basename(files))  # 用样本名给文件路径命名
+files[1:2]  # 查看前两个
 ```
 
 **第 2 步：`lapply` 读入为列表**
 
 ```{r}
-read_htseq <- function(path) {
-  x <- read.delim(path, header = FALSE, col.names = c("gene", "count"))
+read_htseq <- function(path) {  # 读取一个 HTSeq 文件
+  x <- read.delim(path, header = FALSE, col.names = c("gene", "count"))  # 两列：基因、计数
   x[!startsWith(x$gene, "__"), ]                 # 去掉 HTSeq 的统计行
 }
-tab_list <- lapply(files, read_htseq)
+tab_list <- lapply(files, read_htseq)  # 逐个读取，得到命名 list
 vapply(tab_list, nrow, integer(1))              # 一个样本行数不同！
 ```
 
 **第 3 步：检查基因顺序是否一致**——不检查就 `cbind` 是一个会**静默产生错误结果**的经典 bug：
 
 ```{r}
-ref <- tab_list[[1]]$gene
-vapply(tab_list, \(t) identical(t$gene, ref), logical(1))
+ref <- tab_list[[1]]$gene  # 以第一个样本的基因顺序为参照
+vapply(tab_list, \(t) identical(t$gene, ref), logical(1))  # 检查每个样本的基因顺序是否与参照一致
 ```
 
 **第 4 步：按基因 ID 对齐**，而不是按行位置：
 
 ```{r}
-all_genes <- Reduce(union, lapply(tab_list, `[[`, "gene"))
-mat <- vapply(tab_list, \(t) t$count[match(all_genes, t$gene)], numeric(length(all_genes)))
-rownames(mat) <- all_genes
-dim(mat)
+all_genes <- Reduce(union, lapply(tab_list, `[[`, "gene"))  # 所有样本基因的并集
+mat <- vapply(tab_list, \(t) t$count[match(all_genes, t$gene)], numeric(length(all_genes)))  # 按并集顺序 match 计数，缺失处为 NA
+rownames(mat) <- all_genes  # 设置行名
+dim(mat)  # 维度
 which(is.na(mat), arr.ind = TRUE)           # 缺失的位置：哪个基因、哪个样本
 ```
 
 对于计数数据，"该样本的注释里没有这个基因"应该如何处理取决于原因； 如果确认只是注释差异，常见做法是删除这些基因（**不要**填 0，因为 0 表示"测了但没有 reads"）：
 
 ```{r}
-mat <- mat[complete.cases(mat), ]
-dim(mat)
-all.equal(mat, cnt[rownames(mat), colnames(mat)], check.attributes = FALSE)
+mat <- mat[complete.cases(mat), ]  # 只保留所有样本都有的基因
+dim(mat)  # 过滤后维度
+all.equal(mat, cnt[rownames(mat), colnames(mat)], check.attributes = FALSE)  # 与原始计数核对：应完全相同
 ```
 
 **第 5 步：把统计行也汇总起来**——它们是重要的 QC 指标：
 
 ```{r}
-read_htseq_summary <- function(path) {
-  x <- read.delim(path, header = FALSE, col.names = c("gene", "count"))
-  setNames(x$count[startsWith(x$gene, "__")], sub("^__", "", x$gene[startsWith(x$gene, "__")]))
+read_htseq_summary <- function(path) {  # 读取 HTSeq 末尾的统计行
+  x <- read.delim(path, header = FALSE, col.names = c("gene", "count"))  # 两列：基因、计数
+  setNames(x$count[startsWith(x$gene, "__")], sub("^__", "", x$gene[startsWith(x$gene, "__")]))  # 取 "__" 开头的行并去掉前缀作为名字
 }
-t(vapply(files, read_htseq_summary, numeric(5)))[1:3, ]
+t(vapply(files, read_htseq_summary, numeric(5)))[1:3, ]  # 每个样本的统计行汇总（样本 × 类别）
 ```
 
 ## 原生管道 `|>`
@@ -1033,7 +1033,7 @@ t(vapply(files, read_htseq_summary, numeric(5)))[1:3, ]
 R 4.1 引入了原生管道，`x |> f(y)` 在**解析阶段**就被改写为 `f(x, y)`，没有运行时开销。
 
 ```{r}
-c(12, 400, 0, 33) |> log1p() |> round(2)
+c(12, 400, 0, 33) |> log1p() |> round(2)  # 原生管道：左边作为第一个参数
 
 quote(x |> f(y))     # 解析后的真实形式
 ```
@@ -1041,8 +1041,8 @@ quote(x |> f(y))     # 解析后的真实形式
 R 4.2+ 支持占位符 `_`（必须是**具名参数**），R 4.3+ 支持 `_$name` 取元素：
 
 ```{r}
-df |> lm(depth ~ dex, data = _) |> coef()
-df |> _$depth |> mean()
+df |> lm(depth ~ dex, data = _) |> coef()  # 占位符 _ 把左边传给命名参数
+df |> _$depth |> mean()  # _ 也可用于取子元素（R 4.3+）
 ```
 
 |                   | `|>`（base）      | `%>%`（magrittr） |
@@ -1076,11 +1076,11 @@ df |> _$depth |> mean()
 GENCODE / Ensembl 的基因 ID 常带版本号（`ENSG00000141510.18`），不同注释版本的版本号不同， 直接匹配会全部失败：
 
 ```{r}
-ids_a <- c("ENSG00000141510.18", "ENSG00000133703.13", "ENSG00000146648.21")
-ids_b <- c("ENSG00000141510.16", "ENSG00000133703.11", "ENSG00000146648")
-ids_a %in% ids_b
-strip_version <- function(x) sub("\\.\\d+$", "", x)
-strip_version(ids_a) %in% strip_version(ids_b)
+ids_a <- c("ENSG00000141510.18", "ENSG00000133703.13", "ENSG00000146648.21")  # 带版本号的 Ensembl ID
+ids_b <- c("ENSG00000141510.16", "ENSG00000133703.11", "ENSG00000146648")  # 同一批基因，版本号不同
+ids_a %in% ids_b  # 直接比较：全部不匹配
+strip_version <- function(x) sub("\\.\\d+$", "", x)  # 去掉末尾 .版本号
+strip_version(ids_a) %in% strip_version(ids_b)  # 去版本号后再比较
 ```
 
 ::: callout-caution
@@ -1090,10 +1090,10 @@ GENCODE 中 X/Y 拟常染色体区（PAR）的基因在 Y 上的拷贝带 `_PAR_
 :::
 
 ```{r}
-ids_par <- c("ENSG00000182378.15", "ENSG00000182378.15_PAR_Y")
+ids_par <- c("ENSG00000182378.15", "ENSG00000182378.15_PAR_Y")  # PAR 区基因：X 与 Y 上同 ID
 strip_version(ids_par)                     # 正则只去掉末尾的 .数字，PAR_Y 被保留
 sub("\\..*$", "", ids_par)                 # 粗暴写法：变成重复 ID
-anyDuplicated(sub("\\..*$", "", ids_par))
+anyDuplicated(sub("\\..*$", "", ids_par))  # 粗暴写法产生重复 ID
 ```
 
 ### 解析 TCGA 条形码
@@ -1109,29 +1109,29 @@ TCGA 条形码 `TCGA-05-4244-01A-01D-1105-08` 的每一段都有含义：
 | 7 | `08` | 测序中心 |
 
 ```{r}
-bc <- as.character(luad_maf@clinical.data$Tumor_Sample_Barcode)[1:6]
-bc
+bc <- as.character(luad_maf@clinical.data$Tumor_Sample_Barcode)[1:6]  # 取 6 个 TCGA 样本条形码
+bc  # 打印
 parts <- strsplit(bc, "-", fixed = TRUE)       # list：每个条形码一个字符向量
-parts[[1]]
-participant <- vapply(parts, \(p) paste(p[1:3], collapse = "-"), character(1))
-sample_type <- substr(vapply(parts, `[`, character(1), 4), 1, 2)
-data.frame(bc, participant, sample_type)
+parts[[1]]  # 第一个条形码拆分结果
+participant <- vapply(parts, \(p) paste(p[1:3], collapse = "-"), character(1))  # 前 3 段 = 病人 ID
+sample_type <- substr(vapply(parts, `[`, character(1), 4), 1, 2)  # 第 4 段前两位 = 样本类型代码
+data.frame(bc, participant, sample_type)  # 汇总成表
 ```
 
 用正则一次提取多个字段——`regmatches()` + `regexec()` 返回所有捕获组：
 
 ```{r}
-m <- regmatches(bc, regexec("^(TCGA-\\w{2}-\\w{4})-(\\d{2})([A-Z])-(\\d{2})([DRTGWX])", bc))
-do.call(rbind, m)[, -1] |>
-  `colnames<-`(c("participant", "type", "vial", "portion", "analyte")) |> head(3)
+m <- regmatches(bc, regexec("^(TCGA-\\w{2}-\\w{4})-(\\d{2})([A-Z])-(\\d{2})([DRTGWX])", bc))  # 用带捕获组的正则一次解析条形码各字段
+do.call(rbind, m)[, -1] |>  # 去掉整体匹配列，合并成矩阵
+  `colnames<-`(c("participant", "type", "vial", "portion", "analyte")) |> head(3)  # 设列名并看前 3 行
 ```
 
 一个查找表（命名向量）把代码翻译成可读标签：
 
 ```{r}
-type_lut <- c("01" = "Primary Tumor", "02" = "Recurrent Tumor", "06" = "Metastatic",
+type_lut <- c("01" = "Primary Tumor", "02" = "Recurrent Tumor", "06" = "Metastatic",  # TCGA 样本类型代码对照表
               "10" = "Blood Normal", "11" = "Solid Tissue Normal")
-unname(type_lut[sample_type])
+unname(type_lut[sample_type])  # 按代码查表，去掉名字
 ```
 
 ::: callout-tip
@@ -1143,13 +1143,13 @@ unname(type_lut[sample_type])
 ### DNA 序列的小操作
 
 ```{r}
-seq <- "ATGCGTACCTTAGN"
-nchar(seq)
-revcomp <- function(s) paste(rev(strsplit(chartr("ACGTN", "TGCAN", s), "")[[1]]), collapse = "")
-revcomp(seq)
+seq <- "ATGCGTACCTTAGN"  # 示例 DNA 序列
+nchar(seq)  # 序列长度
+revcomp <- function(s) paste(rev(strsplit(chartr("ACGTN", "TGCAN", s), "")[[1]]), collapse = "")  # 反向互补：碱基替换后反转
+revcomp(seq)  # 调用
 table(strsplit(seq, "")[[1]])                      # 碱基组成
-gc <- function(s) { b <- strsplit(s, "")[[1]]; mean(b %in% c("G", "C")) }
-gc(seq)
+gc <- function(s) { b <- strsplit(s, "")[[1]]; mean(b %in% c("G", "C")) }  # GC 含量
+gc(seq)  # 调用
 gregexpr("CG", seq)[[1]]                           # 所有 CpG 的位置
 ```
 
@@ -1158,10 +1158,10 @@ gregexpr("CG", seq)[[1]]                           # 所有 CpG 的位置
 ### 格式化输出
 
 ```{r}
-sprintf("%-10s %8.2f %6.1e", c("DUSP1", "KLF15"), c(5.123, 4.2), c(1.2e-30, 3e-8))
-format(1234567.891, big.mark = ",", nsmall = 1)
+sprintf("%-10s %8.2f %6.1e", c("DUSP1", "KLF15"), c(5.123, 4.2), c(1.2e-30, 3e-8))  # sprintf 控制宽度、小数位与科学计数
+format(1234567.891, big.mark = ",", nsmall = 1)  # 千分位分隔符
 formatC(c(1, 10, 100), width = 4, flag = "0")       # 补零：样本编号
-prettyNum(colSums(cnt)[1:2], big.mark = ",")
+prettyNum(colSums(cnt)[1:2], big.mark = ",")  # 大数字可读化
 ```
 
 ## 数值陷阱：浮点、溢出与极小 p 值 {#sec-numeric}
@@ -1169,11 +1169,11 @@ prettyNum(colSums(cnt)[1:2], big.mark = ",")
 ### 浮点比较
 
 ```{r}
-0.1 + 0.2 == 0.3
+0.1 + 0.2 == 0.3  # 浮点误差：结果为 FALSE
 isTRUE(all.equal(0.1 + 0.2, 0.3))     # 带容差的比较
-seq(0, 1, by = 0.1)[4] == 0.3
-abs(seq(0, 1, by = 0.1)[4] - 0.3) < 1e-12
-.Machine$double.eps
+seq(0, 1, by = 0.1)[4] == 0.3  # seq 生成的 0.3 也不精确
+abs(seq(0, 1, by = 0.1)[4] - 0.3) < 1e-12  # 用容差比较
+.Machine$double.eps  # 机器精度
 ```
 
 ### 整数溢出
@@ -1181,10 +1181,10 @@ abs(seq(0, 1, by = 0.1)[4] - 0.3) < 1e-12
 R 的整数是 32 位，最大约 21 亿。大规模单细胞数据的总 reads 数、 或稀疏矩阵的非零元素个数，都可能超过它：
 
 ```{r}
-.Machine$integer.max
+.Machine$integer.max  # 最大整数
 .Machine$integer.max + 1L               # NA，并警告
 sum(c(.Machine$integer.max, 1L))        # sum() 对整数也会溢出 → NA
-sum(as.numeric(c(.Machine$integer.max, 1L)))
+sum(as.numeric(c(.Machine$integer.max, 1L)))  # 转成 double 后再求和
 ```
 
 ### 极小的 p 值
@@ -1192,7 +1192,7 @@ sum(as.numeric(c(.Machine$integer.max, 1L)))
 强效应基因的 p 值可以小到超出 double 的表示范围（约 1e-308），变成 0：
 
 ```{r}
-pnorm(-38)
+pnorm(-38)  # 极小 p 值仍可表示
 pnorm(-40)                              # 下溢为 0
 pnorm(-40, log.p = TRUE) / log(10)      # 在对数尺度上计算：log10(p)
 -log10(c(1e-300, 0))                    # 火山图上会出现 Inf
@@ -1210,9 +1210,9 @@ round(2.675, 2)                          # 2.67：因为 2.675 在二进制中�
 ### 对数与伪计数
 
 ```{r}
-log2(0)
+log2(0)  # log2(0) = -Inf
 log2(c(0, 1, 10) + 1)                   # 伪计数 1 —— log1p 更精确：
-log1p(1e-10); log(1 + 1e-10)
+log1p(1e-10); log(1 + 1e-10)  # log1p 在 x 很小时更精确
 ```
 
 ## 条件系统：错误、警告与信号
@@ -1220,43 +1220,43 @@ log1p(1e-10); log(1 + 1e-10)
 R 的条件系统比 try/except 更强大：它区分**处理（handling）**与**恢复（restart）**， 并允许在不展开调用栈的情况下处理警告。
 
 ```{r}
-safe_log <- function(x) {
-  tryCatch(
+safe_log <- function(x) {  # 统一处理警告与错误的 log 函数
+  tryCatch(  # 按条件类型分别处理
     log(x),
     warning = function(w) { message("警告被捕获: ", conditionMessage(w)); NA_real_ },
     error   = function(e) { message("错误被捕获: ", conditionMessage(e)); NA_real_ },
     finally = message("清理完成")
   )
 }
-safe_log(-1)
-safe_log("a")
+safe_log(-1)  # 触发警告
+safe_log("a")  # 触发错误
 ```
 
 `withCallingHandlers()` 在条件发生的位置处理并**继续执行**，例如统计但抑制警告：
 
 ```{r}
-n_warn <- 0
-res <- withCallingHandlers(
+n_warn <- 0  # 警告计数器
+res <- withCallingHandlers(  # 捕获警告但不中断执行
   sqrt(c(-1, 4)) + log(-9),          # 两处会产生警告
   warning = function(w) {
     n_warn <<- n_warn + 1
     invokeRestart("muffleWarning")   # 吞掉警告，代码从原处继续执行
   }
 )
-res; n_warn
+res; n_warn  # 结果与警告数
 ```
 
 带**类**的条件让调用者可以精确处理：
 
 ```{r}
-check_counts <- function(m) {
-  if (any(m < 0)) {
-    rlang::abort("计数矩阵中存在负值", class = "negative_counts_error",
+check_counts <- function(m) {  # 输入检查函数
+  if (any(m < 0)) {  # 发现负值
+    rlang::abort("计数矩阵中存在负值", class = "negative_counts_error",  # 抛出带自定义类与数据的错误
                  data = list(n = sum(m < 0)))
   }
-  invisible(m)
+  invisible(m)  # 通过检查则不可见地返回输入
 }
-tryCatch(check_counts(matrix(c(1, -1, 2, -3), 2)),
+tryCatch(check_counts(matrix(c(1, -1, 2, -3), 2)),  # 按错误类捕获并读取附带数据
          negative_counts_error = \(e) paste("发现", e$data$n, "个负值"))
 ```
 
@@ -1275,10 +1275,10 @@ tryCatch(check_counts(matrix(c(1, -1, 2, -3), 2)),
 
 ```{r}
 #| eval: false
-f <- function(x) g(x)
-g <- function(x) h(x)
-h <- function(x) log(x)
-f("a")
+f <- function(x) g(x)  # 三层调用链，最内层出错
+g <- function(x) h(x)  # 中间层
+h <- function(x) log(x)  # 最内层：对字符取 log 会报错
+f("a")  # 触发错误
 traceback()          # 3: h(x)  2: g(x)  1: f("a")
 
 debugonce(DESeq2::results)    # 下一次调用 results() 时逐行执行
@@ -1294,41 +1294,41 @@ options(error = NULL)         # 恢复默认
 
 ```{r}
 # 1) stopifnot：R 4.0+ 支持自定义消息（名字就是消息）
-normalize_cpm <- function(counts) {
-  stopifnot(
+normalize_cpm <- function(counts) {  # 带断言的 CPM 归一化
+  stopifnot(  # 条件不满足时报对应消息
     "counts 必须是矩阵" = is.matrix(counts),
     "counts 必须是非负数" = all(counts >= 0, na.rm = TRUE),
     "counts 不能含 NA" = !anyNA(counts)
   )
-  sweep(counts, 2, colSums(counts), "/") * 1e6
+  sweep(counts, 2, colSums(counts), "/") * 1e6  # CPM 计算
 }
-try(normalize_cpm(data.frame(a = 1)))
-try(normalize_cpm(matrix(c(1, NA))))
+try(normalize_cpm(data.frame(a = 1)))  # 传入 data.frame：触发第一条消息
+try(normalize_cpm(matrix(c(1, NA))))  # 含 NA：触发第三条消息
 ```
 
 ```{r}
 # 2) match.arg：限定字符串参数的取值，并支持缩写
-choose_test <- function(method = c("wald", "lrt", "exact")) {
-  method <- match.arg(method)
-  method
+choose_test <- function(method = c("wald", "lrt", "exact")) {  # 参数取值限定在三个选项中
+  method <- match.arg(method)  # 校验并补全参数
+  method  # 返回结果
 }
 choose_test()          # 默认取第一个
 choose_test("lr")      # 部分匹配
-try(choose_test("t"))
+try(choose_test("t"))  # 非法取值报错
 ```
 
 ```{r}
 # 3) checkmate：表达力强、速度快的断言库
-library(checkmate)
-filter_genes <- function(counts, min_count = 10, min_samples = 2L) {
-  assert_matrix(counts, mode = "numeric", any.missing = FALSE, min.cols = 2, row.names = "unique")
-  assert_number(min_count, lower = 0)
-  assert_int(min_samples, lower = 1, upper = ncol(counts))
-  counts[rowSums(counts >= min_count) >= min_samples, , drop = FALSE]
+library(checkmate)  # 快速、表达力强的参数断言库
+filter_genes <- function(counts, min_count = 10, min_samples = 2L) {  # 带参数检查的基因过滤函数
+  assert_matrix(counts, mode = "numeric", any.missing = FALSE, min.cols = 2, row.names = "unique")  # 必须是数值矩阵、无缺失、≥2 列、行名唯一
+  assert_number(min_count, lower = 0)  # 单个非负数
+  assert_int(min_samples, lower = 1, upper = ncol(counts))  # 1 到样本数之间的整数
+  counts[rowSums(counts >= min_count) >= min_samples, , drop = FALSE]  # 执行过滤
 }
-dim(filter_genes(cnt, 10, 3L))
-try(filter_genes(cnt, 10, 20L))
-try(filter_genes(unname(cnt)))
+dim(filter_genes(cnt, 10, 3L))  # 正常调用
+try(filter_genes(cnt, 10, 20L))  # min_samples 超过样本数 → 报错
+try(filter_genes(unname(cnt)))  # 去掉行名 → 报错
 ```
 
 ### 消息、警告与静默
@@ -1347,7 +1347,7 @@ try(filter_genes(unname(cnt)))
 :::
 
 ```{r}
-cli::cli_inform(c("i" = "读取 {length(files)} 个计数文件", "v" = "共 {nrow(mat)} 个基因"))
+cli::cli_inform(c("i" = "读取 {length(files)} 个计数文件", "v" = "共 {nrow(mat)} 个基因"))  # cli 格式化提示信息，{} 内插值
 ```
 
 ## 面向对象：S3、S4、R6、S7 {#sec-oop}
@@ -1359,32 +1359,32 @@ R 有多套 OOP 系统，你需要**读懂**全部，**会写** S3 和 S4（Bioc
 S3 是"对象有一个 `class` 属性 + 函数名 `generic.class`"的约定。`print`、`summary`、 `plot` 都是 S3 泛型：
 
 ```{r}
-new_deg_result <- function(table, alpha = 0.05) {
-  stopifnot(is.data.frame(table), all(c("gene", "padj") %in% names(table)))
-  structure(list(table = table, alpha = alpha), class = "deg_result")
+new_deg_result <- function(table, alpha = 0.05) {  # S3 构造函数
+  stopifnot(is.data.frame(table), all(c("gene", "padj") %in% names(table)))  # 输入检查
+  structure(list(table = table, alpha = alpha), class = "deg_result")  # list + class 属性 = S3 对象
 }
 
-print.deg_result <- function(x, ...) {
-  n_sig <- sum(x$table$padj < x$alpha, na.rm = TRUE)
-  cat("<deg_result>", nrow(x$table), "genes tested;", n_sig,
+print.deg_result <- function(x, ...) {  # print 方法
+  n_sig <- sum(x$table$padj < x$alpha, na.rm = TRUE)  # 显著基因数
+  cat("<deg_result>", nrow(x$table), "genes tested;", n_sig,  # 输出摘要行
       "significant at padj <", x$alpha, "\n")
-  invisible(x)
+  invisible(x)  # print 方法应不可见地返回对象
 }
 
-summary.deg_result <- function(object, ...) {
-  table(sig = object$table$padj < object$alpha, useNA = "ifany")
+summary.deg_result <- function(object, ...) {  # summary 方法
+  table(sig = object$table$padj < object$alpha, useNA = "ifany")  # 显著/不显著计数
 }
 
-res <- new_deg_result(data.frame(gene = c("DUSP1", "PER1", "ACTB"),
+res <- new_deg_result(data.frame(gene = c("DUSP1", "PER1", "ACTB"),  # 创建示例对象
                                  padj = c(1e-10, 0.003, 0.9)))
-res
-summary(res)
+res  # 自动调用 print.deg_result
+summary(res)  # 调用 summary.deg_result
 
 # 定义自己的泛型
-n_significant <- function(x, ...) UseMethod("n_significant")
-n_significant.deg_result <- function(x, ...) sum(x$table$padj < x$alpha, na.rm = TRUE)
-n_significant.default <- function(x, ...) stop("不支持的类: ", class(x)[1])
-n_significant(res)
+n_significant <- function(x, ...) UseMethod("n_significant")  # 定义泛型
+n_significant.deg_result <- function(x, ...) sum(x$table$padj < x$alpha, na.rm = TRUE)  # deg_result 类的方法
+n_significant.default <- function(x, ...) stop("不支持的类: ", class(x)[1])  # 其他类的默认方法
+n_significant(res)  # 分派到 deg_result 方法
 ```
 
 查看一个泛型有哪些方法：`methods(summary)`；查看方法源码：`getS3method("summary", "lm")`。
@@ -1394,7 +1394,7 @@ n_significant(res)
 S4 有正式的类定义、类型检查的槽（slot）、多重分派与有效性检查。 所有 Bioconductor 核心对象（`SummarizedExperiment`、`GRanges`、`DESeqDataSet`、 `SingleCellExperiment`）都是 S4。
 
 ```{r}
-setClass("CountSet",
+setClass("CountSet",  # 定义 S4 类：槽位 + 有效性检查
   slots = c(counts = "matrix", samples = "data.frame"),
   validity = function(object) {
     if (ncol(object@counts) != nrow(object@samples))
@@ -1403,27 +1403,27 @@ setClass("CountSet",
   }
 )
 
-setGeneric("libSize", function(x, ...) standardGeneric("libSize"))
-setMethod("libSize", "CountSet", function(x, ...) colSums(x@counts))
-setMethod("show", "CountSet", function(object) {
+setGeneric("libSize", function(x, ...) standardGeneric("libSize"))  # 定义 S4 泛型
+setMethod("libSize", "CountSet", function(x, ...) colSums(x@counts))  # 为 CountSet 实现 libSize
+setMethod("show", "CountSet", function(object) {  # 自定义打印方式
   cat("CountSet:", nrow(object@counts), "genes x", ncol(object@counts), "samples\n")
 })
 
-cs <- new("CountSet", counts = mat, samples = data.frame(id = colnames(mat)))
-cs
-libSize(cs)
+cs <- new("CountSet", counts = mat, samples = data.frame(id = colnames(mat)))  # 创建 S4 对象
+cs  # 调用 show 方法
+libSize(cs)  # 调用 libSize
 
-try(new("CountSet", counts = mat, samples = data.frame(id = 1:2)))
+try(new("CountSet", counts = mat, samples = data.frame(id = 1:2)))  # 样本数不匹配 → 有效性检查报错
 ```
 
 阅读 S4 对象的工具：
 
 ```{r}
 #| eval: false
-isVirtualClass("SummarizedExperiment")
+isVirtualClass("SummarizedExperiment")  # 是否为虚类
 showMethods("assay")            # 哪些类实现了 assay()
 getMethod("show", "CountSet")   # 查看具体方法实现
-selectMethod("counts", "DESeqDataSet")
+selectMethod("counts", "DESeqDataSet")  # 查看 DESeqDataSet 实际调用的 counts 方法
 ?"counts,DESeqDataSet-method"   # S4 方法的帮助页
 ```
 
@@ -1436,16 +1436,16 @@ selectMethod("counts", "DESeqDataSet")
 ### R6：引用语义的经典 OOP
 
 ```{r}
-Pipeline <- R6::R6Class("Pipeline",
+Pipeline <- R6::R6Class("Pipeline",  # R6 类：可变对象，方法写在类里
   public = list(
     steps = character(),
     add = function(step) { self$steps <- c(self$steps, step); invisible(self) },
     print = function(...) cat("Pipeline:", paste(self$steps, collapse = " -> "), "\n")
   )
 )
-p <- Pipeline$new()
+p <- Pipeline$new()  # 实例化
 p$add("fastp")$add("salmon")$add("tximeta")   # 链式调用，原地修改
-p
+p  # 调用自定义 print
 ```
 
 Shiny、`targets` 内部和许多 API 客户端用 R6。
@@ -1455,19 +1455,19 @@ Shiny、`targets` 内部和许多 API 客户端用 R6。
 S7 由 R Consortium 设计，目标是统一 S3 与 S4 的优点，未来可能进入 base R。 ggplot2 4.0 已经在内部迁移到 S7。
 
 ```{r}
-library(S7)
-Gene <- new_class("Gene",
+library(S7)  # 新一代面向对象系统（S3/S4 的继任者）
+Gene <- new_class("Gene",  # 定义 S7 类：属性类型 + 校验器
   properties = list(
     symbol = class_character,
     length = new_property(class_integer, validator = \(value) if (any(value <= 0)) "必须为正")
   )
 )
-describe <- new_generic("describe", "x")
-method(describe, Gene) <- function(x) cat(x@symbol, "长度", x@length, "bp\n")
+describe <- new_generic("describe", "x")  # 定义泛型
+method(describe, Gene) <- function(x) cat(x@symbol, "长度", x@length, "bp\n")  # 为 Gene 注册方法
 
-g <- Gene(symbol = "DUSP1", length = 3070L)
-describe(g)
-try(Gene(symbol = "X", length = -1L))
+g <- Gene(symbol = "DUSP1", length = 3070L)  # 创建对象
+describe(g)  # 调用方法
+try(Gene(symbol = "X", length = -1L))  # 长度为负 → 校验失败
 ```
 
 ## 元编程与非标准求值 {#sec-metaprog}
@@ -1477,27 +1477,27 @@ R 的代码本身就是数据（"同像性"），可以被捕获、检查、修�
 ### 捕获表达式
 
 ```{r}
-expr <- quote(log2(count + 1))
-class(expr)
-as.list(expr)
-count <- 255
-eval(expr)
+expr <- quote(log2(count + 1))  # 捕获表达式而不求值
+class(expr)  # 类为 call
+as.list(expr)  # 表达式的组成部分
+count <- 255  # 在全局环境定义 count
+eval(expr)  # 在当前环境求值
 eval(expr, list(count = 1023))      # 在指定的"数据环境"中求值
 
 f <- function(x) substitute(x)      # 捕获调用者写下的表达式
-f(depth > 20 & dex == "trt")
+f(depth > 20 & dex == "trt")  # 返回未求值的表达式
 ```
 
 这就是 `subset(df, depth > 20)` 的实现原理：
 
 ```{r}
-my_subset <- function(data, condition) {
-  cond <- substitute(condition)
+my_subset <- function(data, condition) {  # 仿 subset() 的非标准求值
+  cond <- substitute(condition)  # 捕获条件表达式
   rows <- eval(cond, data, parent.frame())  # 先在 data 中查列名，再去调用者环境
-  data[rows & !is.na(rows), , drop = FALSE]
+  data[rows & !is.na(rows), , drop = FALSE]  # 去掉 NA 行后取子集
 }
-threshold <- 20
-my_subset(df, depth > threshold)
+threshold <- 20  # 调用者环境中的变量
+my_subset(df, depth > threshold)  # depth 来自 df，threshold 来自调用者环境
 ```
 
 ### 公式：被冻结的表达式
@@ -1505,10 +1505,10 @@ my_subset(df, depth > threshold)
 `~` 创建一个**公式**对象：表达式 + 定义它的环境。它在建模中无处不在：
 
 ```{r}
-design <- ~ cell + dex
-class(design)
-all.vars(design)
-head(model.matrix(design, data = df))
+design <- ~ cell + dex  # 公式对象
+class(design)  # 类为 formula
+all.vars(design)  # 公式中的变量名
+head(model.matrix(design, data = df))  # 由公式生成设计矩阵
 ```
 
 ### tidy evaluation 速览
@@ -1516,19 +1516,19 @@ head(model.matrix(design, data = df))
 在 tidyverse 中写函数时，你需要把用户传入的列名"转发"下去：
 
 ```{r}
-library(dplyr)
+library(dplyr)  # 数据框操作的"语法"包（tidyverse 核心）
 
-mean_by <- function(data, group, value) {
-  data |>
-    summarise(mean = mean({{ value }}, na.rm = TRUE), .by = {{ group }})
+mean_by <- function(data, group, value) {  # 在函数中使用 tidy evaluation
+  data |>  # 传入的数据框
+    summarise(mean = mean({{ value }}, na.rm = TRUE), .by = {{ group }})  # {{ }} 把调用者写的列名原样转入
 }
-mean_by(df, dex, depth)
+mean_by(df, dex, depth)  # 直接写裸列名调用
 
 # 列名以字符串形式传入时：用 .data 代词
-mean_by_chr <- function(data, group, value) {
-  data |> summarise(mean = mean(.data[[value]]), .by = all_of(group))
+mean_by_chr <- function(data, group, value) {  # 列名以字符串传入的版本
+  data |> summarise(mean = mean(.data[[value]]), .by = all_of(group))  # .data[[ ]] 与 all_of() 接受字符串
 }
-mean_by_chr(df, "cell", "depth")
+mean_by_chr(df, "cell", "depth")  # 字符串列名调用
 ```
 
 - `{{ x }}`（curly-curly）：把参数原样转发给 tidy 函数。
@@ -1544,8 +1544,8 @@ mean_by_chr(df, "cell", "depth")
 5.  **下沉到 C++**：`Rcpp`。
 
 ```{r}
-big <- matrix(rpois(2e6, 5), nrow = 2e4)
-bench::mark(
+big <- matrix(rpois(2e6, 5), nrow = 2e4)  # 2 万 × 100 的大矩阵
+bench::mark(  # apply 与 matrixStats 的速度对比
   apply   = apply(big, 1, var),
   matrixS = matrixStats::rowVars(big),
   check = FALSE, iterations = 5
@@ -1553,10 +1553,10 @@ bench::mark(
 ```
 
 ```{r}
-library(Matrix)
-dense <- matrix(rbinom(1e6, 1, 0.05) * rpois(1e6, 3), nrow = 1000)
-sparse <- as(dense, "CsparseMatrix")
-c(dense = object.size(dense), sparse = object.size(sparse)) |> format(units = "MB", standard = "SI")
+library(Matrix)  # 稀疏矩阵包
+dense <- matrix(rbinom(1e6, 1, 0.05) * rpois(1e6, 3), nrow = 1000)  # 约 95% 为零的稠密矩阵
+sparse <- as(dense, "CsparseMatrix")  # 转成列压缩稀疏矩阵
+c(dense = object.size(dense), sparse = object.size(sparse)) |> format(units = "MB", standard = "SI")  # 比较内存占用
 ```
 
 一个 Rcpp 小例子——在线计算均值和方差（Welford 算法）：
@@ -1569,7 +1569,7 @@ NumericVector welford(NumericVector x) {
   for (double v : x) { n++; double d = v - mean; mean += d / n; m2 += d * (v - mean); }
   return NumericVector::create(_["mean"] = mean, _["var"] = m2 / (n - 1));
 }')
-welford(c(2, 4, 4, 4, 5, 5, 7, 9))
+welford(c(2, 4, 4, 4, 5, 5, 7, 9))  # 调用 C++ 实现的单遍均值/方差
 ```
 
 ## 小结

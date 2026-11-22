@@ -5,11 +5,11 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {  # 仅在 IDE 中交互运行时执行
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")  # 取当前编辑器中 qmd 的路径；取不到时为空
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))  # 拿到路径才切换工作目录
 }
-source("_common.R")
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -49,12 +49,12 @@ source("_common.R")
 :::
 
 ```{r}
-library(tidyverse)
-library(edgeR)
-library(limma)
-library(DESeq2)
-library(patchwork)
-library(ggrepel)
+library(tidyverse)  # 数据处理与绘图核心包集合（dplyr/tidyr/ggplot2 等）
+library(edgeR)  # 负二项 GLM / 拟似然（QL）差异分析
+library(limma)  # 线性模型 + 经验贝叶斯；voom 处理计数数据
+library(DESeq2)  # 负二项 GLM 的差异表达分析（用于对比）
+library(patchwork)  # 多图拼版：p1 | p2、p1 / p2
+library(ggrepel)  # 不重叠的文字标签（geom_text_repel）
 ```
 
 ## 设计矩阵：一切比较的语言
@@ -63,22 +63,22 @@ library(ggrepel)
 先用一个 2×2 玩具设计看清楚几种参数化方式：
 
 ```{r}
-toy <- expand.grid(rep = 1:2, treat = c("ctrl", "drug"), geno = c("WT", "KO")) |>
-  mutate(treat = factor(treat), geno = factor(geno))
+toy <- expand.grid(rep = 1:2, treat = c("ctrl", "drug"), geno = c("WT", "KO")) |>  # 2 基因型 × 2 处理 × 2 重复的玩具设计
+  mutate(treat = factor(treat), geno = factor(geno))  # 转为因子
 
 # 1) 加性模型：处理效应在两种基因型中相同
-model.matrix(~ geno + treat, toy)
+model.matrix(~ geno + treat, toy)  # 加性模型的设计矩阵
 
 # 2) 交互模型：treatdrug = WT 中的处理效应；genoKO:treatdrug = KO 与 WT 中处理效应之差
-model.matrix(~ geno * treat, toy)
+model.matrix(~ geno * treat, toy)  # 交互模型的设计矩阵
 
 # 3) 组均值参数化（无截距）：每组一个系数，任意比较都写成对比
-toy$group <- interaction(toy$geno, toy$treat, sep = "_")
-design_g <- model.matrix(~ 0 + group, toy)
-colnames(design_g) <- levels(toy$group)
-design_g
+toy$group <- interaction(toy$geno, toy$treat, sep = "_")  # 合并为单一分组变量
+design_g <- model.matrix(~ 0 + group, toy)  # 无截距：每组一列
+colnames(design_g) <- levels(toy$group)  # 列名用组名
+design_g  # 打印
 
-makeContrasts(
+makeContrasts(  # 用组均值写出各种比较
   drug_in_WT   = WT_drug - WT_ctrl,
   drug_in_KO   = KO_drug - KO_ctrl,
   interaction  = (KO_drug - KO_ctrl) - (WT_drug - WT_ctrl),
@@ -103,42 +103,42 @@ DESeq2 / edgeR / limma 最常见的报错之一。原因是设计矩阵的某些
 
 ```{r}
 # 情形 1：完全混杂 —— 批次与处理一一对应
-conf <- data.frame(batch = factor(c("A", "A", "B", "B")), treat = factor(c("ctrl", "ctrl", "drug", "drug")))
-X1 <- model.matrix(~ batch + treat, conf)
-X1
-limma::is.fullrank(X1)
+conf <- data.frame(batch = factor(c("A", "A", "B", "B")), treat = factor(c("ctrl", "ctrl", "drug", "drug")))  # 批次与处理完全重合
+X1 <- model.matrix(~ batch + treat, conf)  # 设计矩阵
+X1  # 打印
+limma::is.fullrank(X1)  # 是否满秩：FALSE
 limma::nonEstimable(X1)          # 告诉你哪一列无法估计
 ```
 
 ```{r}
 # 情形 2：某个组合没有样本（例如交互模型中缺一个格子）
-miss <- data.frame(geno = factor(c("WT", "WT", "KO", "KO", "WT", "WT")),
+miss <- data.frame(geno = factor(c("WT", "WT", "KO", "KO", "WT", "WT")),  # KO 没有 drug 样本
                    treat = factor(c("ctrl", "ctrl", "ctrl", "ctrl", "drug", "drug")))
-X2 <- model.matrix(~ geno * treat, miss)
-limma::nonEstimable(X2)
+X2 <- model.matrix(~ geno * treat, miss)  # 交互模型设计矩阵
+limma::nonEstimable(X2)  # 无法估计的列
 ```
 
 **情形 3：个体嵌套在组内**——最常见也最容易处理。例如 3 位患者、3 位健康人，每人有处理前/后两个样本，
 想同时控制个体差异（配对）并比较"患者与健康人的处理效应差异"：
 
 ```{r}
-nest <- data.frame(
+nest <- data.frame(  # 病人/健康 × 前/后，每人测两次
   status = factor(rep(c("healthy", "patient"), each = 6), levels = c("healthy", "patient")),
   subject = factor(rep(paste0("S", 1:6), each = 2)),
   time = factor(rep(c("pre", "post"), 6), levels = c("pre", "post"))
 )
-X3 <- model.matrix(~ status + subject + time, nest)
+X3 <- model.matrix(~ status + subject + time, nest)  # 直接把 subject 放进模型
 limma::nonEstimable(X3)          # status 与 subject 共线：每个 subject 只属于一个 status
 ```
 
 解决办法（DESeq2 vignette 推荐）：在**组内**重新给个体编号，用 `status:ind.n` 代替 `subject`：
 
 ```{r}
-nest$ind.n <- factor(ave(as.integer(nest$subject), nest$status, FUN = \(x) as.integer(factor(x))))
-nest
-X4 <- model.matrix(~ status + status:ind.n + status:time, nest)
-colnames(X4)
-limma::is.fullrank(X4)
+nest$ind.n <- factor(ave(as.integer(nest$subject), nest$status, FUN = \(x) as.integer(factor(x))))  # 每组内重新编号个体（1–3）
+nest  # 打印
+X4 <- model.matrix(~ status + status:ind.n + status:time, nest)  # 嵌套设计：组内个体 + 组内时间效应
+colnames(X4)  # 列名
+limma::is.fullrank(X4)  # 满秩
 ```
 
 现在 `statushealthy:timepost` 与 `statuspatient:timepost` 分别是两组内的处理效应，
@@ -150,17 +150,17 @@ limma::is.fullrank(X4)
 `makeContrasts()` 用组名写出任意线性组合，是 limma/edgeR 中最不易出错的方式：
 
 ```{r}
-grp <- factor(rep(c("ctrl", "low", "high"), each = 3), levels = c("ctrl", "low", "high"))
-Xg <- model.matrix(~ 0 + grp)
-colnames(Xg) <- levels(grp)
-cm <- makeContrasts(
+grp <- factor(rep(c("ctrl", "low", "high"), each = 3), levels = c("ctrl", "low", "high"))  # 三个剂量组
+Xg <- model.matrix(~ 0 + grp)  # 无截距设计
+colnames(Xg) <- levels(grp)  # 列名用组名
+cm <- makeContrasts(  # 定义对比
   low_vs_ctrl  = low - ctrl,
   high_vs_ctrl = high - ctrl,
   high_vs_low  = high - low,
   any_dose     = (low + high) / 2 - ctrl,
   levels = Xg
 )
-cm
+cm  # 打印对比矩阵
 ```
 
 多个对比可以**同时**检验（F 检验，"任一对比非零"）：`topTable(fit2, coef = c("low_vs_ctrl", "high_vs_ctrl"))`，
@@ -173,19 +173,19 @@ Brooks et al. (2011)：果蝇 S2-DRSC 细胞中用 RNAi 敲低剪接因子 *pasi
 一个**真实的技术批次**。
 
 ```{r}
-cts_file  <- system.file("extdata", "pasilla_gene_counts.tsv", package = "pasilla", mustWork = TRUE)
-anno_file <- system.file("extdata", "pasilla_sample_annotation.csv", package = "pasilla", mustWork = TRUE)
+cts_file  <- system.file("extdata", "pasilla_gene_counts.tsv", package = "pasilla", mustWork = TRUE)  # pasilla 计数文件
+anno_file <- system.file("extdata", "pasilla_sample_annotation.csv", package = "pasilla", mustWork = TRUE)  # pasilla 样本注释
 
-cts <- as.matrix(read.csv(cts_file, sep = "\t", row.names = "gene_id"))
-coldata <- read.csv(anno_file, row.names = 1)[, c("condition", "type")]
-rownames(coldata) <- sub("fb$", "", rownames(coldata))
-cts <- cts[, rownames(coldata)]
+cts <- as.matrix(read.csv(cts_file, sep = "\t", row.names = "gene_id"))  # 读入计数矩阵
+coldata <- read.csv(anno_file, row.names = 1)[, c("condition", "type")]  # 只要处理与测序类型两列
+rownames(coldata) <- sub("fb$", "", rownames(coldata))  # 样本名统一
+cts <- cts[, rownames(coldata)]  # 计数矩阵列顺序与样本表一致
 
-coldata <- coldata |>
-  mutate(condition = factor(condition, levels = c("untreated", "treated")),
+coldata <- coldata |>  # 整理因子水平
+  mutate(condition = factor(condition, levels = c("untreated", "treated")),  # 设 untreated 为参照
          type = factor(type, labels = c("paired", "single")))   # 原始水平：paired-end / single-read
-coldata
-dim(cts)
+coldata  # 打印
+dim(cts)  # 维度
 ```
 
 ## edgeR
@@ -193,28 +193,28 @@ dim(cts)
 ### DGEList、过滤、归一化
 
 ```{r}
-y <- DGEList(counts = cts, samples = coldata, group = coldata$condition)
-design <- model.matrix(~ type + condition, data = coldata)
-colnames(design)
+y <- DGEList(counts = cts, samples = coldata, group = coldata$condition)  # edgeR 的数据对象
+design <- model.matrix(~ type + condition, data = coldata)  # 测序类型作为协变量的设计
+colnames(design)  # 系数名
 
 keep <- filterByExpr(y, design)           # 自动根据文库大小与最小组样本数计算 CPM 阈值
-table(keep)
-y <- y[keep, , keep.lib.sizes = FALSE]
+table(keep)  # 保留与去掉的基因数
+y <- y[keep, , keep.lib.sizes = FALSE]  # 过滤后重算文库大小
 
 y <- normLibSizes(y)                      # edgeR 4 的新名字；旧名 calcNormFactors() 仍可用
-y$samples
+y$samples  # 查看文库大小与归一化因子
 ```
 
 ### 探索：MDS 图
 
 ```{r}
-mds <- plotMDS(y, plot = FALSE)
-tibble(sample = colnames(y), x = mds$x, y = mds$y) |>
-  bind_cols(coldata) |>
-  ggplot(aes(x, y, colour = condition, shape = type)) +
-  geom_point(size = 4) +
-  geom_text_repel(aes(label = sample), colour = "grey30", seed = 1) +
-  labs(x = sprintf("Leading logFC dim 1 (%.0f%%)", 100 * mds$var.explained[1]),
+mds <- plotMDS(y, plot = FALSE)  # MDS 坐标
+tibble(sample = colnames(y), x = mds$x, y = mds$y) |>  # 画 MDS 图
+  bind_cols(coldata) |>  # 加样本信息
+  ggplot(aes(x, y, colour = condition, shape = type)) +  # 颜色为处理，形状为测序类型
+  geom_point(size = 4) +  # 点
+  geom_text_repel(aes(label = sample), colour = "grey30", seed = 1) +  # 样本名
+  labs(x = sprintf("Leading logFC dim 1 (%.0f%%)", 100 * mds$var.explained[1]),  # 轴标签含方差比例
        y = sprintf("Leading logFC dim 2 (%.0f%%)", 100 * mds$var.explained[2]),
        title = "pasilla：处理与测序类型都影响表达谱")
 ```
@@ -228,42 +228,42 @@ edgeR 推荐的流程是 **quasi-likelihood（QL）F 检验**：在负二项离�
 y <- estimateDisp(y, design, robust = TRUE)    # NB 离散度（用于 BCV 图；edgeR 4 的 QL 流程中可选）
 sqrt(y$common.dispersion)                       # 共同 BCV
 
-fit <- glmQLFit(y, design, robust = TRUE)
+fit <- glmQLFit(y, design, robust = TRUE)  # 拟似然 GLM 拟合
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-par(mfrow = c(1, 2))
-plotBCV(y, main = "BCV")
-plotQLDisp(fit, main = "QL dispersion")
-par(mfrow = c(1, 1))
+par(mfrow = c(1, 2))  # 一行两图
+plotBCV(y, main = "BCV")  # BCV 图
+plotQLDisp(fit, main = "QL dispersion")  # QL 离散度图
+par(mfrow = c(1, 1))  # 恢复单图
 ```
 
 ### 检验
 
 ```{r}
-qlf <- glmQLFTest(fit, coef = "conditiontreated")
-topTags(qlf, n = 8)
-summary(decideTests(qlf, p.value = 0.05))
+qlf <- glmQLFTest(fit, coef = "conditiontreated")  # QL F 检验
+topTags(qlf, n = 8)  # 最显著的 8 个基因
+summary(decideTests(qlf, p.value = 0.05))  # 上下调计数
 ```
 
 带倍数阈值的正式检验（等价于 DESeq2 的 `lfcThreshold`）：`glmTreat()`
 
 ```{r}
-tr <- glmTreat(fit, coef = "conditiontreated", lfc = log2(1.5))
-summary(decideTests(tr))
+tr <- glmTreat(fit, coef = "conditiontreated", lfc = log2(1.5))  # 检验 |FC| > 1.5
+summary(decideTests(tr))  # 上下调计数
 ```
 
 ```{r}
-plotMD(qlf, status = decideTests(qlf), main = "treated vs untreated (edgeR QL)")
-abline(h = 0, col = "grey40")
+plotMD(qlf, status = decideTests(qlf), main = "treated vs untreated (edgeR QL)")  # MD 图（edgeR 的 MA 图）
+abline(h = 0, col = "grey40")  # 0 参考线
 ```
 
 pasilla 本身（FBgn0261552）应该是下调最显著的基因之一：
 
 ```{r}
-topTags(qlf, n = Inf)$table["FBgn0261552", ]
+topTags(qlf, n = Inf)$table["FBgn0261552", ]  # pasilla 敲低的目标基因的检验结果
 ```
 
 ## limma-voom
@@ -276,25 +276,25 @@ topTags(qlf, n = Inf)$table["FBgn0261552", ]
 `arrayWeights`、基因集检验 `camera`/`roast`……）。
 
 ```{r}
-v <- voom(y, design, plot = TRUE)
+v <- voom(y, design, plot = TRUE)  # voom：估计均值–方差趋势并计算权重
 ```
 
 voom 图中的趋势线应**平滑单调下降**；如果左端出现上翘，说明低表达基因过滤不足。
 
 ```{r}
-fit_l <- lmFit(v, design)
-fit_l <- eBayes(fit_l, robust = TRUE)
-topTable(fit_l, coef = "conditiontreated", n = 8)
-summary(decideTests(fit_l))
-plotSA(fit_l, main = "残差方差 vs 平均表达（经验贝叶斯收缩后）")
+fit_l <- lmFit(v, design)  # 加权线性模型拟合
+fit_l <- eBayes(fit_l, robust = TRUE)  # 经验贝叶斯收缩方差
+topTable(fit_l, coef = "conditiontreated", n = 8)  # 最显著的 8 个基因
+summary(decideTests(fit_l))  # 上下调计数
+plotSA(fit_l, main = "残差方差 vs 平均表达（经验贝叶斯收缩后）")  # 残差方差 vs 平均表达
 ```
 
 edgeR 4 还提供了一步式的 `voomLmFit()`，能在估计权重时更好地处理零计数，
 并可同时估计样本质量权重：
 
 ```{r}
-fit_vl <- voomLmFit(y, design, sample.weights = TRUE, plot = FALSE) |> eBayes()
-topTable(fit_vl, coef = "conditiontreated", n = 3)
+fit_vl <- voomLmFit(y, design, sample.weights = TRUE, plot = FALSE) |> eBayes()  # voom + 样本权重的一步写法
+topTable(fit_vl, coef = "conditiontreated", n = 3)  # 前 3 个基因
 ```
 
 ### 对比矩阵
@@ -302,22 +302,22 @@ topTable(fit_vl, coef = "conditiontreated", n = 3)
 用组均值参数化 + `makeContrasts()` 是 limma 的经典用法：
 
 ```{r}
-grp <- factor(paste(coldata$condition, coldata$type, sep = "_"))
-design_g <- model.matrix(~ 0 + grp)
-colnames(design_g) <- levels(grp)
-colnames(design_g)
+grp <- factor(paste(coldata$condition, coldata$type, sep = "_"))  # 处理 × 测序类型合成分组
+design_g <- model.matrix(~ 0 + grp)  # 无截距设计
+colnames(design_g) <- levels(grp)  # 列名用组名
+colnames(design_g)  # 打印
 
-cm <- makeContrasts(
+cm <- makeContrasts(  # 三个对比
   KD_in_paired = treated_paired - untreated_paired,
   KD_in_single = treated_single - untreated_single,
   KD_average   = (treated_paired + treated_single - untreated_paired - untreated_single) / 2,
   levels = design_g
 )
 
-v_g   <- voom(y, design_g)
-fit_g <- lmFit(v_g, design_g) |> contrasts.fit(cm) |> eBayes()
-summary(decideTests(fit_g))
-topTable(fit_g, coef = "KD_average", n = 3)
+v_g   <- voom(y, design_g)  # voom
+fit_g <- lmFit(v_g, design_g) |> contrasts.fit(cm) |> eBayes()  # 拟合 → 应用对比 → 经验贝叶斯
+summary(decideTests(fit_g))  # 每个对比的上下调计数
+topTable(fit_g, coef = "KD_average", n = 3)  # 平均效应的前 3 个基因
 ```
 
 ## 三个框架的比较（airway）
@@ -325,43 +325,43 @@ topTable(fit_g, coef = "KD_average", n = 3)
 在同一数据上，三者结论高度一致。
 
 ```{r}
-de <- readRDS(file.path(DATA_DIR, "airway_de.rds"))
-dds <- de$dds
+de <- readRDS(file.path(DATA_DIR, "airway_de.rds"))  # 第 7 章的结果
+dds <- de$dds  # DESeq2 对象
 
-ya <- DGEList(counts(dds), samples = as.data.frame(colData(dds)))
-da <- model.matrix(~ cell + dex, ya$samples)
-ya <- ya[filterByExpr(ya, da), , keep.lib.sizes = FALSE] |> normLibSizes()
+ya <- DGEList(counts(dds), samples = as.data.frame(colData(dds)))  # airway 计数转 DGEList
+da <- model.matrix(~ cell + dex, ya$samples)  # 设计矩阵
+ya <- ya[filterByExpr(ya, da), , keep.lib.sizes = FALSE] |> normLibSizes()  # 过滤并归一化
 
-edgeR_res <- glmQLFit(ya, da, robust = TRUE) |> glmQLFTest(coef = "dextrt") |>
-  topTags(n = Inf) |> as.data.frame() |> as_tibble(rownames = "gene_id")
-limma_res <- voom(ya, da) |> lmFit(da) |> eBayes(robust = TRUE) |>
-  topTable(coef = "dextrt", n = Inf) |> as_tibble(rownames = "gene_id")
-deseq_res <- de$deg
+edgeR_res <- glmQLFit(ya, da, robust = TRUE) |> glmQLFTest(coef = "dextrt") |>  # edgeR QL 流程
+  topTags(n = Inf) |> as.data.frame() |> as_tibble(rownames = "gene_id")  # 全部结果转 tibble
+limma_res <- voom(ya, da) |> lmFit(da) |> eBayes(robust = TRUE) |>  # limma-voom 流程
+  topTable(coef = "dextrt", n = Inf) |> as_tibble(rownames = "gene_id")  # 全部结果转 tibble
+deseq_res <- de$deg  # 第 7 章的 DESeq2 结果
 
-sig <- list(
+sig <- list(  # 三种方法的显著基因
   DESeq2 = deseq_res |> filter(padj < 0.05) |> pull(gene_id),
   edgeR  = edgeR_res |> filter(FDR < 0.05) |> pull(gene_id),
   limma  = limma_res |> filter(adj.P.Val < 0.05) |> pull(gene_id)
 )
-lengths(sig)
+lengths(sig)  # 各方法显著基因数
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 4.5
-p_venn <- ggVennDiagram::ggVennDiagram(sig, label_alpha = 0) +
-  scale_fill_distiller(palette = "Blues", direction = 1) + labs(title = "padj/FDR < 0.05")
+p_venn <- ggVennDiagram::ggVennDiagram(sig, label_alpha = 0) +  # 韦恩图
+  scale_fill_distiller(palette = "Blues", direction = 1) + labs(title = "padj/FDR < 0.05")  # 配色与标题
 
-lfc <- deseq_res |> dplyr::select(gene_id, DESeq2 = log2FC_mle) |>
-  inner_join(edgeR_res |> dplyr::select(gene_id, edgeR = logFC), join_by(gene_id)) |>
-  inner_join(limma_res |> dplyr::select(gene_id, limma = logFC), join_by(gene_id))
+lfc <- deseq_res |> dplyr::select(gene_id, DESeq2 = log2FC_mle) |>  # 三种方法的 log2FC 并排
+  inner_join(edgeR_res |> dplyr::select(gene_id, edgeR = logFC), join_by(gene_id)) |>  # 加 edgeR
+  inner_join(limma_res |> dplyr::select(gene_id, limma = logFC), join_by(gene_id))  # 加 limma
 
-p_lfc <- ggplot(lfc, aes(DESeq2, limma)) +
-  geom_point(size = 0.3, alpha = 0.3) + geom_abline(colour = "red") +
-  annotate("text", x = -4, y = 5, label = sprintf("r = %.3f", cor(lfc$DESeq2, lfc$limma))) +
-  labs(title = "log2FC：DESeq2 vs limma-voom")
+p_lfc <- ggplot(lfc, aes(DESeq2, limma)) +  # DESeq2 vs limma 的 log2FC
+  geom_point(size = 0.3, alpha = 0.3) + geom_abline(colour = "red") +  # 点 + 对角线
+  annotate("text", x = -4, y = 5, label = sprintf("r = %.3f", cor(lfc$DESeq2, lfc$limma))) +  # 标注相关系数
+  labs(title = "log2FC：DESeq2 vs limma-voom")  # 标题
 
-p_venn | p_lfc
+p_venn | p_lfc  # 并排
 ```
 
 | | DESeq2 | edgeR (QL) | limma-voom |
@@ -384,9 +384,9 @@ p_venn | p_lfc
 而不是先"校正"数据再做差异分析。
 
 ```{r}
-d_nobatch <- model.matrix(~ condition, coldata)
-fit_nb <- voom(y, d_nobatch) |> lmFit(d_nobatch) |> eBayes()
-c(without_batch = sum(p.adjust(fit_nb$p.value[, 2], "BH") < 0.05),
+d_nobatch <- model.matrix(~ condition, coldata)  # 不含测序类型的设计
+fit_nb <- voom(y, d_nobatch) |> lmFit(d_nobatch) |> eBayes()  # limma-voom 拟合
+c(without_batch = sum(p.adjust(fit_nb$p.value[, 2], "BH") < 0.05),  # 包含与不包含批次时的显著基因数
   with_batch    = sum(p.adjust(fit_l$p.value[, "conditiontreated"], "BH") < 0.05))
 ```
 
@@ -395,16 +395,16 @@ c(without_batch = sum(p.adjust(fit_nb$p.value[, 2], "BH") < 0.05),
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-lcpm <- cpm(y, log = TRUE)
-lcpm_rbe <- removeBatchEffect(lcpm, batch = coldata$type, design = model.matrix(~ condition, coldata))
+lcpm <- cpm(y, log = TRUE)  # log CPM
+lcpm_rbe <- removeBatchEffect(lcpm, batch = coldata$type, design = model.matrix(~ condition, coldata))  # 去掉测序类型效应（仅用于作图）
 
-pca_plot <- function(m, title) {
-  p <- prcomp(t(m[order(-matrixStats::rowVars(m))[1:500], ]))
-  tibble(PC1 = p$x[, 1], PC2 = p$x[, 2]) |> bind_cols(coldata) |>
-    ggplot(aes(PC1, PC2, colour = condition, shape = type)) + geom_point(size = 4) + labs(title = title)
+pca_plot <- function(m, title) {  # 画 PCA 的函数
+  p <- prcomp(t(m[order(-matrixStats::rowVars(m))[1:500], ]))  # 方差最大的 500 个基因做 PCA
+  tibble(PC1 = p$x[, 1], PC2 = p$x[, 2]) |> bind_cols(coldata) |>  # PC1/PC2 + 样本信息
+    ggplot(aes(PC1, PC2, colour = condition, shape = type)) + geom_point(size = 4) + labs(title = title)  # 散点
 }
-(pca_plot(lcpm, "原始 logCPM") | pca_plot(lcpm_rbe, "removeBatchEffect 后")) +
-  plot_layout(guides = "collect")
+(pca_plot(lcpm, "原始 logCPM") | pca_plot(lcpm_rbe, "removeBatchEffect 后")) +  # 去批次前后对比
+  plot_layout(guides = "collect")  # 合并图例
 ```
 
 ::: callout-warning
@@ -422,16 +422,16 @@ pca_plot <- function(m, title) {
 假装不知道 airway 中的 `cell` 变量，用 `svaseq` 从数据中估计"代理变量"（surrogate variables）：
 
 ```{r}
-library(sva)
-norm_cts <- counts(dds, normalized = TRUE)
-norm_cts <- norm_cts[rowMeans(norm_cts) > 1, ]
-mod  <- model.matrix(~ dex, colData(dds))
-mod0 <- model.matrix(~ 1,   colData(dds))
-svobj <- svaseq(norm_cts, mod, mod0, n.sv = 2)
+library(sva)  # 替代变量分析（SVA）与 ComBat 批次校正
+norm_cts <- counts(dds, normalized = TRUE)  # 归一化计数
+norm_cts <- norm_cts[rowMeans(norm_cts) > 1, ]  # 去掉极低表达
+mod  <- model.matrix(~ dex, colData(dds))  # 完整模型：只含 dex
+mod0 <- model.matrix(~ 1,   colData(dds))  # 零模型
+svobj <- svaseq(norm_cts, mod, mod0, n.sv = 2)  # 估计 2 个替代变量
 
-tibble(SV1 = svobj$sv[, 1], SV2 = svobj$sv[, 2], cell = dds$cell, dex = dds$dex) |>
-  ggplot(aes(SV1, SV2, colour = cell, shape = dex)) + geom_point(size = 4) +
-  labs(title = "SVA 在不知道 cell 的情况下重新发现了它")
+tibble(SV1 = svobj$sv[, 1], SV2 = svobj$sv[, 2], cell = dds$cell, dex = dds$dex) |>  # SV1 vs SV2，按供者着色
+  ggplot(aes(SV1, SV2, colour = cell, shape = dex)) + geom_point(size = 4) +  # 散点
+  labs(title = "SVA 在不知道 cell 的情况下重新发现了它")  # 标题
 ```
 
 把代理变量加入设计：`design(dds) <- ~ SV1 + SV2 + dex`（先把 SV 列写入 `colData`）。
@@ -443,13 +443,13 @@ tibble(SV1 = svobj$sv[, 1], SV2 = svobj$sv[, 2], cell = dds$cell, dex = dds$dex)
 **固定效应**（`~ cell + dex`），limma 还可以把它当作**随机效应**：
 
 ```{r}
-v_a   <- voom(ya, model.matrix(~ dex, ya$samples))
-corfit <- duplicateCorrelation(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell)
-corfit$consensus.correlation
+v_a   <- voom(ya, model.matrix(~ dex, ya$samples))  # 只含 dex 的 voom
+corfit <- duplicateCorrelation(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell)  # 估计同一供者样本间的相关
+corfit$consensus.correlation  # 共识相关系数
 
-fit_re <- lmFit(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell,
+fit_re <- lmFit(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell,  # 供者作为随机效应（block）拟合
                 correlation = corfit$consensus.correlation) |> eBayes()
-sum(p.adjust(fit_re$p.value[, "dextrt"], "BH") < 0.05)
+sum(p.adjust(fit_re$p.value[, "dextrt"], "BH") < 0.05)  # 显著基因数
 ```
 
 随机效应在**个体间比较**时不可或缺：例如"患者 vs 健康人，每人 3 个时间点"——
@@ -462,58 +462,58 @@ sum(p.adjust(fit_re$p.value[, "dextrt"], "BH") < 0.05)
 分解平方和——一个用 `apply()` 实现的"简化版 variancePartition"：
 
 ```{r}
-v_air <- voom(ya, da)
-E <- v_air$E
-cell <- ya$samples$cell; dex <- ya$samples$dex
-var_frac <- t(apply(E, 1, function(yv) {
+v_air <- voom(ya, da)  # airway 的 voom 结果
+E <- v_air$E  # log CPM 矩阵
+cell <- ya$samples$cell; dex <- ya$samples$dex  # 两个协变量
+var_frac <- t(apply(E, 1, function(yv) {  # 每个基因的方差分解（逐基因 lm）
   ss <- anova(lm(yv ~ cell + dex))[["Sum Sq"]]
   setNames(ss / sum(ss), c("cell", "dex", "residual"))
 }))
-summary(var_frac)
+summary(var_frac)  # 各来源的分布概况
 ```
 
 逐基因调用 `lm()` 一万多次要十几秒。利用"多响应线性模型"，同样的计算可以完全向量化：
 
 ```{r}
-vp_fast <- function(E, data, terms) {
+vp_fast <- function(E, data, terms) {  # 矩阵运算版的方差分解
   # 对所有基因同时拟合：拟合值 = E %*% H，H 是"帽子矩阵"（n × n，对称）
-  rss <- function(f) {
-    X <- model.matrix(f, data)
-    H <- X %*% solve(crossprod(X), t(X))
-    rowSums((E - E %*% H)^2)
+  rss <- function(f) {  # 给定公式的残差平方和
+    X <- model.matrix(f, data)  # 设计矩阵
+    H <- X %*% solve(crossprod(X), t(X))  # 帽子矩阵
+    rowSums((E - E %*% H)^2)  # 所有基因的 RSS
   }
-  tss <- rowSums((E - rowMeans(E))^2)
+  tss <- rowSums((E - rowMeans(E))^2)  # 总平方和
   # 序贯地加入各项，得到每一步的残差平方和（与 anova() 的 I 型平方和一致）
-  rss_seq <- vapply(seq_along(terms), \(k) rss(reformulate(terms[seq_len(k)])), numeric(nrow(E)))
-  ss <- cbind(tss, rss_seq)
-  frac <- (ss[, -ncol(ss), drop = FALSE] - ss[, -1, drop = FALSE]) / tss
-  out <- cbind(frac, rss_seq[, length(terms)] / tss)
-  colnames(out) <- c(terms, "residual")
-  out
+  rss_seq <- vapply(seq_along(terms), \(k) rss(reformulate(terms[seq_len(k)])), numeric(nrow(E)))  # 依次加入各项后的 RSS
+  ss <- cbind(tss, rss_seq)  # TSS 与各步 RSS
+  frac <- (ss[, -ncol(ss), drop = FALSE] - ss[, -1, drop = FALSE]) / tss  # 每步减少的比例 = 该项的方差占比
+  out <- cbind(frac, rss_seq[, length(terms)] / tss)  # 加上残差占比
+  colnames(out) <- c(terms, "residual")  # 列名
+  out  # 返回
 }
-vf <- vp_fast(E, data.frame(cell, dex), c("cell", "dex"))
-all.equal(unname(vf), unname(var_frac), tolerance = 1e-6)
-bench::mark(apply_lm = t(apply(E[1:500, ], 1, \(yv) anova(lm(yv ~ cell + dex))[["Sum Sq"]])),
+vf <- vp_fast(E, data.frame(cell, dex), c("cell", "dex"))  # 矩阵版计算
+all.equal(unname(vf), unname(var_frac), tolerance = 1e-6)  # 与逐基因 lm 结果一致
+bench::mark(apply_lm = t(apply(E[1:500, ], 1, \(yv) anova(lm(yv ~ cell + dex))[["Sum Sq"]])),  # 速度对比
             matrix   = vp_fast(E[1:500, ], data.frame(cell, dex), c("cell", "dex")),
             check = FALSE, iterations = 3)[, c("expression", "median")]
 ```
 
 ```{r}
 #| fig-height: 3.5
-as_tibble(var_frac, rownames = "gene_id") |>
-  pivot_longer(-gene_id, names_to = "source", values_to = "fraction") |>
-  mutate(source = factor(source, levels = c("dex", "cell", "residual"))) |>
-  ggplot(aes(source, fraction, fill = source)) +
-  geom_violin(scale = "width") + geom_boxplot(width = 0.1, outlier.shape = NA, fill = "white") +
-  scale_y_continuous(labels = scales::label_percent()) +
-  labs(x = NULL, y = "方差解释比例", title = "airway：每个基因的方差来源") +
-  theme(legend.position = "none")
+as_tibble(var_frac, rownames = "gene_id") |>  # 方差来源的小提琴图
+  pivot_longer(-gene_id, names_to = "source", values_to = "fraction") |>  # 转长表
+  mutate(source = factor(source, levels = c("dex", "cell", "residual"))) |>  # 来源顺序
+  ggplot(aes(source, fraction, fill = source)) +  # 坐标
+  geom_violin(scale = "width") + geom_boxplot(width = 0.1, outlier.shape = NA, fill = "white") +  # 小提琴 + 箱线
+  scale_y_continuous(labels = scales::label_percent()) +  # 百分比 y 轴
+  labs(x = NULL, y = "方差解释比例", title = "airway：每个基因的方差来源") +  # 标签
+  theme(legend.position = "none")  # 不显示图例
 ```
 
 ```{r}
-as_tibble(var_frac, rownames = "gene_id") |>
-  mutate(symbol = rowData(dds)[gene_id, "gene_name"]) |>
-  slice_max(cell, n = 8) |> mutate(across(cell:residual, \(x) round(x, 3)))
+as_tibble(var_frac, rownames = "gene_id") |>  # 供者解释方差最多的基因
+  mutate(symbol = rowData(dds)[gene_id, "gene_name"]) |>  # 加 symbol
+  slice_max(cell, n = 8) |> mutate(across(cell:residual, \(x) round(x, 3)))  # 前 8 个，保留三位小数
 ```
 
 供者效应最强的基因里有 *XIST* 和 Y 染色体基因——与第 6 章推断的性别（3 男 1 女）一致。
@@ -525,29 +525,29 @@ as_tibble(var_frac, rownames = "gene_id") |>
 与其删除这些样本，limma 可以**估计每个样本的质量权重**，让"噪声大"的样本在拟合中贡献更小：
 
 ```{r}
-ncbi_file <- file.path(DATA_DIR, "GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz")
-if (file.exists(ncbi_file)) {
-  ncbi <- data.table::fread(ncbi_file) |> as.data.frame() |> column_to_rownames("GeneID") |> as.matrix()
-  n8 <- ncbi[, as.character(dds$SampleName)]
-  colnames(n8) <- colnames(dds)
-  yn <- DGEList(n8, samples = as.data.frame(colData(dds)))
-  dn <- model.matrix(~ cell + dex, yn$samples)
-  yn <- yn[filterByExpr(yn, dn), , keep.lib.sizes = FALSE] |> normLibSizes()
+ncbi_file <- file.path(DATA_DIR, "GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz")  # 第 7 章下载的 NCBI 计数
+if (file.exists(ncbi_file)) {  # 文件存在时
+  ncbi <- data.table::fread(ncbi_file) |> as.data.frame() |> column_to_rownames("GeneID") |> as.matrix()  # 读入为矩阵
+  n8 <- ncbi[, as.character(dds$SampleName)]  # 取 airway 的 8 个样本
+  colnames(n8) <- colnames(dds)  # 列名换成 SRR
+  yn <- DGEList(n8, samples = as.data.frame(colData(dds)))  # DGEList
+  dn <- model.matrix(~ cell + dex, yn$samples)  # 设计矩阵
+  yn <- yn[filterByExpr(yn, dn), , keep.lib.sizes = FALSE] |> normLibSizes()  # 过滤并归一化
 
-  v_plain <- voom(yn, dn)
-  v_qw    <- voomWithQualityWeights(yn, dn)
-  w <- v_qw$targets$sample.weights
-  tibble(run = colnames(yn), avgLength = yn$samples$avgLength, weight = round(w, 2))
+  v_plain <- voom(yn, dn)  # 普通 voom
+  v_qw    <- voomWithQualityWeights(yn, dn)  # voom + 样本质量权重
+  w <- v_qw$targets$sample.weights  # 每个样本的权重
+  tibble(run = colnames(yn), avgLength = yn$samples$avgLength, weight = round(w, 2))  # 权重与读长并排
 }
 ```
 
 ```{r}
-if (file.exists(ncbi_file)) {
-  n_sig <- function(v) {
-    lmFit(v, dn) |> eBayes(robust = TRUE) |> topTable(coef = "dextrt", n = Inf) |>
-      with(sum(adj.P.Val < 0.05))
+if (file.exists(ncbi_file)) {  # 文件存在时
+  n_sig <- function(v) {  # 显著基因数
+    lmFit(v, dn) |> eBayes(robust = TRUE) |> topTable(coef = "dextrt", n = Inf) |>  # 拟合并取全部结果
+      with(sum(adj.P.Val < 0.05))  # 计数
   }
-  c(voom = n_sig(v_plain), voom_quality_weights = n_sig(v_qw))
+  c(voom = n_sig(v_plain), voom_quality_weights = n_sig(v_qw))  # 两种 voom 的显著数对比
 }
 ```
 
@@ -573,16 +573,16 @@ if (file.exists(ncbi_file)) {
 | `camera()` | **竞争性**（competitive） | 集合内基因**不比其他基因**更差异 | 校正了基因间相关（避免假阳性） |
 
 ```{r}
-sym_a <- rowData(dds)$gene_name[match(rownames(ya), rownames(dds))]
-sets <- list(
+sym_a <- rowData(dds)$gene_name[match(rownames(ya), rownames(dds))]  # 每个基因的 symbol
+sets <- list(  # 三个基因集
   GC_response  = c("DUSP1", "KLF15", "PER1", "TSC22D3", "FKBP5", "ZBTB16", "CRISPLD2", "ERRFI1"),
   inflammation = c("IL6", "CXCL8", "PTGS2", "IL1B", "CCL2", "TNFAIP3"),
   housekeeping = c("ACTB", "GAPDH", "TUBB", "RPLP0", "PGK1", "HPRT1")
 )
-idx <- ids2indices(sets, sym_a)
-lengths(idx)
-camera(v_air, idx, design = da, contrast = "dextrt")
-fry(v_air, idx, design = da, contrast = "dextrt")
+idx <- ids2indices(sets, sym_a)  # 基因集 → 行号
+lengths(idx)  # 每个集合匹配到的基因数
+camera(v_air, idx, design = da, contrast = "dextrt")  # camera：考虑基因间相关的竞争性检验
+fry(v_air, idx, design = da, contrast = "dextrt")  # fry：快速的自包含检验
 ```
 
 `fry` 说明糖皮质激素应答基因集**有**差异表达（方向向上），`camera` 进一步说明它们比随机基因更差异；
@@ -595,28 +595,28 @@ fry(v_air, idx, design = da, contrast = "dextrt")
 `sva::ComBat_seq()` 在**计数**层面校正已知批次，输出仍是整数矩阵：
 
 ```{r}
-cts_cb <- sva::ComBat_seq(cts[keep, ], batch = coldata$type, group = coldata$condition)
-cts_cb[1:3, ]
+cts_cb <- sva::ComBat_seq(cts[keep, ], batch = coldata$type, group = coldata$condition)  # ComBat-seq 直接校正计数
+cts_cb[1:3, ]  # 校正后的计数（仍为整数）
 ```
 
 ```{r}
 #| fig-width: 10
 #| fig-height: 4
-(pca_plot(cpm(cts[keep, ], log = TRUE), "原始") | pca_plot(cpm(cts_cb, log = TRUE), "ComBat-seq 后")) +
-  plot_layout(guides = "collect")
+(pca_plot(cpm(cts[keep, ], log = TRUE), "原始") | pca_plot(cpm(cts_cb, log = TRUE), "ComBat-seq 后")) +  # 校正前后的 PCA
+  plot_layout(guides = "collect")  # 合并图例
 ```
 
 **部分混杂**时会发生什么？若处理在批次间不平衡，批次与处理的效应估计相关，标准误变大：
 
 ```{r}
-balanced   <- data.frame(batch = factor(rep(c("A", "B"), each = 4)), treat = factor(rep(c("c", "t"), 4)))
-unbalanced <- data.frame(batch = factor(rep(c("A", "B"), each = 4)),
+balanced   <- data.frame(batch = factor(rep(c("A", "B"), each = 4)), treat = factor(rep(c("c", "t"), 4)))  # 批次与处理平衡的设计
+unbalanced <- data.frame(batch = factor(rep(c("A", "B"), each = 4)),  # 不平衡的设计
                          treat = factor(c("c", "c", "c", "t", "t", "t", "t", "c")))
-se_factor <- function(df) {
-  X <- model.matrix(~ batch + treat, df)
+se_factor <- function(df) {  # 处理系数标准误的放大倍数
+  X <- model.matrix(~ batch + treat, df)  # 设计矩阵
   sqrt(diag(solve(crossprod(X))))["treatt"]       # 处理系数的方差膨胀（相对于单位误差）
 }
-c(balanced = se_factor(balanced), unbalanced = se_factor(unbalanced))
+c(balanced = se_factor(balanced), unbalanced = se_factor(unbalanced))  # 平衡 vs 不平衡
 ```
 
 同样的样本量，不平衡设计中处理效应的标准误更大——功效更低。这就是为什么**实验设计阶段**就要让处理在批次间平衡。
