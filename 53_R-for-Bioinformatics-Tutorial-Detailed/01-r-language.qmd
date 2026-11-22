@@ -7,7 +7,7 @@
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
 if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
   this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+  if (length(this_file) == 1 && nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
 }
 source("_common.R")
 
