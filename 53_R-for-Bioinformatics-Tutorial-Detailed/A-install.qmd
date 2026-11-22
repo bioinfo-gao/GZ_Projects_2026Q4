@@ -54,6 +54,8 @@ conda-forge + bioconda 提供预编译二进制包，不需要编译器，约 15
   以及 `R_USER_CACHE_DIR=/mnt/ex_8T_SSD/R_user_cache`（Hub / BiocFileCache / biomaRt / msigdbr 缓存移出已近满的 `/home`）。
   查看：`conda env config vars list -p /mnt/ex_8T_SSD/conda_envs/p53_rbio`（mamba 2.x 无此子命令）。
 - Quarto 是装在环境里的 conda 版，必须在 `mamba activate` 之后调用；不激活直接调 `bin/quarto` 会报找不到 `share/version`。
+- 环境还设置了 `XDG_CACHE_HOME=/Work_bio/gao/configs/.cache`（即 `~/.cache` 软链的真实路径）：
+  Quarto 1.11.9 经软链路径打不开 Sass 缓存数据库，报 `unable to open database file: .../sass.kv`。
 - Positron 里请把 R 解释器选为该环境的 `bin/R`。
 :::
 

@@ -44,11 +44,15 @@ fi
 #   必须在 R 启动前设置（.Renviron 读得太晚，OpenBLAS 已初始化）。
 # - R_USER_CACHE_DIR：ExperimentHub / AnnotationHub / BiocFileCache / biomaRt / msigdbr 的缓存
 #   默认在 ~/.cache/R，而 /home 所在盘已近满，改到 8T SSD。
+# - XDG_CACHE_HOME：~/.cache 是指向 /Work_bio/gao/configs/.cache 的软链；Quarto 1.11.9 的 Deno KV
+#   经软链路径打不开 sass.kv（"unable to open database file"，R 代码跑完后在 Sass 阶段失败）。
+#   设成软链的真实路径 = 同一个目录，只是不经过软链。
 CACHE_DIR=/mnt/ex_8T_SSD/R_user_cache
 mkdir -p "$CACHE_DIR"
 # mamba 2.x 不支持 `env config vars`，这里必须用 conda
 conda env config vars set -p "$PREFIX" \
-  OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 R_USER_CACHE_DIR="$CACHE_DIR"
+  OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 R_USER_CACHE_DIR="$CACHE_DIR" \
+  XDG_CACHE_HOME="$(readlink -f "$HOME/.cache")"
 
 # 注意：不要用 conda 安装 r-quarto（R 包）—— 它会附带 conda 版 quarto 命令行，可能遮蔽系统 Quarto。
 # 本服务器没有系统 Quarto，所以上面直接装了 conda-forge 的 quarto CLI 到本环境。
