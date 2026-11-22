@@ -1,0 +1,111 @@
+# 安装与环境配置 {#sec-install}
+
+## R 与 IDE
+
+- **R ≥ 4.4**（推荐 4.5.x）。Bioconductor 每年 4 月 / 10 月发布，各版本与 R 小版本绑定；
+  `BiocManager` 会自动选对版本。
+- IDE：Positron、RStudio 或 VS Code + R 扩展均可。
+- **Quarto ≥ 1.5**：渲染本书所需。
+
+## Linux 系统依赖
+
+Seurat、sf、igraph、HDF5 等包需要系统库。Ubuntu / Debian：
+
+```bash
+sudo apt-get install -y build-essential gfortran cmake \
+  libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev \
+  libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev \
+  libjpeg-dev libhdf5-dev libglpk-dev libgsl-dev libmagick++-dev
+```
+
+如果使用 conda / miniforge 提供的 R，则优先使用 conda 安装二进制包
+（`mamba install -c conda-forge -c bioconda r-seurat bioconductor-deseq2 ...`），
+**不要**在同一个库中混用 conda 与源码编译，否则容易出现动态库版本冲突。
+
+::: callout-tip
+## 加速 CRAN 安装：二进制包
+Posit Public Package Manager 提供 Linux 预编译二进制，安装速度可提升 10 倍：
+
+```r
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"))
+```
+把 `noble` 换成你的发行版代号（`jammy`、`bookworm` 等）。
+:::
+
+## 一键安装
+
+**方式一：conda / miniforge 中的 R（推荐，本教程实际验证方式）**
+
+conda-forge + bioconda 提供预编译二进制包，不需要编译器，约 15 分钟、下载约 1 GB：
+
+```bash
+./install-conda.sh          # 默认装进 base 环境；./install-conda.sh myenv 装进指定环境
+```
+
+然后在 R 中补装 conda 上没有的可选包（`BPCells`，仅第 15 章的非执行示例用到，可跳过）。
+
+::: callout-note
+## 本服务器（64 核 / 125 GB，Ubuntu 24.04）的约定
+- 环境：`./install-conda.sh` 默认建独立前缀环境 `/mnt/ex_8T_SSD/conda_envs/p53_rbio`
+  （R 4.5.3 + Quarto CLI），不改动 base 或其他项目的环境。使用：
+  `mamba activate /mnt/ex_8T_SSD/conda_envs/p53_rbio && quarto render`。
+- 该环境激活时自动设置 `OPENBLAS_NUM_THREADS=8`、`OMP_NUM_THREADS=8`
+  （conda R 的 OpenBLAS 默认用满 64 核，超出服务器 56 线程上限），
+  以及 `R_USER_CACHE_DIR=/mnt/ex_8T_SSD/R_user_cache`（Hub / BiocFileCache / biomaRt / msigdbr 缓存移出已近满的 `/home`）。
+  查看：`conda env config vars list -p /mnt/ex_8T_SSD/conda_envs/p53_rbio`（mamba 2.x 无此子命令）。
+- Quarto 是装在环境里的 conda 版，必须在 `mamba activate` 之后调用；不激活直接调 `bin/quarto` 会报找不到 `share/version`。
+- Positron 里请把 R 解释器选为该环境的 `bin/R`。
+:::
+
+**方式二：系统 R / 官方安装包**
+
+```bash
+Rscript install.R
+```
+
+脚本内容：
+
+```{r}
+#| eval: false
+#| file: install.R
+```
+
+## 验证
+
+```{r}
+#| eval: false
+BiocManager::valid()          # 检查是否存在版本不匹配
+packageVersion("Seurat")      # 应为 5.x
+packageVersion("DESeq2")
+sessionInfo()
+```
+
+## 内存与磁盘
+
+以下数字来自 9 GB 内存的 WSL2 实测：
+
+| 章节 | 峰值内存 | 首次运行时间（详细版） | 下载量 |
+|---|---|---|---|
+| 1–4、6、8 | < 2 GB | 各 < 1.5 分钟 | ≈ 50 MB（airway、pasilla、注释；GEO 表型） |
+| 5 | < 2 GB | ≈ 1 分钟 | ≈ 1 MB chain 文件；BioMart 在线查询（结果缓存到 `data/`） |
+| 7 | ≈ 2 GB | ≈ 2.5 分钟（含十几次 DESeq2 拟合，已缓存） | ≈ 1 MB（GEO/NCBI 计数） |
+| 9 | ≈ 2 GB | ≈ 4.5 分钟（GSVA、9 组 ORA，已缓存） | KEGG / Reactome 在线 |
+| 3、14 | ≈ 2–3 GB | 1 分钟 / ≈ 6.5 分钟（多重插补 m = 20，已缓存） | ≈ 20 MB（TCGA LUAD MC3） |
+| 10–11 | ≈ 3 GB | 各 1.5 分钟 | ≈ 20 MB（PBMC3k）+ celldex 参考 |
+| 12 | **≈ 5 GB** | ≈ 4 分钟 | ≈ 150 MB（Kang 2018） |
+| 13 | ≈ 3 GB | ≈ 1.5 分钟 | ≈ 30 MB |
+
+::: callout-note
+## 网络依赖
+第 2 章（GEOquery）、第 5 章（UCSC chain、Ensembl BioMart）、第 7 章（NCBI GEO 计数）、第 9 章（KEGG）需要联网。
+所有在线结果都通过 `cached()` 保存在 `data/` 中，第二次运行不再联网。Ensembl 服务器偶尔不可用，
+第 5 章的代码会捕获错误并跳过相关单元，而不会中断渲染。
+:::
+
+::: callout-warning
+第 12 章内存占用较大。不要同时运行其他占内存的 R 会话；8 GB 以下的机器可以在
+`CreateSeuratObject()` 之后用 `subset(obj, downsample = 1500)` 按细胞类型下采样。
+:::
+
+ExperimentHub / AnnotationHub 的缓存默认在 `~/.cache/R/`，可以通过环境变量
+`EXPERIMENT_HUB_CACHE`、`ANNOTATION_HUB_CACHE` 改到大容量磁盘。

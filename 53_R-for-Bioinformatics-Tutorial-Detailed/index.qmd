@@ -1,0 +1,91 @@
+# 前言 {.unnumbered}
+
+## 这本教程是给谁的
+
+你已经会写代码——也许是 Python、C++、Java 或 JavaScript——理解函数、作用域、
+数据结构和复杂度；但 R 对你来说要么陌生，要么"能用但总觉得别扭"。
+同时你需要用 R 完成真实的转录组分析：bulk RNA-seq 差异表达、功能富集，
+以及单细胞 RNA-seq 的质控、聚类、注释、整合和多样本差异分析。
+
+因此本教程**不会**解释什么是变量、什么是循环；而会把篇幅花在：
+
+- R 和你熟悉的语言**不一样**的地方（向量化语义、惰性求值、copy-on-modify、
+  非标准求值、三套半 OOP 系统……），以及它们为什么让 R 在数据分析上顺手；
+- 现代、稳定的写法：原生管道 `|>`、`\(x)` 匿名函数、dplyr 1.1 的 `.by` /
+  `join_by()`、ggplot2 3.5+ 的 `linewidth`、Seurat v5 的 layer 体系、
+  edgeR 4 的 `normLibSizes()` / QL 框架等；
+- 每一个统计步骤**背后的模型**，以及常见的错误用法（例如单细胞"伪重复"问题）。
+
+## 路线图与时间预算
+
+这是**详细版**：章节结构与基础版相同，但每一章的内容约增加一倍，重点加强了
+**apply 家族**、**真实数据中缺失值的定位与统计**、**参考基因组/注释版本的混乱**、**ID 映射与 biomaRt**，
+以及每个分析步骤的质量核查与稳健性检验。每章开头有"本章路线"表，页面右侧与正文开头都有本章目录。
+
+| 部分 | 章 | 内容（详细版新增要点） | 建议时长 |
+|---|---|---|---|
+| I | 1 | R 语言特性；**缺失值语义与 TCGA 临床表缺失审计**；**apply 家族全解**；批量读取文件；字符串/正则；数值陷阱；调试 | 3 h |
+| I | 2 | tidyverse；**连接键诊断（Excel 日期化、过时 symbol）**；多列整形；窗口函数；forcats；GEO 元数据；**naniar 缺失工作流** | 2 h |
+| I | 3 | 数据处理生态；**原始 MAF 审计与过滤日志**；NA 在各方言中的差异；data.table 进阶；apply ↔ across ↔ lapply(.SD) | 2 h |
+| I | 4 | 可视化；分布图；**NA 与坐标范围**；相关热图；UpSet；基因组坐标图；批量作图；色盲友好 | 2 h |
+| I | 5 | Bioconductor；**GRCh37 vs GRCh38、命名风格、liftOver、版本嗅探**；注释版本漂移；**ID 映射与 biomaRt 实战** | 2.5 h |
+| II | 6 | 计数与 QC；完整性检查；**性别/配对核查**；长度/生物类型/GC 偏差；离群检测；过滤规则比较 | 2 h |
+| II | 7 | DESeq2；离散度诊断；Cook 距离；功效分析；留一法；**同一数据两套参考/流程的对比**；**GEO 标签核查**与交互作用 | 3 h |
+| II | 8 | edgeR / limma；满秩与嵌套设计；方差分解（apply vs 矩阵）；质量权重；camera/fry；ComBat-seq | 2 h |
+| II | 9 | 富集分析；ID 映射损失；手写 ORA/GSEA；长度偏差；GSVA；阈值敏感性 | 2 h |
+| III | 10 | scRNA QC；重复 symbol 与参考版本；**稀疏矩阵上的 apply**；SoupX；零值与 dropout | 1.5 h |
+| III | 11 | 聚类与注释；clustree；参数敏感性；参考/查询基因命名差异；**注释的 NA** | 2 h |
+| III | 12 | 整合与伪 bulk；元数据审计；局部混合熵；伪 bulk 缺失组合；三框架比较；比例检验 | 2 h |
+| III | 13 | Bioconductor 与轨迹；**FACS 的结构性缺失**；蛋白验证；手写扩散映射；稳健性；基因模块 | 1.5 h |
+| IV | 14 | 突变与生存；**用热点验证 MAF 的基因组版本**；生存数据审计；**缺失协变量的多重插补**；竞争风险；C 指数 | 3 h |
+| V | 15 | 可复现性；targets 实操；数据 manifest 与注释版本；结果契约；性能剖析 | 1 h |
+| | | **合计** | **≈ 32 h** |
+
+第 1–5 章可按需跳读；第 6–9 章（bulk）、第 10–13 章（单细胞）、第 14 章（肿瘤基因组）各自形成一条完整的分析线，
+只依赖第一部分的基础。
+
+## 真实数据集
+
+| 数据集 | 生物学问题 | 规模 | 用于 |
+|---|---|---|---|
+| **airway**（Himes et al. 2014, *PLoS One*） | 4 个人气道平滑肌细胞系 ± 地塞米松 | 8 样本 × 63k 基因 | 第 2、4–9 章 |
+| **pasilla**（Brooks et al. 2011, *Genome Res*） | 果蝇 S2 细胞 *pasilla* RNAi | 7 样本，含单端/双端批次 | 第 8 章 |
+| **PBMC 3k**（10x Genomics） | 健康人外周血单个核细胞 | 2,700 细胞 | 第 10–11 章 |
+| **Kang 2018**（*Nat Biotechnol*） | 8 名狼疮患者 PBMC ± IFN-β 刺激 | 约 29k 细胞，16 个样本 | 第 12 章 |
+| **Nestorowa 2016**（*Blood*） | 小鼠造血干/祖细胞分化 | 1,920 细胞，Smart-seq2 + ERCC | 第 13 章 |
+| **TCGA-LUAD MC3**（Ellrott et al. 2018；TCGA-CDR, Liu et al. 2018） | 肺腺癌体细胞突变 + 临床随访 | 517 例肿瘤，约 14 万个非同义 + 6 万个同义突变 | 第 3、14 章 |
+| **TCGA-LAML**（maftools 附带） | 急性髓系白血病拷贝数（GISTIC） | 约 190 例 | 第 14 章 |
+| **GSE52778**（GEO，NCBI 统一重处理计数） | airway 原实验全部 16 个样本（Dex × Albuterol），GRCh38 | 16 样本 | 第 2、7、8 章 |
+| **UCSC hg38 knownGene / hg19ToHg38 chain**、**EnsDb v86**、**Ensembl BioMart (GRCh37)** | 参考基因组与注释版本对比 | — | 第 5 章 |
+
+## 环境准备
+
+```bash
+Rscript install.R      # 或使用附录 A 的 conda/mamba 一键安装
+quarto preview         # 或在 Positron / RStudio 中逐章运行
+```
+
+每一章开头都会执行：
+
+```r
+source("_common.R")
+```
+
+它定义了数据目录 `data/`、带缓存的下载函数 `fetch()`、结果缓存函数
+`cached()`，并设置随机种子与 ggplot2 主题。
+
+## 约定
+
+- 代码块输出以 `#>` 开头。
+- `pkg::fun()` 形式用于强调函数来源或避免命名冲突（例如 `dplyr::filter` 与
+  `stats::filter`，`S4Vectors::rename` 与 `dplyr::rename`）。
+- 每章末尾有**练习**，答案默认折叠。
+- 标注 `eval: false` 的代码块是需要外部原始数据或长时间运行的示例，
+  逻辑完整，可以照抄到自己的项目中。
+
+::: callout-tip
+## 关于"较新且稳定"
+本教程在 R 4.5.3、Bioconductor 3.22（DESeq2 1.50、edgeR 4.8、clusterProfiler 4.18、maftools 2.26）、
+Seurat 5.5、dplyr 1.2、ggplot2 4.0、data.table 1.18 上完整运行验证。凡是新旧 API 有差异的地方都会明确指出
+（例如 Seurat v4 的 `slot=` 改为 v5 的 `layer=`）。
+:::
