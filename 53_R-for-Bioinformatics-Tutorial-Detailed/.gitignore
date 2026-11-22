@@ -1,0 +1,11 @@
+/.quarto/
+/_book/
+/_freeze/
+/data/
+*_cache/
+*_files/
+.Rhistory
+.RData
+.Rproj.user/
+
+**/*.quarto_ipynb
