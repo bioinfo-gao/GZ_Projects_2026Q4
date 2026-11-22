@@ -1,0 +1,724 @@
+# 单细胞 RNA-seq（四）：Bioconductor 流程与轨迹推断 {#sec-scrna-bioc}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：1.75 小时（详细版）
+>
+> 目标：用 Bioconductor（OSCA, *Orchestrating Single-Cell Analysis*）生态完成一遍
+> 单细胞分析：`SingleCellExperiment`、`scuttle`/`scran`/`scater`/`bluster`；
+> 理解 spike-in 与去卷积归一化；用 slingshot 推断分化轨迹，并做沿伪时间的差异表达。
+> 详细版新增：小鼠 ID 映射损失、FACS 数据的结构性缺失、用蛋白信号验证伪时间、手写扩散映射与 DPT、
+> 伪时间稳健性网格、沿伪时间的基因模块。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| SCE / 数据 / 基因名 | Nestorowa 2016；Ensembl → symbol | 10 min |
+| @sec-facs-na | FACS index 数据的全有或全无缺失 | 5 min |
+| 质控 / 去卷积 / spike-in / HVG | scuttle、scran | 15 min |
+| 降维 / 聚类 / marker | scater、bluster、scoreMarkers | 15 min |
+| 轨迹：slingshot / 伪时间 DE / @sec-facs-validate | | 20 min |
+| @sec-lineage-ends / RNA velocity | 终点细胞比较；velocity 原理 | 10 min |
+| TSCAN / @sec-diffmap | 两种替代方法；手写扩散映射 | 15 min |
+| @sec-pt-robust、@sec-pt-modules | 稳健性；基因模块热图 | 15 min |
+:::
+
+```{r}
+library(tidyverse)
+library(SingleCellExperiment)
+library(scuttle)
+library(scran)
+library(scater)
+library(bluster)
+library(slingshot)
+library(TSCAN)
+library(scRNAseq)
+library(AnnotationDbi)
+library(org.Mm.eg.db)
+library(patchwork)
+```
+
+## 为什么还要学 Bioconductor 流程
+
+| | Seurat | Bioconductor (OSCA) |
+|---|---|---|
+| 风格 | 一个大包，一体化 | 许多小包，模块化，可组合 |
+| 数据结构 | Seurat 对象 | `SingleCellExperiment`（继承 `SummarizedExperiment`） |
+| 统计方法 | 实用、默认值友好 | 方法学更严谨，文档详细（OSCA 书） |
+| 与 bulk 工具的衔接 | 需要转换 | 直接衔接 DESeq2/edgeR/limma |
+| 大数据 | BPCells | DelayedArray / HDF5Array |
+
+两者可以互转，许多实验室混用。理解两套生态能让你读懂几乎所有 R 单细胞代码。
+
+## SingleCellExperiment
+
+`SingleCellExperiment` = `SummarizedExperiment` + 单细胞特有的槽：
+
+```
+SingleCellExperiment
+├── assays          counts, logcounts, ...
+├── colData         每个细胞的元数据（QC、聚类、标签）
+├── rowData         每个基因的元数据（HVG 统计等）
+├── reducedDims     PCA, UMAP, TSNE ...（行 = 细胞）
+├── altExps         替代实验：ERCC spike-in、抗体标签（CITE-seq）、FACS 指标……
+├── sizeFactors     归一化因子
+└── colPairs/rowPairs  细胞–细胞图（如 SNN）
+```
+
+## 数据：Nestorowa et al. 2016
+
+小鼠骨髓造血干细胞与祖细胞（HSPC），用 FACS 分选后以 **Smart-seq2**（全长、每孔一个细胞）测序，
+1,920 个细胞，带 **ERCC spike-in** 与每个细胞的 **FACS 表面标记强度**。造血分化是研究轨迹推断的经典体系：
+造血干细胞（HSC）→ 多能祖细胞（MPP）→ 分叉为红系/巨核系（MEP）、髓系（GMP）、淋系（LMPP）。
+
+```{r}
+sce <- NestorowaHSCData()
+sce
+altExpNames(sce)
+altExp(sce, "FACS")
+table(sce$gate)
+table(sce$broad, useNA = "ifany")
+```
+
+::: callout-warning
+`NestorowaHSCData()` 会在后台加载 **ensembldb**，而 ensembldb 导出了自己的 `filter()`，
+会遮蔽 `dplyr::filter()`（报错 "ensembldb::filter requires an 'EnsDb' object"）。
+本章因此一律写 `dplyr::filter()`。
+:::
+
+`gate` 是分选门（HSPC：广义 HSPC 门；LT-HSC：长期造血干细胞；Prog：祖细胞），
+`broad` 是作者根据表面标记回溯注释的细胞类型。
+
+### 基因名
+
+行名是 Ensembl ID；用 org.Mm.eg.db 映射 symbol，`uniquifyFeatureNames()` 在缺失或重复时回退到 Ensembl ID：
+
+```{r}
+symbol <- mapIds(org.Mm.eg.db, keys = rownames(sce), keytype = "ENSEMBL", column = "SYMBOL")
+rowData(sce)$ensembl <- rownames(sce)
+rowData(sce)$symbol  <- symbol
+rownames(sce) <- uniquifyFeatureNames(rownames(sce), symbol)
+head(rownames(sce))
+```
+
+映射的损失与重复：
+
+```{r}
+c(genes = length(symbol), no_symbol = sum(is.na(symbol)),
+  dup_symbol = sum(duplicated(symbol[!is.na(symbol)])))
+grepl("^ENSMUSG", rownames(sce)) |> sum()      # 回退为 Ensembl ID 的行
+```
+
+没有 symbol 的基因保留 Ensembl ID 作为行名，重复 symbol 的基因被加上 `_ENSMUSG...` 后缀——
+这比 Seurat 的 `.1` 后缀更可追溯。
+
+### FACS 指标中的结构性缺失 {#sec-facs-na}
+
+这个数据集特别之处是每个细胞都有 FACS 分选时记录的**表面蛋白强度**（index sorting），
+可以作为独立于 RNA 的验证。但这张表有缺失：
+
+```{r}
+facs <- t(assay(altExp(sce, "FACS")))
+dim(facs)
+colSums(is.na(facs))                                     # 每个标记缺失多少
+table(n_missing = rowSums(is.na(facs)), gate = sce$gate) # 缺失的模式：全有或全无，且与分选门相关
+```
+
+缺失是**全有或全无**的（一个细胞要么 10 个标记都有，要么全部缺失），而且**所有 LT-HSC 门的细胞都缺失**——
+这是实验记录方式造成的结构性缺失（该批次分选没有保存 index 数据），绝非随机缺失。后果：
+
+- 如果只用"有 FACS 数据的细胞"去验证轨迹，验证集里**没有一个 LT-HSC**——恰恰缺少轨迹的起点；
+- 任何用 FACS 做协变量的模型，若直接删除缺失行，都会系统性地丢掉一个细胞群体。
+
+```{r}
+#| fig-height: 3.5
+tibble(gate = sce$gate, has_facs = !is.na(facs[, "CD34"]), broad = sce$broad) |>
+  dplyr::count(broad, has_facs) |>
+  ggplot(aes(n, broad, fill = has_facs)) + geom_col() +
+  scale_fill_manual(values = c(`TRUE` = "steelblue", `FALSE` = "grey70")) +
+  labs(x = "细胞数", y = "作者注释 (broad)", fill = "有 FACS 数据")
+```
+
+## 质控
+
+```{r}
+is_mito <- grepl("^mt-", rownames(sce))
+sum(is_mito)
+
+sce <- addPerCellQCMetrics(sce, subsets = list(Mito = is_mito))
+colnames(colData(sce)) |> tail(12)
+```
+
+`altexps_ERCC_percent` 是 spike-in 占比：细胞内源 RNA 越少（细胞破损或体积小），ERCC 占比越高。
+
+```{r}
+qc <- perCellQCFilters(colData(sce), sub.fields = c("subsets_Mito_percent", "altexps_ERCC_percent"))
+colSums(as.matrix(qc))
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4
+sce$discard <- qc$discard
+plotColData(sce, x = "gate", y = "sum", colour_by = "discard") + scale_y_log10() + ggtitle("总计数") |
+  plotColData(sce, x = "gate", y = "detected", colour_by = "discard") + ggtitle("检出基因数") |
+  plotColData(sce, x = "gate", y = "altexps_ERCC_percent", colour_by = "discard") + ggtitle("ERCC %")
+```
+
+```{r}
+sce <- sce[, !sce$discard]
+sce <- sce[rowSums(counts(sce) > 0) >= 5, ]
+dim(sce)
+```
+
+## 归一化：去卷积（deconvolution）
+
+单细胞计数中大量零值，使得 DESeq2 式的 median-of-ratios 失效（几乎每个基因都有零）。
+`scran::computeSumFactors()`（Lun et al. 2016）的思路：
+
+1. 把细胞**池化**（每池数十个细胞），池化后的计数零值少，可以稳定地计算池的大小因子；
+2. 用许多重叠的池构造线性方程组，**反解**出每个细胞的大小因子。
+
+先粗聚类（`quickCluster`）以免在差异很大的细胞间池化：
+
+```{r}
+set.seed(100)
+clust <- quickCluster(sce)
+sce <- computeSumFactors(sce, clusters = clust)
+summary(sizeFactors(sce))
+
+tibble(libsize = librarySizeFactors(sce), deconv = sizeFactors(sce), cluster = clust) |>
+  ggplot(aes(libsize, deconv, colour = cluster)) +
+  geom_point(size = 0.8) + geom_abline(linetype = "dashed") +
+  scale_x_log10() + scale_y_log10() +
+  labs(title = "去卷积因子 vs 文库大小因子", subtitle = "偏离对角线 = 组成偏差")
+```
+
+```{r}
+sce <- logNormCounts(sce)        # 生成 logcounts = log2(count / sizeFactor + 1)
+assayNames(sce)
+```
+
+::: callout-note
+## spike-in 归一化
+如果关心**细胞总 RNA 含量**的真实差异（例如激活后的细胞变大），可以用 spike-in 计算大小因子
+（`computeSpikeFactors(sce, "ERCC")`），它假设每个细胞加入了等量的 spike-in。
+去卷积归一化则假设大多数基因不差异表达，会"抹掉"总 RNA 含量的差异。
+:::
+
+## 高变基因：用 spike-in 建模技术噪声
+
+ERCC 只经历技术噪声（无生物学变异），它们的均值–方差关系给出了**技术噪声**的基线；
+内源基因的方差超出基线的部分就是**生物学变异**。
+
+```{r}
+dec <- modelGeneVarWithSpikes(sce, "ERCC")
+dec[order(dec$bio, decreasing = TRUE), ][1:8, c("mean", "total", "tech", "bio", "FDR")]
+```
+
+```{r}
+fit_spike <- metadata(dec)
+tibble(mean = dec$mean, total = dec$total) |>
+  ggplot(aes(mean, total)) +
+  geom_point(size = 0.4, alpha = 0.4) +
+  geom_point(data = tibble(mean = fit_spike$mean, var = fit_spike$var), aes(mean, var),
+             colour = "red", size = 1.5) +
+  geom_function(fun = fit_spike$trend, colour = "dodgerblue", linewidth = 1) +
+  labs(x = "Mean log-expression", y = "Variance", title = "红点：ERCC；蓝线：技术噪声趋势")
+```
+
+```{r}
+hvg <- getTopHVGs(dec, prop = 0.1)
+length(hvg)
+head(hvg, 20)
+```
+
+## 降维
+
+`denoisePCA()` 利用技术噪声估计，自动保留"生物学方差之和"所需的 PC 数，丢弃主要反映技术噪声的 PC：
+
+```{r}
+set.seed(101)
+sce <- denoisePCA(sce, technical = dec, subset.row = hvg)
+ncol(reducedDim(sce, "PCA"))
+```
+
+```{r}
+set.seed(102)
+sce <- runUMAP(sce, dimred = "PCA")
+sce <- runTSNE(sce, dimred = "PCA", perplexity = 30)
+reducedDimNames(sce)
+```
+
+## 聚类：bluster
+
+bluster 把"聚类算法"与"参数"抽象为 `BlusterParam` 对象，同一接口切换方法：
+
+```{r}
+set.seed(103)
+sce$cluster <- clusterCells(sce, use.dimred = "PCA",
+                            BLUSPARAM = NNGraphParam(k = 15, type = "jaccard", cluster.fun = "louvain"))
+table(sce$cluster)
+
+km <- clusterCells(sce, use.dimred = "PCA", BLUSPARAM = KmeansParam(centers = 8))
+pairwiseRand(sce$cluster, km, mode = "index")       # 两种聚类的一致性（调整兰德指数）
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4.5
+plotReducedDim(sce, "UMAP", colour_by = "cluster", text_by = "cluster") + ggtitle("Louvain") |
+  plotReducedDim(sce, "UMAP", colour_by = "broad") + ggtitle("作者注释 (broad)")
+```
+
+FACS 表面标记也可以直接画在 UMAP 上（来自 `altExp`）：
+
+```{r}
+#| fig-width: 11
+#| fig-height: 3.5
+facs <- t(assay(altExp(sce, "FACS")))
+head(facs, 3)
+emb <- reducedDim(sce, "UMAP")
+map(c("cKit", "Sca1", "CD34", "Flk2"), \(m) {
+  if (!m %in% colnames(facs)) return(NULL)
+  tibble(x = emb[, 1], y = emb[, 2], v = facs[, m]) |>
+    ggplot(aes(x, y, colour = v)) + geom_point(size = 0.5) +
+    scale_colour_viridis_c() + labs(title = m, colour = NULL) + theme_void()
+}) |> compact() |> wrap_plots(nrow = 1)
+```
+
+## Marker 基因：scoreMarkers
+
+`scran::scoreMarkers()` 对每对簇计算效应量（而不仅是 p 值）：Cohen's d、AUC、
+检出比例差（logFC.detected），然后跨对比汇总（mean / min / median / max / rank）。
+
+```{r}
+mk <- scoreMarkers(sce, groups = sce$cluster)
+names(mk)
+
+top_markers <- map(mk, \(df) {
+  df |> as_tibble(rownames = "gene") |>
+    slice_max(mean.AUC, n = 3) |>
+    dplyr::select(gene, mean.AUC, mean.logFC.cohen)
+}) |> list_rbind(names_to = "cluster")
+top_markers
+```
+
+`min.AUC` 高的基因在**所有**两两比较中都上调（最严格）；`mean.AUC` 用于一般排序。
+
+```{r}
+#| fig-height: 5
+plotDots(sce, features = unique(top_markers$gene), group = "cluster") +
+  scale_colour_viridis_c() + coord_flip()
+```
+
+用已知造血 marker 帮助解读：
+
+```{r}
+#| fig-width: 11
+#| fig-height: 6
+known <- c("Procr", "Hlf", "Mecom",          # HSC
+           "Flt3", "Dntt",                    # 淋系引物 LMPP
+           "Mpo", "Elane", "Ctsg",            # 粒系 GMP
+           "Car1", "Klf1", "Gata1",           # 红系 MEP
+           "Pf4", "Itga2b")                   # 巨核
+known <- intersect(known, rownames(sce))
+plotExpression(sce, features = known, x = "cluster", colour_by = "cluster", ncol = 5) +
+  theme(legend.position = "none")
+```
+
+## 轨迹推断
+
+单细胞快照中，处于分化不同阶段的细胞同时存在。**伪时间**（pseudotime）把细胞沿着
+表达变化的连续路径排序。常用方法：
+
+| 方法 | 思路 |
+|---|---|
+| **slingshot** | 在聚类上构建最小生成树（MST）确定谱系结构 → 用主曲线（principal curves）平滑 |
+| **TSCAN** | 簇中心 MST + 投影 |
+| Monocle 3 | 主图学习（reversed graph embedding） |
+| diffusion pseudotime（destiny） | 扩散映射上的随机游走距离 |
+| RNA velocity（scVelo / velociraptor） | 利用 spliced/unspliced 比例推断**方向** |
+
+::: callout-important
+伪时间是**表达相似性**的排序，不是真实时间。起点需要依据生物学知识指定（例如 HSC 标记），
+且方法假设细胞状态连续变化——如果数据是彼此分离的类型，强行拟合轨迹没有意义。
+:::
+
+### 确定起点
+
+用 HSC 标记的平均表达确定起始簇：
+
+```{r}
+hsc_genes <- intersect(c("Procr", "Hlf", "Mecom", "Mllt3", "Hoxb5"), rownames(sce))
+hsc_score <- colMeans(logcounts(sce)[hsc_genes, , drop = FALSE])
+root <- names(which.max(tapply(hsc_score, sce$cluster, mean)))
+root
+tapply(hsc_score, sce$cluster, mean) |> round(2)
+```
+
+### slingshot
+
+```{r}
+set.seed(104)
+sce <- slingshot(sce, clusterLabels = "cluster", reducedDim = "PCA", start.clus = root)
+sds <- SlingshotDataSet(sce)
+slingLineages(sds)
+```
+
+每条谱系是一条从起始簇出发、经过若干簇的路径。每个细胞对每条谱系都有一个伪时间（不属于该谱系的为 NA）。
+
+```{r}
+pt <- slingPseudotime(sce)
+head(pt)
+sce$pseudotime_mean <- rowMeans(pt, na.rm = TRUE)
+```
+
+把主曲线投影到 UMAP 上展示：
+
+```{r}
+#| fig-height: 5.5
+emb_curves <- embedCurves(sce, "UMAP")
+curve_df <- map(seq_along(slingCurves(emb_curves)), \(i) {
+  crv <- slingCurves(emb_curves)[[i]]
+  as_tibble(crv$s[crv$ord, ], .name_repair = ~ c("x", "y")) |> mutate(lineage = paste0("Lineage", i))
+}) |> list_rbind()
+
+tibble(x = emb[colnames(sce), 1], y = emb[colnames(sce), 2], pt = sce$pseudotime_mean) |>
+  ggplot(aes(x, y)) +
+  geom_point(aes(colour = pt), size = 0.6) +
+  geom_path(data = curve_df, aes(group = lineage, linetype = lineage), linewidth = 1) +
+  scale_colour_viridis_c(name = "pseudotime") +
+  labs(x = "UMAP1", y = "UMAP2", title = "slingshot 谱系") + theme_classic()
+```
+
+（注意：曲线是在 PCA 空间中拟合，再嵌入 UMAP 展示；UMAP 中看起来弯曲是正常的。）
+
+### 沿伪时间的差异表达
+
+找出随伪时间显著变化的基因（对每条谱系分别检验）。`TSCAN::testPseudotime()` 对每个基因拟合
+样条回归，检验伪时间效应：
+
+```{r}
+lin_genes <- map(seq_len(ncol(pt)), \(i) {
+  keep <- !is.na(pt[, i])
+  res <- testPseudotime(sce[, keep], pseudotime = pt[keep, i])
+  res$gene <- rownames(res)
+  as_tibble(res) |> mutate(lineage = colnames(pt)[i])
+}) |> list_rbind()
+
+lin_genes |>
+  dplyr::filter(FDR < 0.05) |>
+  slice_max(abs(logFC), n = 6, by = lineage) |>
+  dplyr::select(lineage, gene, logFC, FDR)
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 5
+show_genes <- intersect(c("Procr", "Mpo", "Car1", "Klf1", "Elane", "Dntt"), rownames(sce))
+map(seq_len(ncol(pt)), \(i) {
+  keep <- !is.na(pt[, i])
+  as_tibble(t(as.matrix(logcounts(sce)[show_genes, keep]))) |>
+    mutate(pseudotime = pt[keep, i], lineage = colnames(pt)[i])
+}) |>
+  list_rbind() |>
+  pivot_longer(all_of(show_genes), names_to = "gene", values_to = "expr") |>
+  ggplot(aes(pseudotime, expr, colour = lineage)) +
+  geom_point(size = 0.2, alpha = 0.2) +
+  geom_smooth(se = FALSE, method = "gam", formula = y ~ s(x, k = 5)) +
+  facet_wrap(~ gene, scales = "free_y", nrow = 2) +
+  labs(title = "基因表达随伪时间的变化")
+```
+
+对照 `table(sce$cluster, sce$broad)` 与 `slingLineages(sds)` 来解读（以本书固定随机种子的结果为例）：
+
+- 起点簇以 **LT-HSC** 为主；HSC 标记 Procr 沿**所有**谱系下降。
+- 一条谱系经过以 CMP/GMP 为主的簇、终止于 **MEP**：红系基因 Car1、Klf1 沿它持续上升；
+  粒系基因 Mpo 只在途经 GMP 样簇时**短暂升高**，然后回落。
+- 另一条谱系终止于以 **LMPP** 为主的簇：淋系引物基因 Dntt 沿它上升。
+
+注意 slingshot **没有**给粒系（GMP）单独一个终点——GMP 样簇被放在了通往 MEP 的路径上。
+这提醒我们：谱系结构依赖聚类分辨率与 MST，并非"真理"。如果有先验知识，可以用
+`end.clus =` 指定终点簇（练习 5）。
+
+```{r}
+table(cluster = sce$cluster, broad = sce$broad)
+```
+
+### 用 FACS 蛋白信号验证伪时间 {#sec-facs-validate}
+
+RNA 推断出的伪时间是否与**独立测量**的表面蛋白一致？小鼠 HSC 的经典免疫表型是 Lin⁻ Sca-1⁺ c-Kit⁺、
+EPCR⁺（由 *Procr* 编码）、CD150⁺、CD48⁻；离开干细胞状态时 Sca-1、EPCR 下降，CD48 上升。
+只在有 FACS 数据的细胞上计算相关：
+
+```{r}
+facs_kept <- facs[colnames(sce), ]
+ok <- !is.na(facs_kept[, "CD34"])
+sum(ok)
+cor_pt <- vapply(colnames(facs_kept)[-1], function(m)
+  cor(facs_kept[ok, m], sce$pseudotime_mean[ok], method = "spearman", use = "complete.obs"),
+  numeric(1))
+sort(round(cor_pt, 2))
+```
+
+```{r}
+#| fig-height: 3.5
+tibble(pseudotime = sce$pseudotime_mean[ok], as_tibble(facs_kept[ok, c("Sca1", "EPCR", "CD48", "CD34")])) |>
+  pivot_longer(-pseudotime, names_to = "marker", values_to = "intensity") |>
+  ggplot(aes(pseudotime, intensity)) +
+  geom_point(size = 0.3, alpha = 0.3) + geom_smooth(se = FALSE, colour = "firebrick") +
+  facet_wrap(~ marker, scales = "free_y", nrow = 1) +
+  labs(title = "FACS 表面蛋白强度沿 RNA 伪时间的变化")
+```
+
+Sca-1 与 EPCR 随伪时间明显下降（ρ ≈ −0.66、−0.46），CD48 上升——独立的蛋白数据支持了 RNA 推断的**方向**。
+CD150 与伪时间几乎无关；CD34、CD16/32 则依赖谱系（CD16/32 在粒系祖细胞上高、在红系祖细胞上低），
+把各谱系的伪时间平均后，这类谱系特异的信号会被抵消——应当**按谱系分别**检查（练习 7）。
+再次提醒：没有 FACS 数据的 LT-HSC 细胞不在这张图中，伪时间最早的那一段验证不了。
+
+::: callout-tip
+## 更强大的伪时间 DE
+`tradeSeq`（Van den Berge et al. 2020）为每个基因拟合负二项 GAM，提供
+`associationTest()`（是否随伪时间变化）、`startVsEndTest()`、`diffEndTest()`（不同谱系终点之间的差异）、
+`patternTest()`（谱系间表达模式是否不同）等检验，适合正式分析。
+:::
+
+### 谱系终点之间的比较 {#sec-lineage-ends}
+
+伪时间 DE 回答"沿某条谱系什么在变"；另一个常见问题是"两个**终点**有什么不同"（tradeSeq 的 `diffEndTest()`）。
+一个透明的近似：取每条谱系伪时间最后 15% 的细胞作为"终点细胞"，用 `scoreMarkers()` 比较：
+
+```{r}
+ends <- map(seq_len(ncol(pt)), \(i) {
+  p <- pt[, i]
+  thr <- quantile(p, 0.85, na.rm = TRUE)
+  rownames(pt)[which(p >= thr)]
+}) |> set_names(colnames(pt))
+lengths(ends)
+shared <- Reduce(intersect, ends)
+length(shared)                                    # 同时属于两个终点的细胞（应该很少）
+end_label <- rep(NA_character_, ncol(sce)); names(end_label) <- colnames(sce)
+for (l in names(ends)) end_label[setdiff(ends[[l]], shared)] <- l
+table(end_label, useNA = "ifany")
+```
+
+```{r}
+keep_end <- !is.na(end_label)
+sm <- scoreMarkers(sce[, keep_end], groups = end_label[keep_end])
+lapply(sm, \(df) as_tibble(df, rownames = "gene") |>
+         dplyr::select(gene, mean.AUC, mean.logFC.cohen) |> arrange(desc(mean.AUC)) |> head(8))
+```
+
+用作者的 `broad` 注释检查每个终点主要是什么细胞：
+
+```{r}
+table(end = end_label[keep_end], broad = sce$broad[keep_end], useNA = "ifany")
+```
+
+- **Lineage1** 的终点几乎全是 MEP，标志基因 *Klf1*、*Epor*、*Rhag*、*Ermap* 都是红系基因，AUC 接近 1；
+- **Lineage2** 的终点是 LMPP/MPP，*Flt3*、*Cd34* 等淋系引物祖细胞标记；
+- **Lineage3** 只到一个 17 个细胞的小簇（簇 9），作者注释以 LT-HSC 为主，却高表达 *Igkc*、*Jchain*（浆细胞基因）——
+  这更像是**少量污染细胞或双细胞**，而不是一条真实的分化谱系。
+
+最后一点很重要：slingshot 会为 MST 的**每一个叶子簇**生成一条谱系，一个由十几个异常细胞构成的小簇也会变成"谱系"。
+解读轨迹之前，先检查每个终点簇的大小和身份。
+
+### RNA velocity：给伪时间加上方向
+
+伪时间的方向由我们指定的起点决定。**RNA velocity**（La Manno et al. 2018）利用 reads 中**未剪接**（内含子）
+与**已剪接**（外显子）的比例推断每个基因"正在上调还是下调"，从而为每个细胞估计一个未来状态的方向。
+流程：比对后用 velocyto / STARsolo（`--soloFeatures Gene Velocyto`）/ alevin-fry 生成 spliced/unspliced 两个矩阵，
+再用 scVelo（Python）或 R 的 `velociraptor`（调用 scVelo）计算。本数据集（Smart-seq2，仅提供基因计数）
+没有这两个矩阵，因此不在此演示。注意 velocity 的假设（转录动力学稳态、剪接速率恒定）在许多系统中并不成立，
+结果应与已知生物学和伪时间相互印证。
+
+### TSCAN：另一种快速方案
+
+```{r}
+# quickPseudotime：计算簇中心 → 构建 MST → 把细胞投影到 MST 的边上
+tscan_pt <- quickPseudotime(sce, use.dimred = "PCA", clusters = sce$cluster, start = root)
+tscan_pt$mst                       # 簇之间的最小生成树（igraph 对象）
+tscan_pt$ordering                  # PseudotimeOrdering 对象：细胞 × 路径
+tscan_avg <- TrajectoryUtils::averagePseudotime(tscan_pt$ordering)
+
+# 与 slingshot 的（各谱系平均）伪时间一致吗？
+cor(tscan_avg, sce$pseudotime_mean, use = "complete.obs", method = "spearman")
+```
+
+### 手写扩散映射与扩散伪时间 {#sec-diffmap}
+
+扩散映射（diffusion map，Haghverdi et al. 2015/2016；destiny 包）把细胞之间的相似度看作
+**随机游走的转移概率**，其主特征向量构成一个对噪声稳健、保留连续轨迹的低维空间。
+1,900 个细胞的规模，用 base R 的 `eigen()` 就能完整实现：
+
+```{r}
+#| label: diffusion-map
+diffusion_map <- function(X, k = 30, n_ev = 10) {
+  D2 <- as.matrix(dist(X))^2                                   # 细胞间平方欧氏距离
+  sigma <- apply(sqrt(D2), 1, \(d) sort(d)[k])                  # 每个细胞的局部带宽：第 k 近邻距离
+  K <- exp(-D2 / outer(sigma, sigma, \(a, b) a^2 + b^2)) *      # 局部自适应高斯核（Haghverdi 2016）
+       sqrt(2 * outer(sigma, sigma) / outer(sigma, sigma, \(a, b) a^2 + b^2))
+  diag(K) <- 0
+  q <- rowSums(K)
+  K <- K / outer(q, q)                                          # 密度归一化
+  d <- rowSums(K)
+  S <- K / sqrt(outer(d, d))                                    # 对称化的转移矩阵
+  e <- eigen(S, symmetric = TRUE)
+  ev <- e$vectors[, 2:(n_ev + 1)] / sqrt(d)                     # 去掉平凡的第一特征向量
+  list(dc = ev, values = e$values[2:(n_ev + 1)])
+}
+ncol(reducedDim(sce, "PCA"))                                    # denoisePCA 保留的 PC 数
+dm <- cached("nestorowa_diffmap.rds", diffusion_map(reducedDim(sce, "PCA")))
+round(dm$values, 4)
+```
+
+扩散伪时间（DPT）的简化版：在特征值加权的扩散空间中，计算每个细胞到起点（根细胞）的距离。
+根细胞选 HSC 得分最高的细胞：
+
+```{r}
+root_cell <- which.max(hsc_score[colnames(sce)])
+w <- dm$values / (1 - dm$values)                                 # 对所有游走步长求和后的权重
+dc_w <- sweep(dm$dc, 2, w, "*")
+dpt <- sqrt(rowSums(sweep(dc_w, 2, dc_w[root_cell, ], "-")^2))
+sce$dpt <- dpt / max(dpt)
+cor(sce$dpt, sce$pseudotime_mean, method = "spearman")
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4
+dm_df <- tibble(DC1 = dm$dc[, 1], DC2 = dm$dc[, 2], DC3 = dm$dc[, 3],
+                broad = sce$broad, dpt = sce$dpt)
+(ggplot(dm_df, aes(DC1, DC2, colour = broad)) + geom_point(size = 0.6) + labs(title = "扩散成分 DC1 vs DC2")) |
+  (ggplot(dm_df, aes(DC1, DC2, colour = dpt)) + geom_point(size = 0.6) + scale_colour_viridis_c() +
+     labs(title = "扩散伪时间"))
+```
+
+扩散成分上可以看到从 HSC 出发、向不同方向延伸的分支；手写 DPT 与 slingshot 伪时间的秩相关告诉我们
+两种完全不同的算法在多大程度上同意细胞的排序。
+
+### 伪时间的稳健性 {#sec-pt-robust}
+
+轨迹推断有很多"自由度"：PC 数、聚类分辨率、随机种子、起点。系统地扰动它们（PC 数 × 近邻数），看伪时间排序是否稳定。
+注意参考结果用的是 `denoisePCA()` 保留的少量 PC：
+
+```{r}
+#| label: pt-robustness
+pca50 <- calculatePCA(sce, ncomponents = 50, subset_row = hvg)   # 另算一个 50 PC 的版本
+settings <- expand_grid(n_pc = c(10, 20, 50), k = c(10, 20))
+pt_runs <- cached("nestorowa_pt_robustness.rds", pmap(settings, function(n_pc, k) {
+  emb_k <- pca50[, 1:n_pc]
+  cl <- clusterRows(emb_k, NNGraphParam(k = k, cluster.fun = "louvain"))
+  rt <- names(which.max(tapply(hsc_score[colnames(sce)], cl, mean)))
+  s <- slingshot(emb_k, clusterLabels = cl, start.clus = rt)
+  rowMeans(slingPseudotime(s), na.rm = TRUE)
+}))
+pt_mat <- do.call(cbind, pt_runs)
+colnames(pt_mat) <- with(settings, paste0("pc", n_pc, "_k", k))
+round(cor(cbind(reference = sce$pseudotime_mean, dpt = sce$dpt, pt_mat), method = "spearman"), 2)
+```
+
+如果大多数设置之间的秩相关都很高，说明"细胞沿轨迹的排序"是稳健的；谱系的**分支结构**（哪些簇连在一起）
+通常比排序更敏感——这也是为什么应当同时报告谱系结构在不同设置下是否一致。
+
+### 沿伪时间的基因模块 {#sec-pt-modules}
+
+把随伪时间显著变化的基因按其**平滑后的表达曲线**聚成几个模块，可以概括"先上调—后下调"等动态模式。
+对每个基因拟合平滑样条，是"对矩阵每一行应用函数"的又一个例子：
+
+```{r}
+#| fig-height: 5
+lin1 <- !is.na(pt[, 1])
+top_dyn <- lin_genes |> dplyr::filter(lineage == colnames(pt)[1], FDR < 1e-10) |>
+  slice_max(abs(logFC), n = 150) |> pull(gene)
+ord <- order(pt[lin1, 1])
+grid_pt <- seq(min(pt[lin1, 1]), max(pt[lin1, 1]), length.out = 50)
+smooth_mat <- t(apply(as.matrix(logcounts(sce)[top_dyn, lin1]), 1, function(y) {
+  predict(smooth.spline(pt[lin1, 1], y, df = 5), grid_pt)$y
+}))
+smooth_z <- t(scale(t(smooth_mat)))
+set.seed(1)
+km <- kmeans(smooth_z, centers = 4, nstart = 20)
+ComplexHeatmap::Heatmap(
+  smooth_z, name = "z", cluster_columns = FALSE, show_row_names = FALSE,
+  row_split = paste("module", km$cluster), cluster_row_slices = FALSE,
+  column_title = paste(colnames(pt)[1], "：伪时间 →"),
+  col = circlize::colorRamp2(c(-2, 0, 2), c("#2166AC", "white", "#B2182B"))
+)
+```
+
+```{r}
+split(rownames(smooth_z), km$cluster) |> lapply(head, 8)
+```
+
+## 与 Seurat / Python 互通
+
+```{r}
+#| eval: false
+# SCE → Seurat
+seu <- Seurat::as.Seurat(sce, counts = "counts", data = "logcounts")
+
+# SCE ↔ AnnData（h5ad，Scanpy）
+library(zellkonverter)
+writeH5AD(sce, "data/nestorowa.h5ad")
+sce2 <- readH5AD("data/nestorowa.h5ad")
+```
+
+## 保存
+
+```{r}
+saveRDS(sce, file.path(DATA_DIR, "nestorowa_sce.rds"))
+```
+
+## 练习
+
+1. 改用 `modelGeneVar()`（不用 spike-in）选择 HVG，与 `modelGeneVarWithSpikes()` 的前 500 个 HVG 比较重叠。
+2. 用 `clusterSweep()` 系统地尝试 `k = c(10, 20, 40)` × `cluster.fun = c("louvain", "walktrap")`，
+   用 `approxSilhouette()` 比较聚类质量。
+3. 用作者提供的 `diffusion` 降维（`reducedDim(sce, "diffusion")`）运行 slingshot，谱系结构是否一致？
+4. 把簇注释为 HSC / MPP / LMPP / GMP / MEP（参考 `sce$broad` 与 marker），并用 `table()` 检查一致性。
+5. 找出 GMP 占比最高的簇，把它和 MEP 簇一起作为 `end.clus` 传给 `slingshot()`，谱系是否变为
+   HSC→GMP 与 HSC→MEP 两条分叉？Mpo 的趋势如何变化？
+6. 用 `diffusion_map()` 的 `k = 10` 与 `k = 50` 重新计算 DPT，与 `k = 30` 的结果比较。
+7. 对每条 slingshot 谱系分别计算 FACS 标记与该谱系伪时间的相关，CD16 在哪条谱系上随伪时间上升？
+8. 对 FACS 缺失的细胞，能否用 RNA 表达"预测"其表面蛋白强度（例如用 *Procr* 预测 EPCR）？在有数据的细胞上先评估预测效果。
+
+::: {.callout-tip collapse="true"}
+## 参考答案（1 与 2）
+```r
+# 1
+dec2 <- modelGeneVar(sce)
+length(intersect(getTopHVGs(dec, n = 500), getTopHVGs(dec2, n = 500)))
+
+# 2
+sweep <- clusterSweep(reducedDim(sce, "PCA"), NNGraphParam(),
+                      k = c(10L, 20L, 40L), cluster.fun = c("louvain", "walktrap"))
+map_dbl(as.list(sweep$clusters), \(cl) mean(approxSilhouette(reducedDim(sce, "PCA"), cl)$width))
+```
+:::

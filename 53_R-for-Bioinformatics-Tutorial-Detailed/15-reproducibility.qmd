@@ -1,0 +1,538 @@
+# 可复现性、性能与大规模数据 {#sec-repro}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：1 小时（详细版）
+>
+> 目标：把前面的分析变成**别人（以及半年后的你）能重跑**的项目：项目结构、环境锁定（renv / conda / 容器）、
+> 参数化报告（Quarto）、流水线（targets）、并行（BiocParallel）、大数据（HDF5 / BPCells）、高效序列化（qs2）。
+> 详细版新增：可运行的 targets 示例、数据 manifest 与注释版本记录、结果契约（checkmate）、性能剖析与内存。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 项目结构 / 环境锁定 | renv、conda、容器、sessionInfo | 10 min |
+| Quarto 参数化报告 | | 5 min |
+| targets / @sec-targets-demo | 依赖图；动手跑一个流水线 | 10 min |
+| 并行 / 大规模单细胞 / 序列化 | BiocParallel、BPCells、HDF5、qs2 | 10 min |
+| @sec-provenance | md5 清单、注释版本、包版本表 | 10 min |
+| @sec-validation | 结果契约 | 5 min |
+| @sec-profiling | Rprof、lobstr | 10 min |
+:::
+
+```{r}
+library(tidyverse)
+```
+
+## 项目结构
+
+```
+my-rnaseq-project/
+├── README.md               项目说明、如何复现
+├── renv.lock               R 包版本锁（或 environment.yml）
+├── _targets.R              流水线定义
+├── R/                      函数（不是脚本！）
+│   ├── io.R
+│   ├── qc.R
+│   └── de.R
+├── data-raw/               原始数据（只读；大文件不进 git，记录来源与 md5）
+├── data/                   中间结果（可再生，gitignore）
+├── reports/
+│   └── analysis.qmd        参数化报告
+├── figures/
+└── tests/testthat/         函数的单元测试
+```
+
+原则：
+
+1. **原始数据只读**；所有处理都由代码完成，不手工编辑表格。
+2. **函数放在 `R/`**，脚本/报告只负责调用——便于测试与复用。
+3. 用 `here::here("data", "x.rds")` 构造路径，不用 `setwd()`，不写绝对路径。
+4. 每一个随机步骤设定种子（`set.seed()`，Seurat 函数的 `seed.use`，`BiocParallel` 的 `RNGseed`）。
+
+## 环境锁定
+
+### renv
+
+```{r}
+#| eval: false
+renv::init(bioconductor = "3.22")   # 为项目创建独立库，并记录 Bioconductor 版本
+renv::install(c("DESeq2", "Seurat"))
+renv::snapshot()                    # 写入 renv.lock
+# 在另一台机器上：
+renv::restore()
+```
+
+`renv.lock` 记录了每个包的确切版本与来源（CRAN / Bioconductor / GitHub）。
+
+### conda / mamba
+
+本教程的环境就是用 conda-forge + bioconda 安装的（二进制包，免编译）：
+
+```bash
+mamba create -n rbio -c conda-forge -c bioconda r-base=4.5 r-seurat bioconductor-deseq2 ...
+mamba env export -n rbio --from-history > environment.yml   # 只导出显式安装的包
+mamba env create -f environment.yml
+```
+
+::: callout-warning
+不要在同一个 R 库中混用 conda 与 `install.packages()` 源码编译：
+二者链接的系统库（libcurl、HDF5、BLAS……）版本不同，迟早出现难以调试的崩溃。
+选定一种主渠道。
+:::
+
+### 容器
+
+最高级别的可复现：把操作系统 + R + 包全部固定在镜像中。
+
+```dockerfile
+FROM bioconductor/bioconductor_docker:RELEASE_3_22
+RUN R -e 'BiocManager::install(c("DESeq2", "edgeR", "scran"), ask = FALSE)' \
+ && R -e 'install.packages(c("Seurat", "ggrepel", "patchwork"))'
+WORKDIR /project
+```
+
+HPC 上通常用 Apptainer/Singularity 运行同一镜像：`apptainer run docker://bioconductor/bioconductor_docker:RELEASE_3_22`。
+
+### 记录会话信息
+
+```{r}
+sessioninfo::session_info(c("DESeq2", "Seurat", "edgeR"), dependencies = FALSE)
+```
+
+每份报告末尾都应包含 `sessionInfo()` 或 `sessioninfo::session_info()`。
+
+## Quarto 参数化报告
+
+同一份分析模板，用不同参数生成多份报告（例如每种细胞类型一份）：
+
+````markdown
+---
+title: "Pseudobulk DE report"       # 正文中可用 params$celltype 引用参数
+params:
+  celltype: "CD14+ Monocytes"
+  fdr: 0.05
+format: html
+---
+
+```{{r}}
+res <- readRDS("data/kang_pseudobulk_results.rds") |>
+  dplyr::filter(celltype == params$celltype, padj < params$fdr)
+```
+````
+
+```bash
+quarto render report.qmd -P celltype:"B cells" -P fdr:0.01 --output B_cells.html
+```
+
+或在 R 中批量生成：
+
+```{r}
+#| eval: false
+for (ct in c("B cells", "CD14+ Monocytes", "NK cells")) {
+  quarto::quarto_render("report.qmd", execute_params = list(celltype = ct),
+                        output_file = paste0(make.names(ct), ".html"))
+}
+```
+
+本书使用了 `execute: freeze: auto`（见 `_quarto.yml`）：已渲染章节的计算结果被冻结在 `_freeze/`，
+只有源码变动的章节才会重新计算。
+
+## targets：可缓存的分析流水线
+
+当分析包含很多耗时步骤时，手动管理"哪些需要重跑"非常容易出错。
+`targets` 构建一个**依赖图**：每个目标（target）是一个函数调用的结果，
+只有当其代码或上游数据变化时才会重算——类似于 Make / Snakemake，但完全在 R 中。
+
+下面是 airway 分析的 `_targets.R`：
+
+```{r}
+#| eval: false
+# _targets.R
+library(targets)
+library(tarchetypes)
+tar_option_set(packages = c("DESeq2", "airway", "tidyverse", "clusterProfiler", "org.Hs.eg.db"))
+tar_source("R/")    # 加载 R/ 下的函数
+
+list(
+  tar_target(se,      { data(airway, package = "airway"); airway }),
+  tar_target(dds,     make_dds(se, design = ~ cell + dex)),          # R/de.R 中定义
+  tar_target(dds_fit, DESeq(dds)),
+  tar_target(res,     lfcShrink(dds_fit, coef = "dex_trt_vs_untrt", type = "apeglm")),
+  tar_target(res_tbl, annotate_results(res, dds_fit)),
+  tar_target(res_file, write_results(res_tbl, "results/de.tsv"), format = "file"),
+  tar_target(go,      run_go(res_tbl)),
+  tar_quarto(report,  "reports/analysis.qmd")
+)
+```
+
+```{r}
+#| eval: false
+targets::tar_make()            # 运行（只运行过时的目标）
+targets::tar_visnetwork()      # 可视化依赖图
+targets::tar_read(res_tbl)     # 读取结果
+targets::tar_outdated()        # 哪些目标需要重算
+```
+
+一个可以直接运行的最小示例（在临时目录中）：
+
+```{r}
+tmp <- tempfile("targets_demo"); dir.create(tmp)
+writeLines(c(
+  'library(targets)',
+  'list(',
+  '  tar_target(x, rnorm(100)),',
+  '  tar_target(m, mean(x)),',
+  '  tar_target(s, sd(x))',
+  ')'), file.path(tmp, "_targets.R"))
+
+withr::with_dir(tmp, {
+  targets::tar_make(reporter = "silent")
+  print(targets::tar_read(m))
+  targets::tar_make(reporter = "timestamp")   # 第二次运行：全部跳过（已是最新）
+})
+```
+
+### 动手：一个最小的 targets 流水线 {#sec-targets-demo}
+
+在临时目录里建一个三步流水线，体验"只重算需要重算的部分"：
+
+```{r}
+#| label: targets-demo
+tdir <- file.path(tempdir(), "targets_demo")
+dir.create(tdir, showWarnings = FALSE)
+writeLines(c(
+  'library(targets)',
+  'filter_genes <- function(m, min_count = 10) m[rowSums(m >= min_count) >= 4, ]',
+  'summarise_lib <- function(m) data.frame(sample = colnames(m), lib = colSums(m))',
+  'list(',
+  '  tar_target(counts,   { data(airway, package = "airway"); SummarizedExperiment::assay(airway) }),',
+  '  tar_target(filtered, filter_genes(counts)),',
+  '  tar_target(lib,      summarise_lib(filtered))',
+  ')'
+), file.path(tdir, "_targets.R"))
+
+withr::with_dir(tdir, {
+  targets::tar_make(callr_function = NULL, reporter = "timestamp")
+  print(targets::tar_read(lib))
+})
+```
+
+修改 `filter_genes()` 的默认阈值，再看哪些目标"过时"了：
+
+```{r}
+withr::with_dir(tdir, {
+  x <- readLines("_targets.R")
+  writeLines(sub("min_count = 10", "min_count = 20", x), "_targets.R")
+  print(targets::tar_outdated(callr_function = NULL))    # counts 不需要重算
+  targets::tar_make(callr_function = NULL, reporter = "timestamp")
+  print(targets::tar_meta(fields = c("name", "seconds", "time")))
+})
+```
+
+`counts`（读取原始数据）没有重算，只有下游的 `filtered` 与 `lib` 被更新——在真实项目中，
+被跳过的可能是数小时的比对或整合。
+
+## 并行：BiocParallel
+
+Bioconductor 包统一使用 `BiocParallel` 的 `BPPARAM` 参数：
+
+```{r}
+library(BiocParallel)
+bp <- MulticoreParam(workers = 2, RNGseed = 1)    # Linux / macOS fork；Windows 用 SnowParam
+res <- bplapply(1:4, \(i) { Sys.sleep(0.5); i^2 }, BPPARAM = bp)
+unlist(res)
+```
+
+```{r}
+#| eval: false
+dds <- DESeq(dds, parallel = TRUE, BPPARAM = MulticoreParam(8))
+sce <- scDblFinder(sce, samples = "sample", BPPARAM = MulticoreParam(8))
+dec <- modelGeneVar(sce, BPPARAM = MulticoreParam(8))
+register(MulticoreParam(8))      # 设为全局默认
+```
+
+Seurat 使用 `future`：
+
+```{r}
+#| eval: false
+library(future)
+plan("multicore", workers = 8)
+options(future.globals.maxSize = 8 * 1024^3)    # 允许传递 8 GB 的全局对象
+markers <- FindAllMarkers(obj)
+plan("sequential")
+```
+
+::: callout-tip
+并行不是免费的：每个 worker 都要复制数据（fork 是写时复制，但一旦修改就会复制）。
+内存紧张时（例如本教程的 9 GB 环境中第 12 章峰值约 5 GB），增加 worker 反而会触发 OOM。
+先用 `bench::mark()` / `profvis` 找到真正的瓶颈。
+:::
+
+## 大规模单细胞数据
+
+| 规模 | 方案 |
+|---|---|
+| < 10 万细胞 | 内存中的 `dgCMatrix` 即可 |
+| 10 万 – 数百万 | **BPCells**（Seurat v5）或 **HDF5Array / DelayedArray**（Bioconductor） |
+| 图谱级 | 先在磁盘上抽样/子集；Python 生态（scanpy + dask, rapids-singlecell）也是选项 |
+
+### BPCells + Seurat v5
+
+BPCells 以位压缩格式把计数矩阵存在磁盘上，按需流式计算：
+
+```{r}
+#| eval: false
+library(BPCells)
+mat <- open_matrix_10x_hdf5("data/1M_neurons_filtered_gene_bc_matrices_h5.h5")
+write_matrix_dir(mat, dir = "data/bpcells_1M")          # 转换为 BPCells 格式（一次）
+mat <- open_matrix_dir("data/bpcells_1M")
+
+obj <- CreateSeuratObject(counts = mat)                 # 计数留在磁盘上
+obj <- NormalizeData(obj) |> FindVariableFeatures()
+# "草图"（sketch）：抽取有代表性的子集做聚类，再投射回全部细胞
+obj <- SketchData(obj, ncells = 50000, method = "LeverageScore", sketched.assay = "sketch")
+```
+
+### HDF5Array + SingleCellExperiment
+
+```{r}
+#| eval: false
+library(HDF5Array)
+sce <- TENxBrainData::TENxBrainData()        # 130 万细胞，HDF5 后端
+class(counts(sce))                           # HDF5Matrix（DelayedArray）
+sce <- scuttle::logNormCounts(sce)           # 延迟计算，不会一次读入内存
+saveHDF5SummarizedExperiment(sce, "data/brain_h5", replace = TRUE)
+```
+
+## 序列化：rds vs qs2
+
+```{r}
+pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")
+if (file.exists(pbmc_file)) {
+  obj <- readRDS(pbmc_file)
+  f_rds <- tempfile(fileext = ".rds"); f_qs2 <- tempfile(fileext = ".qs2")
+  bench::mark(
+    rds = saveRDS(obj, f_rds),
+    qs2 = qs2::qs_save(obj, f_qs2, nthreads = 2),
+    iterations = 1, check = FALSE
+  )[, c("expression", "median")] |> print()
+  c(rds_MB = file.size(f_rds), qs2_MB = file.size(f_qs2)) / 1e6
+}
+```
+
+`qs2` 通常比 `saveRDS` 更快、更小（多线程 zstd 压缩）。长期归档或跨语言交换时，
+优先用开放格式：表格用 Parquet / TSV，矩阵用 HDF5 / MTX，单细胞对象用 h5ad。
+
+## 测试你的分析函数
+
+```{r}
+#| eval: false
+# tests/testthat/test-qc.R
+test_that("cpm 保留维度且每列和为 1e6", {
+  m <- matrix(c(10, 0, 90, 5, 5, 0), nrow = 3, dimnames = list(letters[1:3], c("s1", "s2")))
+  out <- cpm(m)
+  expect_equal(dim(out), dim(m))
+  expect_equal(unname(colSums(out)), c(1e6, 1e6))
+  expect_equal(dimnames(out), dimnames(m))
+})
+```
+
+`testthat::test_dir("tests/testthat")` 运行全部测试。对数据分析而言，最有价值的测试往往是
+**断言**：在流水线关键步骤加 `stopifnot()` 检查维度、样本顺序、ID 唯一性
+（例如第 4 章强调的 `colData` 与 `counts` 列顺序一致）。
+
+## 数据与注释的来源记录 {#sec-provenance}
+
+"用的是哪个版本的数据和注释"是可复现性中最常被遗漏的部分（第 5、7 章已经看到版本差异的后果）。
+把它自动化：
+
+### 数据文件清单（manifest）
+
+```{r}
+files <- list.files(DATA_DIR, recursive = TRUE, full.names = TRUE)
+files <- files[!grepl("parquet|/hg19/|_files/", files)]          # 跳过目录型数据
+manifest <- tibble(
+  file   = sub(paste0("^", DATA_DIR, "/"), "", files),
+  size_MB = round(file.size(files) / 1e6, 2),
+  modified = format(file.mtime(files), "%Y-%m-%d"),
+  md5    = unname(tools::md5sum(files))
+) |> arrange(desc(size_MB))
+head(manifest, 10)
+```
+
+```{r}
+#| eval: false
+write_tsv(manifest, "data/MANIFEST.tsv")   # 与代码一起提交到 Git；数据本身不提交
+# 下次运行前校验：
+old <- read_tsv("data/MANIFEST.tsv")
+changed <- old$file[old$md5 != tools::md5sum(file.path(DATA_DIR, old$file))]
+```
+
+### 注释资源的版本
+
+```{r}
+ann_versions <- list(
+  Bioconductor = as.character(BiocManager::version()),
+  org.Hs.eg.db = {
+    m <- AnnotationDbi::metadata(org.Hs.eg.db::org.Hs.eg.db)
+    paste(m$value[m$name %in% c("EGSOURCEDATE", "ENSOURCEDATE")], collapse = " / ")
+  },
+  EnsDb.Hsapiens.v86 = {
+    m <- ensembldb::metadata(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86)
+    paste("Ensembl", m$value[m$name == "ensembl_version"], m$value[m$name == "genome_build"])
+  },
+  msigdbr = as.character(packageVersion("msigdbr")),
+  airway_annotation = "Ensembl 75 (GRCh37)，见第 5 章",
+  TCGA_MC3 = "GRCh37（第 14 章用已知热点验证）"
+)
+tibble(resource = names(ann_versions), version = unlist(ann_versions))
+```
+
+### 关键包版本表
+
+```{r}
+key_pkgs <- c("DESeq2", "edgeR", "limma", "Seurat", "SeuratObject", "scran", "scater", "SingleR",
+              "clusterProfiler", "fgsea", "maftools", "survival", "data.table", "dplyr", "ggplot2")
+tibble(package = key_pkgs,
+       version = vapply(key_pkgs, \(p) as.character(packageVersion(p)), character(1)),
+       source  = vapply(key_pkgs, \(p) {
+         d <- packageDescription(p)
+         if (!is.null(d$biocViews)) "Bioconductor" else if (!is.null(d$Repository)) d$Repository else "other"
+       }, character(1)))
+```
+
+## 防御式流水线：结果契约 {#sec-validation}
+
+第 1 章（@sec-debug）介绍了函数参数检查。在流水线层面，可以为每个**中间结果**定义"契约"：
+行数范围、必须存在的列、取值范围、缺失比例上限、ID 唯一性。契约失败时立刻停止，而不是让错误传到最终报告：
+
+```{r}
+library(checkmate)
+validate_de_table <- function(df, id_col = "gene_id", max_na_padj = 0.5) {
+  coll <- makeAssertCollection()                          # 收集所有失败，一次报告
+  assert_data_frame(df, min.rows = 1000, add = coll)
+  assert_names(names(df), must.include = c(id_col, "baseMean", "padj", "pvalue"), add = coll)
+  assert_character(df[[id_col]], unique = TRUE, any.missing = FALSE, add = coll)
+  assert_numeric(df$pvalue, lower = 0, upper = 1, add = coll)
+  assert_numeric(df$baseMean, lower = 0, any.missing = FALSE, add = coll)
+  if (mean(is.na(df$padj)) > max_na_padj)
+    coll$push(sprintf("padj 缺失比例 %.1f%% 超过上限 %.0f%%", 100 * mean(is.na(df$padj)), 100 * max_na_padj))
+  reportAssertions(coll)
+  invisible(df)
+}
+de_tbl <- read_tsv(file.path(DATA_DIR, "airway_DESeq2_results.tsv"), show_col_types = FALSE)
+validate_de_table(de_tbl)            # 通过：无输出
+```
+
+一个"坏"的结果表会一次性报告所有问题：
+
+```{r}
+bad_tbl <- de_tbl |> slice(1:2000) |>
+  mutate(pvalue = if_else(row_number() == 1, 1.5, pvalue),
+         gene_id = if_else(row_number() == 2, gene_id[1], gene_id),
+         padj = if_else(row_number() > 500, NA_real_, padj))
+try(validate_de_table(bad_tbl))
+```
+
+## 性能剖析：找到真正的瓶颈 {#sec-profiling}
+
+不要凭直觉优化。`Rprof()`（base R）或 `profvis`（交互式火焰图）告诉你时间花在哪里。
+剖析第 8 章逐基因 `lm()` 的方差分解：
+
+```{r}
+#| label: rprof
+E_demo <- matrix(rnorm(2000 * 8), 2000, 8)
+cell <- factor(rep(1:4, each = 2)); dex <- factor(rep(c("u", "t"), 4))
+prof_file <- tempfile()
+Rprof(prof_file, interval = 0.01)
+invisible(apply(E_demo, 1, \(y) anova(lm(y ~ cell + dex))[["Sum Sq"]]))
+Rprof(NULL)
+head(summaryRprof(prof_file)$by.total, 12)
+```
+
+大部分时间花在 `lm()` 的**准备工作**（`model.frame`、`model.matrix`、公式解析）上，而不是数值计算本身——
+这些对每个基因都完全一样。所以第 8 章的矩阵化版本只构建一次设计矩阵，就快了几百倍。
+这是 R 性能优化的普遍规律：**把循环中不变的工作移出循环**，然后才考虑向量化或 C++。
+
+```{r}
+#| eval: false
+profvis::profvis({ apply(E_demo, 1, \(y) anova(lm(y ~ cell + dex))) })   # 交互式火焰图
+```
+
+### 内存：对象到底有多大？
+
+```{r}
+pbmc_file <- file.path(DATA_DIR, "pbmc3k_annotated.rds")
+if (file.exists(pbmc_file)) {
+  obj <- readRDS(pbmc_file)
+  c(object.size = format(object.size(obj), units = "MB"),
+    lobstr      = format(lobstr::obj_size(obj), units = "MB"))
+}
+```
+
+`object.size()` 不计算共享的内存、也不深入某些环境；`lobstr::obj_size()` 更准确。
+Seurat 对象的大部分体积来自 `scale.data`（稠密矩阵！）——保存前可以用 `DietSeurat()` 去掉不需要的层。
+
+```{r}
+x <- runif(1e6)
+lobstr::obj_size(x)
+y <- x                          # 不复制：两个名字指向同一个对象
+lobstr::obj_size(x, y)          # 总共仍是 8 MB
+y[1] <- 0                       # 修改时才复制（copy-on-modify，第 1 章）
+lobstr::obj_size(x, y)          # 16 MB
+```
+
+## 发布前检查清单
+
+- [ ] 原始数据来源（GEO/SRA 编号、下载日期、md5）已记录
+- [ ] 参考基因组与注释版本（GRCh38 / GENCODE v49 / Ensembl 115……）已记录且全流程一致；
+      对外部来源的坐标文件用已知位点**验证**过版本（第 5、14 章）
+- [ ] ID 映射的丢失率、一对多处理方式已报告（第 5、9 章）
+- [ ] 每个关键变量的缺失数量、缺失原因与处理方式（删除 / 插补 / 作为类别）已报告（第 1、2、14 章）
+- [ ] 样本标签已用表达证据核查（性别、已知应答基因，第 6–7 章）
+- [ ] 所有软件版本已锁定（`renv.lock` / `environment.yml` / 镜像 tag）
+- [ ] 随机种子已设定
+- [ ] 每个过滤阈值与参数在代码中而非"手工完成"
+- [ ] 从原始数据一键重跑（`tar_make()` / `quarto render`）可得到相同结果
+- [ ] 代码与报告进入 Git；大文件用外部存储（Zenodo / figshare / 机构存储）并在 README 中链接
+
+## 结语与延伸阅读
+
+你已经完成了从 R 语言语义到 bulk 与单细胞转录组、再到肿瘤基因组与生存分析的完整路线。继续深入：
+
+- **R 语言**：Hadley Wickham, *Advanced R*（第 2 版）；*R for Data Science*（第 2 版）
+- **Bulk RNA-seq**：Bioconductor `rnaseqGene` 工作流；DESeq2、edgeR、limma 用户指南（edgeR 的 *User's Guide* 极其详尽）
+- **单细胞**：*Orchestrating Single-Cell Analysis with Bioconductor*（OSCA 书）；Seurat 官方 vignettes；
+  *Single-cell best practices*（Heumos et al. 2023, *Nat Rev Genet*，以 Python 为主但原理通用）
+- **肿瘤基因组**：maftools vignette；GATK Best Practices；*Cancer Genomics*（Cancer Genome Atlas 系列论文）
+- **生存分析**：Therneau & Grambsch, *Modeling Survival Data*；`survival` 包 vignettes
+
+```{r}
+sessionInfo()
+```

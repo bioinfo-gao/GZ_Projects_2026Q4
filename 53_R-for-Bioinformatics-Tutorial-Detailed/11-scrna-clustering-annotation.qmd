@@ -1,0 +1,700 @@
+# 单细胞 RNA-seq（二）：归一化、降维、聚类与细胞类型注释 {#sec-scrna-cluster}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2.25 小时（详细版）
+>
+> 目标：理解标准流程每一步背后的假设——归一化、高变基因、PCA、kNN/SNN 图、
+> 社区发现、UMAP；找 marker 基因；手动与自动（SingleR）注释细胞类型。详细版新增：clustree 分辨率选择、
+> PC 数/近邻数的敏感性网格、参考与查询的基因命名差异、注释置信度与"未分配"细胞。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 归一化 / HVG / PCA | LogNormalize vs SCTransform v2；保留多少 PC | 20 min |
+| 聚类 | kNN/SNN、Louvain/Leiden | 10 min |
+| @sec-clustree、@sec-param-sensitivity | 分辨率树；dims × k 网格的 ARI | 20 min |
+| 轮廓宽度 / UMAP | 聚类质量、UMAP 的局限 | 10 min |
+| Marker / 手动注释 | FindAllMarkers、模块打分 | 20 min |
+| @sec-signature-score、@sec-marker-auc | 均值法 vs 秩法打分（apply 实现）；AUC 选 marker | 15 min |
+| SingleR / @sec-ref-gene-overlap / @sec-singler-na | 自动注释；基因命名差异；pruned 标签 | 25 min |
+| 细胞周期 / 保存 | | 5 min |
+:::
+
+```{r}
+library(tidyverse)
+library(Seurat)
+library(patchwork)
+library(ggrepel)
+library(SingleR)
+library(celldex)
+library(bluster)
+```
+
+```{r}
+pbmc <- readRDS(file.path(DATA_DIR, "pbmc3k_qc.rds"))     # 第 10 章输出
+pbmc
+```
+
+## 归一化
+
+### LogNormalize
+
+$$
+\text{data}_{gc} = \log\!\left(1 + \frac{\text{count}_{gc}}{\sum_g \text{count}_{gc}} \times 10^4\right)
+$$
+
+即"每万 UMI 计数"后取自然对数。
+
+```{r}
+pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 1e4)
+Layers(pbmc)
+```
+
+它的问题：假设每个细胞的 RNA 总量相同（实际上细胞大小差异很大），并且对高 UMI 细胞，
+低表达基因的方差仍被测序深度影响。
+
+### SCTransform（v2）
+
+SCTransform（Hafemeister & Satija 2019；v2：Choudhary & Satija 2022）为每个基因拟合
+以测序深度为协变量的**正则化负二项 GLM**，用 **Pearson 残差**作为归一化表达值：
+
+$$
+\log \mu_{gc} = \beta_{g0} + \beta_{g1}\log(n_c), \quad
+r_{gc} = \frac{x_{gc} - \mu_{gc}}{\sqrt{\mu_{gc} + \mu_{gc}^2/\theta_g}}
+$$
+
+残差已经去除了深度效应并稳定了方差，可以直接做 PCA。安装 `glmGamPoi` 后速度大幅提升。
+
+```{r}
+pbmc_sct <- SCTransform(pbmc, vst.flavor = "v2", vars.to.regress = NULL, verbose = FALSE)
+pbmc_sct
+Assays(pbmc_sct)        # 新增 SCT assay，含 counts（校正后）、data、scale.data
+```
+
+| | LogNormalize + ScaleData | SCTransform v2 |
+|---|---|---|
+| 速度 | 快 | 稍慢（glmGamPoi 后可接受） |
+| 深度效应去除 | 部分 | 更彻底 |
+| 稀有群体分辨力 | 好 | 通常略好 |
+| 下游 DE | 用 `RNA` assay 的 `data` | 需 `PrepSCTFindMarkers()`，或仍用 `RNA` assay |
+
+本章主线使用 LogNormalize（便于理解每一步），在练习中比较 SCTransform。
+
+## 高变基因（HVG）
+
+大部分基因在细胞间的变化只是抽样噪声。选择"变异超过其均值所预期水平"的基因可以
+提高信噪比并加速计算。Seurat 的 `vst` 方法：拟合 log(方差)~log(均值) 的 loess 趋势，
+用标准化方差排序。
+
+```{r}
+pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
+top15 <- head(VariableFeatures(pbmc), 15)
+top15
+```
+
+```{r}
+#| fig-height: 4.5
+LabelPoints(VariableFeaturePlot(pbmc), points = top15, repel = TRUE, xnudge = 0, ynudge = 0) +
+  labs(title = "高变基因（LabelPoints 内部使用 ggrepel）")
+```
+
+PPBP、PF4（血小板）、LYZ、S100A9（单核）、GNLY、NKG7（NK）、IGLL5（B/浆细胞）——
+最高变的基因已经暗示了主要的细胞类型。
+
+## 缩放与 PCA
+
+`ScaleData` 把每个基因中心化、标准化为方差 1，使高表达基因不主导 PCA。
+
+```{r}
+pbmc <- ScaleData(pbmc)          # 默认只缩放 HVG；可加 vars.to.regress = "percent.mt"
+pbmc <- RunPCA(pbmc, npcs = 50, verbose = FALSE)
+print(pbmc[["pca"]], dims = 1:3, nfeatures = 6)
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4
+VizDimLoadings(pbmc, dims = 1:2, reduction = "pca", nfeatures = 15) |
+  DimPlot(pbmc, reduction = "pca") + NoLegend()
+```
+
+### 保留多少个主成分？
+
+```{r}
+#| fig-height: 4
+ElbowPlot(pbmc, ndims = 50)
+```
+
+```{r}
+#| fig-height: 6
+DimHeatmap(pbmc, dims = c(1:3, 9:11), cells = 500, balanced = TRUE, ncol = 3)
+```
+
+经验：PC 数宁多勿少（10–50 都常见），下游结果对此不太敏感；对复杂组织可多取。
+基于"解释方差的拐点"或 `PCAtools::findElbowPoint()`、`intrinsicDimension` 估计都可以。
+本数据取 10 个 PC。
+
+```{r}
+pcs <- 1:10
+```
+
+## 聚类：kNN 图 + 社区发现
+
+1. 在 PCA 空间中为每个细胞找 $k$ 个最近邻（kNN）；
+2. 用**共享近邻**（SNN, Jaccard 相似度）给边加权，减少"枢纽"细胞的影响；
+3. 在图上做社区发现（Louvain / Leiden），最大化模块度。`resolution` 越大，簇越多。
+
+```{r}
+pbmc <- FindNeighbors(pbmc, dims = pcs, k.param = 20)
+pbmc <- FindClusters(pbmc, resolution = c(0.2, 0.5, 0.8, 1.2), algorithm = 1, verbose = FALSE)
+pbmc@meta.data |> dplyr::select(starts_with("RNA_snn_res")) |> map_int(n_distinct)
+```
+
+```{r}
+#| fig-height: 4
+# 不同分辨率之间的对应关系
+table(res0.5 = pbmc$RNA_snn_res.0.5, res0.8 = pbmc$RNA_snn_res.0.8)
+```
+
+::: callout-note
+## Leiden 算法
+Leiden（Traag et al. 2019）修复了 Louvain 可能产生"内部不连通社区"的缺陷，是 Scanpy 的默认方法。
+在 Seurat 中设置 `algorithm = 4`（使用 `leidenbase` 包实现）：
+`FindClusters(pbmc, resolution = 0.5, algorithm = 4)`。
+:::
+
+### 分辨率的选择：clustree {#sec-clustree}
+
+"到底该分多少个簇"没有唯一答案。clustree 把不同分辨率下的聚类画成一棵树：节点是簇，
+边表示细胞从低分辨率簇流向高分辨率簇。**稳定的簇**在分辨率增加时保持为一条直线；
+**不稳定的簇**会在多个父节点之间来回交叉：
+
+```{r}
+#| fig-height: 6
+#| fig-width: 8
+library(clustree)
+clustree(pbmc@meta.data, prefix = "RNA_snn_res.", node_text_size = 3) +
+  guides(edge_colour = "none", edge_alpha = "none")
+```
+
+可以把一个 marker 的平均表达叠加到树上，看看在哪个分辨率下它被"分开"了：
+
+```{r}
+#| fig-height: 6
+#| fig-width: 8
+clustree(pbmc, prefix = "RNA_snn_res.", node_colour = "FCGR3A", node_colour_aggr = "mean",
+         node_text_size = 3) + guides(edge_colour = "none", edge_alpha = "none")
+```
+
+*FCGR3A*（CD16）高的节点在较低分辨率时就独立出来（CD16+ 单核细胞与 NK 细胞），说明它们是稳健的生物学群体。
+
+### 参数敏感性：PC 数与近邻数 {#sec-param-sensitivity}
+
+聚类结果依赖于 PC 数（`dims`）和近邻数（`k.param`）。用一个参数网格系统地检查，
+并以调整兰德指数（ARI）衡量与参考聚类（10 PCs、k = 20、res = 0.5）的一致性：
+
+```{r}
+#| label: param-grid
+ref_cl <- pbmc$RNA_snn_res.0.5
+grid <- expand_grid(n_pc = c(5, 10, 20, 30), k = c(10, 20, 50))
+sens <- cached("pbmc3k_param_sensitivity.rds", {
+  grid |> mutate(
+    clusters = map2(n_pc, k, \(np, kk) {
+      g <- FindNeighbors(pbmc, dims = 1:np, k.param = kk, verbose = FALSE)
+      FindClusters(g, resolution = 0.5, verbose = FALSE)$seurat_clusters
+    })
+  )
+})
+sens <- sens |> mutate(
+  n_clusters = map_int(clusters, n_distinct),
+  ARI = map_dbl(clusters, \(cl) bluster::pairwiseRand(ref_cl, cl, mode = "index"))
+)
+sens |> dplyr::select(-clusters)
+```
+
+```{r}
+#| fig-height: 3
+ggplot(sens, aes(factor(k), factor(n_pc), fill = ARI)) +
+  geom_tile() + geom_text(aes(label = sprintf("%.2f\n(%d)", ARI, n_clusters)), size = 3) +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  labs(x = "k.param", y = "PC 数", title = "与参考聚类的 ARI（括号内为簇数）")
+```
+
+PC 数为 10–20、k 为 10–20 时与参考高度一致（ARI ≈ 0.85–1）；PC 过少（5）或 k 过大（50）时
+相近的簇被合并（簇数减少），ARI 降到 0.6 左右。变化主要发生在"细分"的簇上（例如 naive/memory CD4 T 的边界）。
+报告结果时应说明所选参数，并在补充材料中展示这类敏感性分析。
+
+### 聚类质量：轮廓宽度
+
+```{r}
+Idents(pbmc) <- "RNA_snn_res.0.5"
+sil <- approxSilhouette(Embeddings(pbmc, "pca")[, pcs], clusters = Idents(pbmc))
+as_tibble(sil) |>
+  mutate(closest_is_self = cluster == other) |>
+  ggplot(aes(cluster, width, fill = cluster)) +
+  geom_boxplot(show.legend = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "近似轮廓宽度（>0：比最近的其他簇更接近本簇）")
+```
+
+## 非线性降维：UMAP 与 t-SNE
+
+```{r}
+pbmc <- RunUMAP(pbmc, dims = pcs, verbose = FALSE)
+pbmc <- RunTSNE(pbmc, dims = pcs)
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4.5
+DimPlot(pbmc, reduction = "umap", label = TRUE) + ggtitle("UMAP") |
+  DimPlot(pbmc, reduction = "tsne", label = TRUE) + ggtitle("t-SNE")
+```
+
+::: callout-warning
+## 不要过度解读 UMAP
+- UMAP/t-SNE 只**保局部邻域**：簇之间的距离、簇的大小与形状几乎没有定量意义。
+- 聚类是在 PCA/kNN 图上做的，**不是**在 UMAP 坐标上做的。
+- 结果受 `n.neighbors`、`min.dist`、随机种子影响。统计结论应基于 PCA 空间或原始表达。
+:::
+
+QC 指标在 UMAP 上的分布可以帮助识别低质量簇：
+
+```{r}
+#| fig-width: 11
+#| fig-height: 3.8
+FeaturePlot(pbmc, features = c("nCount_RNA", "percent.mt", "doublet_score"), ncol = 3) &
+  scale_colour_viridis_c()
+```
+
+## Marker 基因
+
+`FindAllMarkers` 对每个簇做"本簇 vs 其他所有细胞"的 Wilcoxon 秩和检验
+（安装 `presto` 后快几十倍）。
+
+```{r}
+markers <- FindAllMarkers(pbmc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+markers |>
+  as_tibble() |>
+  slice_max(avg_log2FC, n = 4, by = cluster) |>
+  dplyr::select(cluster, gene, avg_log2FC, pct.1, pct.2, p_val_adj)
+```
+
+`pct.1` / `pct.2`：本簇 / 其他细胞中表达该基因的细胞比例。好的 marker 是 `pct.1` 高、`pct.2` 低。
+
+::: callout-important
+## 单细胞 marker 检验的 p 值不能按字面理解
+1. **双重使用数据（double dipping）**：簇是根据表达定义的，再用同一数据检验簇间差异，p 值必然极小。
+2. **伪重复**：细胞不是独立样本，同一个体的细胞高度相关。
+因此 marker 检验只用于**排序**基因；跨条件的差异表达必须用伪 bulk（第 12 章）。
+:::
+
+### 可视化 marker
+
+```{r}
+#| fig-height: 5
+top3 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 3, by = cluster) |> pull(gene) |> unique()
+DotPlot(pbmc, features = top3) + RotatedAxis() +
+  scale_colour_gradient2(low = "steelblue", mid = "grey90", high = "firebrick")
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 7
+canonical <- c("IL7R", "CCR7", "S100A4", "CD14", "LYZ", "MS4A1", "CD8A",
+               "FCGR3A", "MS4A7", "GNLY", "NKG7", "FCER1A", "CST3", "PPBP")
+FeaturePlot(pbmc, features = canonical[c(1, 4, 6, 7, 8, 10, 12, 14)], ncol = 4, order = TRUE) &
+  NoAxes()
+```
+
+```{r}
+#| fig-height: 6
+top10 <- markers |> as_tibble() |> slice_max(avg_log2FC, n = 8, by = cluster) |> pull(gene) |> unique()
+DoHeatmap(subset(pbmc, downsample = 100), features = top10, size = 3) +
+  theme(axis.text.y = element_text(size = 6))
+```
+
+### 用 FetchData + ggplot 自定义
+
+```{r}
+#| fig-height: 4
+FetchData(pbmc, vars = c("ident", "umap_1", "umap_2", "CD8A", "CCR7")) |>
+  as_tibble() |>
+  pivot_longer(c(CD8A, CCR7), names_to = "gene", values_to = "expr") |>
+  arrange(expr) |>                                    # 高表达细胞画在最上层
+  ggplot(aes(umap_1, umap_2, colour = expr)) +
+  geom_point(size = 0.4) +
+  facet_wrap(~ gene) +
+  scale_colour_viridis_c(option = "magma") +
+  coord_fixed() + theme_void()
+```
+
+## 细胞类型注释
+
+### 基于 marker 的手动注释
+
+PBMC 的经典 marker：
+
+| 细胞类型 | marker |
+|---|---|
+| Naive CD4 T | IL7R, CCR7 |
+| Memory CD4 T | IL7R, S100A4 |
+| CD8 T | CD8A, CD8B |
+| NK | GNLY, NKG7 |
+| B | MS4A1, CD79A |
+| CD14+ Mono | CD14, LYZ |
+| FCGR3A+ Mono | FCGR3A, MS4A7 |
+| DC | FCER1A, CST3 |
+| Platelet | PPBP, PF4 |
+
+不要把簇编号写死在代码里（参数或版本变化时编号会变）；而是**用 marker 打分自动匹配**，
+然后人工核对：
+
+```{r}
+marker_sets <- list(
+  "Naive CD4 T"  = c("IL7R", "CCR7", "LEF1", "TCF7"),
+  "Memory CD4 T" = c("IL7R", "S100A4", "IL32", "LTB"),
+  "CD8 T"        = c("CD8A", "CD8B", "GZMK"),
+  "NK"           = c("GNLY", "NKG7", "GZMB", "PRF1"),
+  "B"            = c("MS4A1", "CD79A", "CD79B"),
+  "CD14+ Mono"   = c("CD14", "LYZ", "S100A8", "S100A9"),
+  "FCGR3A+ Mono" = c("FCGR3A", "MS4A7", "LST1"),
+  "DC"           = c("FCER1A", "CST3", "CLEC10A"),
+  "Platelet"     = c("PPBP", "PF4")
+)
+
+avg <- AverageExpression(pbmc, features = unique(unlist(marker_sets)), group.by = "ident")$RNA
+score <- sapply(marker_sets, \(g) colMeans(as.matrix(avg[g, , drop = FALSE])))   # 簇 × 类型
+score_z <- scale(score)                                                          # 每种类型在簇间标准化
+assign <- tibble(col     = rownames(score_z),                 # AverageExpression 给数字簇名加了前缀 "g"
+                 cluster = sub("^g", "", col),
+                 label   = colnames(score_z)[apply(score_z, 1, which.max)],
+                 z       = apply(score_z, 1, max))
+assign
+```
+
+注意：两个 CD4 T 簇很可能都被标成了同一类。原因是 memory 的 marker（S100A4、IL32）在单核/NK
+细胞中也高表达，z-score 时被这些簇"抢走"了。这正是**层级注释**的意义：先分大类，再在大类
+**内部**用区分性 marker 细分。
+
+```{r}
+cd4 <- assign |> filter(label %in% c("Naive CD4 T", "Memory CD4 T"))
+if (nrow(cd4) > 1) {
+  # 在 CD4 T 簇内部比较：CCR7（naive）相对 S100A4（memory）
+  naive_score <- avg["CCR7", cd4$col] - avg["S100A4", cd4$col]
+  assign$label[match(cd4$col, assign$col)] <-
+    if_else(naive_score == max(naive_score), "Naive CD4 T", "Memory CD4 T")
+}
+assign
+```
+
+```{r}
+#| fig-height: 4.5
+pheatmap::pheatmap(t(score_z), cluster_rows = FALSE, cluster_cols = FALSE,
+                   color = colorRampPalette(c("navy", "white", "firebrick"))(50),
+                   main = "簇 × 细胞类型 marker 得分（z）")
+```
+
+检查热图：每个簇应该在且仅在一种类型上得分明显最高。CD4 naive 与 memory 往往界限模糊——
+这也是生物学上的连续谱。
+
+```{r}
+#| fig-height: 5
+new_ids <- setNames(assign$label, assign$cluster)
+pbmc$celltype_manual <- unname(new_ids[as.character(Idents(pbmc))])
+DimPlot(pbmc, group.by = "celltype_manual", label = TRUE, repel = TRUE) + NoLegend() +
+  ggtitle("手动注释")
+```
+
+### 基因集打分：均值法 vs 秩法 {#sec-signature-score}
+
+用一组 marker 给每个细胞打分，是注释与状态分析中最常用的操作。两类方法：
+
+- **均值法**（Seurat `AddModuleScore()`）：基因集平均表达减去表达水平匹配的随机"对照基因"的平均表达；
+  依赖归一化与测序深度；
+- **秩法**（UCell、AUCell 的思路）：在**每个细胞内部**把所有基因按表达排序，看基因集是否集中在顶部；
+  只依赖细胞内的相对顺序，对深度和批次更稳健。
+
+手写一个简化的秩法得分——对矩阵的**每一列**（细胞）应用排序，正是 apply 家族的用武之地：
+
+```{r}
+#| label: rank-score
+sigs <- list(
+  NK   = c("GNLY", "NKG7", "GZMB", "PRF1", "KLRD1", "GZMA"),
+  B    = c("MS4A1", "CD79A", "CD79B", "CD19", "BANK1"),
+  Mono = c("CD14", "LYZ", "S100A8", "S100A9", "FCN1", "VCAN")
+)
+expr <- as.matrix(LayerData(pbmc, layer = "data"))      # 约 1.4 万 × 2.5 千，稠密约 270 MB
+max_rank <- 1500
+rank_score <- function(sig) {
+  idx <- which(rownames(expr) %in% sig)
+  apply(expr, 2, function(x) {
+    r <- rank(-x, ties.method = "average")[idx]          # 该细胞中基因集各基因的名次
+    r <- pmin(r, max_rank)                                # 排名靠后（含 0 表达）统一截断
+    1 - mean(r) / max_rank                                # 越接近 1：基因集越集中在顶部
+  })
+}
+rank_scores <- vapply(sigs, rank_score, numeric(ncol(expr)))
+rm(expr); invisible(gc())
+pbmc <- AddModuleScore(pbmc, features = sigs, name = "mod")
+colnames(pbmc@meta.data) <- sub("^mod(\\d)$", "\\1", colnames(pbmc@meta.data))
+mean_scores <- as.matrix(pbmc@meta.data[, as.character(seq_along(sigs))])
+colnames(mean_scores) <- names(sigs)
+diag(cor(rank_scores, mean_scores, method = "spearman"))
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 3.5
+as_tibble(rank_scores) |> mutate(celltype = pbmc$celltype_manual) |>
+  pivot_longer(-celltype, names_to = "signature", values_to = "score") |>
+  ggplot(aes(score, celltype, fill = signature)) +
+  geom_boxplot(outlier.size = 0.2) + facet_wrap(~ signature, nrow = 1) +
+  theme(legend.position = "none") + labs(x = "秩法得分", y = NULL)
+```
+
+两种得分高度一致，且每个基因集都在对应的细胞类型中最高。秩法的代价是需要对每个细胞排序（这里用稠密矩阵 + `apply`，
+几秒钟）；对十万级细胞，UCell 只对每个细胞的前 `maxRank` 个基因排序，并在稀疏矩阵上分块并行计算。
+
+::: callout-tip
+## `apply(expr, 2, rank)` 的内存账
+
+稠密化一个 2 万 × 10 万的矩阵需要约 16 GB。处理大数据时，按细胞**分块**：
+`split(seq_len(ncol(m)), ceiling(seq_len(ncol(m)) / 5000))` 得到块索引，对每块 `as.matrix()` 后计算，
+再 `unlist()` 合并——这就是第 1 章 apply 家族 + 第 15 章分块思想的结合。
+:::
+
+### marker 的另一种度量：AUC {#sec-marker-auc}
+
+Wilcoxon 检验的 p 值随细胞数增大而趋于 0，几乎不提供排序信息（第 12 章）。更适合**选 marker** 的度量是
+**AUC**：随机取本簇一个细胞和其他簇一个细胞，本簇细胞表达更高的概率（0.5 = 无区分，1 = 完美区分）：
+
+```{r}
+Idents(pbmc) <- "celltype_manual"
+roc_nk <- FindMarkers(pbmc, ident.1 = "NK", test.use = "roc", only.pos = TRUE, verbose = FALSE) |>
+  as_tibble(rownames = "gene") |> arrange(desc(myAUC))
+wil_nk <- FindMarkers(pbmc, ident.1 = "NK", only.pos = TRUE, verbose = FALSE) |>
+  as_tibble(rownames = "gene")
+head(roc_nk, 8)
+inner_join(roc_nk |> dplyr::select(gene, myAUC), wil_nk |> dplyr::select(gene, avg_log2FC, p_val_adj),
+           join_by(gene)) |>
+  summarise(n = n(), cor_auc_lfc = cor(myAUC, avg_log2FC, method = "spearman"),
+            n_p_below_1e_50 = sum(p_val_adj < 1e-50))
+Idents(pbmc) <- "RNA_snn_res.0.5"                     # 恢复为聚类结果
+```
+
+AUC 直接回答"这个基因能多好地把 NK 细胞与其他细胞分开"，可以跨簇、跨数据集比较；
+而 p 值主要反映细胞数。scran 的 `scoreMarkers()`（第 13 章）同时报告 AUC 与 Cohen's d 等效应量指标。
+
+### 自动注释：SingleR
+
+SingleR（Aran et al. 2019）把每个细胞与参考数据集（已注释的纯化细胞 bulk 或单细胞图谱）
+做 Spearman 相关，并通过迭代"微调"（fine-tuning）区分相近类型。
+
+`celldex::MonacoImmuneData()`：114 个 bulk RNA-seq 样本，29 种纯化免疫细胞类型，非常适合 PBMC。
+
+```{r}
+ref <- cached("celldex_monaco.rds", celldex::MonacoImmuneData())
+ref
+table(ref$label.main)
+```
+
+```{r}
+pred <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref,
+                labels = ref$label.main, de.method = "classic")
+pbmc$singler_main <- pred$pruned.labels       # 低置信度的被修剪为 NA
+
+pred_fine <- SingleR(test = LayerData(pbmc, layer = "data"), ref = ref, labels = ref$label.fine)
+pbmc$singler_fine <- pred_fine$pruned.labels
+
+table(pbmc$singler_main, useNA = "ifany")
+```
+
+```{r}
+#| fig-height: 5
+plotScoreHeatmap(pred, show.labels = FALSE, annotation_col = data.frame(
+  cluster = Idents(pbmc), row.names = colnames(pbmc)))
+```
+
+```{r}
+#| fig-height: 5
+tab <- table(manual = pbmc$celltype_manual, SingleR = pbmc$singler_main)
+as_tibble(tab) |>
+  mutate(prop = n / sum(n), .by = manual) |>
+  ggplot(aes(SingleR, manual, fill = prop)) +
+  geom_tile() + geom_text(aes(label = ifelse(n > 0, n, "")), size = 3) +
+  scale_fill_viridis_c() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "手动注释 vs SingleR")
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4.5
+DimPlot(pbmc, group.by = "singler_main", label = TRUE, repel = TRUE) + NoLegend() + ggtitle("SingleR (main)") |
+  DimPlot(pbmc, group.by = "singler_fine", label = TRUE, repel = TRUE, label.size = 2.5) + NoLegend() + ggtitle("SingleR (fine)")
+```
+
+### 参考与查询的基因交集 {#sec-ref-gene-overlap}
+
+SingleR 只能使用**参考与查询共有的基因**。PBMC 3k 的基因名来自 2016 年的 hg19 注释，Monaco 参考来自较新的注释，
+两者的 symbol 并不完全一致：
+
+```{r}
+q_genes <- rownames(pbmc); r_genes <- rownames(ref)
+c(query = length(q_genes), reference = length(r_genes), shared = length(intersect(q_genes, r_genes)))
+```
+
+查询中有表达、但在参考中找不到的基因里，有多少只是**改了名字**？用 HGNChelper 把查询的旧 symbol 更新到当前命名：
+
+```{r}
+#| label: hgnc-update
+expressed <- q_genes[Matrix::rowSums(LayerData(pbmc, layer = "counts") > 0) >= 10]
+missing_in_ref <- setdiff(expressed, r_genes)
+length(missing_in_ref)
+upd <- cached("pbmc3k_hgnc_update.rds",
+              suppressWarnings(HGNChelper::checkGeneSymbols(missing_in_ref, species = "human")))
+rescued <- upd |> filter(!is.na(Suggested.Symbol), Suggested.Symbol != x,
+                         !str_detect(Suggested.Symbol, "///"), Suggested.Symbol %in% r_genes)
+nrow(rescued)
+head(rescued, 10)
+```
+
+这几百个基因只是因为改名而"消失"（例如 `C*orf*` 开放阅读框被正式命名、`FAM` 家族重命名）。
+对 SingleR 这样基于大量基因相关性的方法影响不大；但如果某个**关键 marker** 恰好改了名，
+基于 marker 的注释、模块打分就会悄悄失效。跨数据集比较之前，先统一基因命名（或统一使用 Ensembl ID）。
+
+### 注释的置信度与"缺失"标签 {#sec-singler-na}
+
+`pred$labels` 总会给每个细胞一个标签；`pred$pruned.labels` 则把**置信度低**的细胞设为 `NA`。
+置信度用 **delta**（最佳标签得分与其余标签得分中位数之差）衡量，按标签分别用 MAD 判定离群：
+
+```{r}
+table(pruned = is.na(pred$pruned.labels))
+summary(pred$delta.next)
+```
+
+```{r}
+#| fig-height: 4
+plotDeltaDistribution(pred, ncol = 5, dots.on.top = FALSE)
+```
+
+被修剪的细胞在哪里？它们是否集中在某些簇、或者具有某种 QC 特征？
+
+```{r}
+pbmc$singler_pruned <- is.na(pbmc$singler_main)
+pbmc@meta.data |>
+  summarise(n = n(), pct_pruned = round(100 * mean(singler_pruned), 1),
+            .by = celltype_manual) |> arrange(desc(pct_pruned))
+pbmc@meta.data |>
+  summarise(across(c(nCount_RNA, nFeature_RNA, percent.mt, doublet_score), median), .by = singler_pruned)
+```
+
+```{r}
+#| fig-height: 4
+DimPlot(pbmc, group.by = "singler_pruned", cols = c(`FALSE` = "grey85", `TRUE` = "red"),
+        order = TRUE) + ggtitle("SingleR 置信度低（pruned = NA）的细胞")
+```
+
+在这个数据集中只有 7 个细胞被修剪，它们的 UMI 与检出基因数约为其他细胞的一半——主要是**低质量**细胞。
+更值得注意的是反方向的问题：7 个血小板（Monaco 参考中**没有**血小板）中 6 个被标成了 "Progenitors"、1 个 "B cells"，
+而且**都没有被修剪**。pruning 只能发现"在已有标签之间犹豫不决"的细胞，**发现不了参考里根本没有的类型**——
+这正是需要结合 marker（*PPBP*、*PF4*）人工检查的原因。
+
+注释中的 `NA` 和临床数据中的 `NA` 一样需要解释：它可能代表**过渡态**（两类之间）、参考中**不存在**的类型
+（例如 PBMC 中的血小板，Monaco 参考里没有）、低质量细胞，或仅仅是参考中相近类型难以区分。
+不要简单地删除，也不要用"最可能的标签"强行填补；在结果中把它们作为"Unassigned"报告。
+
+::: callout-tip
+## 注释的最佳实践
+1. 自动注释是**起点**而不是结论；与 marker、文献、参考图谱交叉验证。
+2. 参考数据集要匹配组织与物种（免疫：Monaco / DICE / BlueprintEncode；
+   全组织图谱：Azimuth / CellTypist / Tabula Sapiens）。
+3. Seurat 的 `MapQuery()` / Azimuth 将查询数据**投射**到参考 UMAP 上，适合有大型单细胞参考的组织。
+4. 无法匹配的簇可能是新类型、过渡态、双细胞或低质量细胞——逐一检查。
+:::
+
+## 细胞周期打分
+
+```{r}
+pbmc <- CellCycleScoring(pbmc, s.features = cc.genes.updated.2019$s.genes,
+                         g2m.features = cc.genes.updated.2019$g2m.genes)
+table(pbmc$Phase)
+```
+
+注意运行时的警告：`cc.genes.updated.2019` 中有十几个基因"不在对象中"。它们大多不是没有表达，而是**改了名字**——
+基因列表用的是 2019 年的命名（如 `PIMREG`、`JPT1`），而 PBMC 3k 用的是 2016 年的 hg19 命名（`FAM64A`、`HN1`）。
+这又是 @sec-ref-gene-overlap 的问题：任何基于基因列表的打分，都要先检查列表与数据的命名是否一致。
+
+```{r}
+cc_all <- c(cc.genes.updated.2019$s.genes, cc.genes.updated.2019$g2m.genes)
+missing_cc <- setdiff(cc_all, rownames(pbmc))
+missing_cc
+c("FAM64A", "HN1") %in% rownames(pbmc)   # 旧名是否在数据里？
+```
+
+外周血细胞大多处于静息态；在增殖活跃的组织中，细胞周期可能主导聚类，此时可在 `ScaleData`
+或 `SCTransform` 中回归 `S.Score - G2M.Score`。
+
+## 保存
+
+```{r}
+Idents(pbmc) <- "celltype_manual"
+saveRDS(pbmc, file.path(DATA_DIR, "pbmc3k_annotated.rds"))
+```
+
+## 练习
+
+1. 用 `pbmc_sct` 完成 PCA → 邻居 → 聚类（res = 0.5）→ UMAP，与 LogNormalize 的聚类结果
+   用调整兰德指数比较（`mclust::adjustedRandIndex` 或 `bluster::pairwiseRand`）。
+2. 把 `pcs` 改为 1:30，聚类结果变化大吗？
+3. 用 `FindMarkers(pbmc, ident.1 = "CD14+ Mono", ident.2 = "FCGR3A+ Mono")` 找两类单核细胞的差异基因，
+   画火山图并用 ggrepel 标注 top 基因。
+4. 对 T 细胞簇做**子聚类**（`subset` → 重新 HVG/PCA/聚类），能否分出 Treg（FOXP3、IL2RA）？
+5. 把 @sec-param-sensitivity 的网格扩展到 `resolution = c(0.3, 0.5, 0.8)`，用 `pmap()` 实现，并找出 ARI 最低的组合。
+6. 用 `rescued` 表把 PBMC 3k 的旧 symbol 改成新名字（注意不要制造重复行名），重新运行 SingleR，比较 pruned 细胞数。
+7. 用 `celldex::DatabaseImmuneCellExpressionData()` 作为第二个参考，比较两个参考给出的 `NA` 细胞是否相同。
+
+::: {.callout-tip collapse="true"}
+## 参考答案（1 与 3）
+```r
+# 1
+pbmc_sct <- pbmc_sct |> RunPCA(verbose = FALSE) |> FindNeighbors(dims = 1:10) |>
+  FindClusters(resolution = 0.5, verbose = FALSE)
+common <- intersect(colnames(pbmc), colnames(pbmc_sct))
+bluster::pairwiseRand(pbmc$RNA_snn_res.0.5[common], pbmc_sct$seurat_clusters[common], mode = "index")
+
+# 3
+mono <- FindMarkers(pbmc, ident.1 = "CD14+ Mono", ident.2 = "FCGR3A+ Mono") |>
+  as_tibble(rownames = "gene")
+ggplot(mono, aes(avg_log2FC, -log10(p_val_adj + 1e-300))) +
+  geom_point(alpha = 0.4) +
+  geom_text_repel(data = slice_max(mono, abs(avg_log2FC), n = 20), aes(label = gene), max.overlaps = Inf)
+```
+:::
