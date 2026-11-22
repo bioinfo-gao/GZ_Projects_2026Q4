@@ -520,3 +520,20 @@ worker 0 / worker 1 两条分工。冒烟产物在
 （脚本 canonical 位置 2026-07-17 起已移到 `Utilities/Server/monitoring_alerting/`）。
 由于那一行是 `[ -x "$MAILER" ] && ...`，**发信会静默跳过** ⇒ 守护复活看门狗时不会通知任何人。
 这同样影响现有的 P52 守护行。属共享基础设施，**未擅自修改**。
+
+### 10.7 客户交付范围：只给 FASTQ（user decision 2026-11-21）
+
+Dropbox 交付目录 `/home/gao/Dropbox/Athenomics_Delivery/WALKUP-21683/Yeji_WGS/`。
+
+**用户 2026-11-21 决定：给客户只上传 FASTQ。** 测序方随数据一起产出的
+`Logs/`（4 个文件）与 `Reports/`（12 个文件，4.5 MB，DRAGEN demux 统计 +
+`RunInfo.xml` + `SampleSheet.csv`）**不进客户交付目录**，只留在源目录
+`/srv/external_data/gao_projects/46_park_wgs_raw/WALKUP-21683/fastq/` 供内部分析引用。
+
+截至 2026-11-21 21:12 实测：交付目录内 **20 个条目，全部是 `.fastq.gz`，非 FASTQ 条目 0 个**
+⇒ 现状已符合该决定，无需任何增删动作。上传进度 17/20 up to date、3 个 syncing
+（`WGS000034_R2`、`WGS000037_R1/R2`）。
+⚠ Dropbox 为渐进同步，上述为该时刻的目录状态，不代表最终状态。
+
+**报告 Methods 的连带影响**：demux 统计既然不交付，报告里引用的 read 数与深度必须以
+我方实测（flagstat / mosdepth）为准，不得写成"据测序方报告"——客户手上没有那份报告。
