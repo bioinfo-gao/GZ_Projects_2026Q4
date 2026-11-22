@@ -1,0 +1,601 @@
+# Bulk RNA-seq（四）：功能富集分析 {#sec-enrichment}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2 小时（详细版）
+>
+> 目标：理解过表征分析（ORA）与基因集富集分析（GSEA）的统计原理与各自的假设；
+> 用 clusterProfiler / fgsea / msigdbr 完成 GO、KEGG、Reactome、Hallmark 分析，
+> 并正确地选择**背景基因集**与**排序统计量**。详细版新增：ID 映射损失与重复、手写 ORA/GSEA 统计量、
+> 基因长度偏差与协变量校正、GSVA 单样本通路得分、阈值敏感性分析。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 两类方法 / 准备基因列表 | ORA vs GSEA；背景基因集 | 10 min |
+| GO ORA / 去冗余 / 可视化 / compareCluster | clusterProfiler、enrichplot | 20 min |
+| KEGG / Reactome / GSEA / Hallmark + fgsea | 排序统计量，leading edge | 25 min |
+| @sec-enrich-id | Ensembl→Entrez 的丢失与重复；合并策略 | 10 min |
+| @sec-enrich-by-hand | 超几何 p 值、游走统计量 | 10 min |
+| @sec-length-bias | 长度偏差；逻辑回归校正 | 15 min |
+| @sec-gsva | GSVA + limma | 15 min |
+| @sec-enrich-threshold | 9 种阈值组合下的 ORA 稳定性 | 10 min |
+:::
+
+```{r}
+library(tidyverse)
+library(clusterProfiler)
+library(enrichplot)
+library(org.Hs.eg.db)
+library(msigdbr)
+library(fgsea)
+library(patchwork)
+```
+
+```{r}
+de  <- readRDS(file.path(DATA_DIR, "airway_de.rds"))
+deg <- de$deg                         # 第 7 章：DESeq2 + apeglm 注释结果
+deg |> dplyr::select(gene_id, symbol, entrez, baseMean, log2FC_shrunk, stat, padj) |> head()
+```
+
+## 两类方法
+
+| | ORA（过表征分析） | GSEA（基因集富集分析） |
+|---|---|---|
+| 输入 | 一个**显著基因列表** + 背景（universe） | **所有基因**的排序（统计量） |
+| 检验 | 超几何 / Fisher 精确检验 | 排序列表上的加权 Kolmogorov–Smirnov 型游走 |
+| 问题 | "显著基因中，属于集合 S 的是否过多？" | "集合 S 的基因是否集中在排序的顶部/底部？" |
+| 依赖阈值 | 是（padj、LFC 截断） | 否 |
+| 对弱而一致的变化 | 不敏感 | **敏感** |
+
+ORA 的超几何检验：总共 $N$ 个背景基因，其中 $K$ 个属于集合 $S$；抽取 $n$ 个显著基因，
+其中 $k$ 个属于 $S$。
+
+$$
+p = P(X \ge k) = \sum_{i=k}^{\min(n,K)} \frac{\binom{K}{i}\binom{N-K}{n-i}}{\binom{N}{n}}
+$$
+
+```{r}
+# 手算一个例子：显著基因中，"response to glucocorticoid" 相关基因是否过多
+N <- 15000; K <- 120; n <- 800; k <- 25
+phyper(k - 1, K, N - K, n, lower.tail = FALSE)
+c(expected = n * K / N, observed = k)
+```
+
+::: callout-important
+## 背景基因集决定了 ORA 的结论
+背景应是**实际被检测的基因**（通过过滤、有 padj 的基因），而不是全基因组。
+用全基因组作背景会让"组织中表达的基因"的功能看起来都显著——这是文献中最常见的富集错误之一。
+:::
+
+## 准备基因列表
+
+```{r}
+universe <- deg |> filter(!is.na(padj), !is.na(entrez)) |> pull(entrez) |> unique()
+
+sig_up <- deg |> filter(padj < 0.05, log2FC_shrunk >  1, !is.na(entrez)) |> pull(entrez) |> unique()
+sig_dn <- deg |> filter(padj < 0.05, log2FC_shrunk < -1, !is.na(entrez)) |> pull(entrez) |> unique()
+c(universe = length(universe), up = length(sig_up), down = length(sig_dn))
+```
+
+## GO 过表征分析
+
+```{r}
+ego_up <- enrichGO(
+  gene          = sig_up,
+  universe      = universe,
+  OrgDb         = org.Hs.eg.db,
+  keyType       = "ENTREZID",
+  ont           = "BP",
+  pAdjustMethod = "BH",
+  pvalueCutoff  = 0.05,
+  qvalueCutoff  = 0.2,
+  minGSSize     = 15,
+  maxGSSize     = 500,
+  readable      = TRUE           # 把 Entrez 转成 symbol 便于阅读
+)
+ego_up
+head(as.data.frame(ego_up)[, c("Description", "GeneRatio", "BgRatio", "p.adjust")], 10)
+```
+
+`GeneRatio = k/n`，`BgRatio = K/N`。新版 clusterProfiler 还给出 `FoldEnrichment`、
+`RichFactor`（k/K）、`zScore`。
+
+### 去冗余
+
+GO 是层次结构（DAG），父子术语高度重叠。`simplify()` 基于语义相似度合并冗余术语：
+
+```{r}
+ego_up_s <- simplify(ego_up, cutoff = 0.7, by = "p.adjust", select_fun = min)
+c(before = nrow(ego_up), after = nrow(ego_up_s))
+```
+
+### 可视化
+
+```{r}
+#| fig-width: 11
+#| fig-height: 5.5
+dotplot(ego_up_s, showCategory = 15, x = "FoldEnrichment") + ggtitle("GO BP — up-regulated") |
+  barplot(ego_up_s, showCategory = 15) + ggtitle("计数条形图")
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+fc <- setNames(deg$log2FC_shrunk, deg$symbol)
+cnetplot(ego_up_s, showCategory = 6, foldChange = fc) +
+  ggtitle("基因–概念网络：哪些基因驱动了哪些术语")
+```
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+ego_up_s |> pairwise_termsim() |> emapplot(showCategory = 30, node_label_size = 3) +
+  ggtitle("富集图：术语按共享基因聚成模块")
+```
+
+也可以把结果当作普通 tibble 用 ggplot 自由绘图：
+
+```{r}
+as_tibble(ego_up_s) |>
+  slice_min(p.adjust, n = 12) |>
+  mutate(Description = fct_reorder(str_wrap(Description, 45), FoldEnrichment)) |>
+  ggplot(aes(FoldEnrichment, Description, size = Count, colour = -log10(p.adjust))) +
+  geom_point() +
+  scale_colour_viridis_c() +
+  labs(y = NULL, title = "GO BP（上调基因）")
+```
+
+### 同时比较上调与下调：`compareCluster`
+
+```{r}
+#| fig-height: 7
+cc <- compareCluster(
+  geneClusters = list(Up = sig_up, Down = sig_dn),
+  fun = "enrichGO", universe = universe, OrgDb = org.Hs.eg.db,
+  ont = "BP", readable = TRUE
+)
+dotplot(simplify(cc), showCategory = 8) + ggtitle("Up vs Down")
+```
+
+## KEGG 与 Reactome
+
+```{r}
+ekegg <- enrichKEGG(gene = sig_up, universe = universe, organism = "hsa",
+                    pvalueCutoff = 0.05) |>
+  setReadable(OrgDb = org.Hs.eg.db, keyType = "ENTREZID")
+head(as.data.frame(ekegg)[, c("Description", "GeneRatio", "p.adjust", "geneID")], 6)
+```
+
+::: callout-note
+`enrichKEGG()` 默认在线获取最新 KEGG 数据（KEGG REST API），因此结果会随时间变化。
+为了可复现，记录查询日期，或在离线环境用 msigdbr 中的 `CP:KEGG_MEDICUS` 集合。
+`pathview` 包可以把 log2FC 画到 KEGG 通路图上。
+:::
+
+```{r}
+library(ReactomePA)
+ereact <- enrichPathway(gene = sig_up, universe = universe, organism = "human", readable = TRUE)
+head(as.data.frame(ereact)[, c("Description", "GeneRatio", "p.adjust")], 6)
+```
+
+## GSEA
+
+### 排序统计量的选择
+
+| 排序依据 | 评价 |
+|---|---|
+| DESeq2 Wald `stat` | **推荐**：同时反映效应量和确定性；符号表示方向 |
+| apeglm 收缩后的 LFC | 也可以；噪声基因已被压向 0 |
+| 未收缩 LFC | **不推荐**：低表达基因的极端值主导排序 |
+| `-log10(p) × sign(LFC)` | 常见，但 p 值极小时出现大量并列 |
+
+```{r}
+ranks_tbl <- deg |>
+  filter(!is.na(stat), !is.na(entrez)) |>
+  summarise(stat = stat[which.max(abs(stat))], .by = entrez) |>  # 一个 Entrez 对应多个 Ensembl 时取 |stat| 最大
+  arrange(desc(stat))
+gene_list <- setNames(ranks_tbl$stat, ranks_tbl$entrez)
+head(gene_list); tail(gene_list)
+```
+
+### GSEA：GO
+
+```{r}
+gse_go <- gseGO(
+  geneList     = gene_list,
+  OrgDb        = org.Hs.eg.db,
+  keyType      = "ENTREZID",
+  ont          = "BP",
+  minGSSize    = 15,
+  maxGSSize    = 500,
+  pvalueCutoff = 0.05,
+  eps          = 0,                # 允许计算极小 p 值
+  seed         = TRUE
+) |> setReadable(OrgDb = org.Hs.eg.db, keyType = "ENTREZID")
+
+as_tibble(gse_go) |>
+  dplyr::select(Description, setSize, NES, p.adjust) |>
+  arrange(desc(abs(NES))) |>
+  head(10)
+```
+
+`NES`（normalized enrichment score）> 0 表示集合在排序顶部（地塞米松上调），< 0 表示底部。
+
+```{r}
+#| fig-height: 6
+dotplot(gse_go, showCategory = 8, split = ".sign") + facet_grid(~ .sign) +
+  ggtitle("GSEA GO BP")
+```
+
+```{r}
+#| fig-height: 6
+top_ids <- as_tibble(gse_go) |> slice_max(NES, n = 2) |> pull(ID)
+gseaplot2(gse_go, geneSetID = top_ids, pvalue_table = TRUE,
+          title = "Running enrichment score")
+```
+
+```{r}
+#| fig-height: 7
+ridgeplot(gse_go, showCategory = 15) + labs(x = "Wald statistic 分布")
+```
+
+### MSigDB Hallmark + fgsea
+
+MSigDB 的 50 个 Hallmark 基因集是"去冗余、高可信"的生物学过程集合，非常适合作为首选。
+`msigdbr` 提供离线访问（本版本 MSigDB 2026.1）：
+
+```{r}
+hallmark <- msigdbr(species = "Homo sapiens", collection = "H")
+hallmark |> dplyr::distinct(gs_name) |> nrow()
+pathways <- split(hallmark$ncbi_gene, hallmark$gs_name)
+lengths(pathways) |> head()
+```
+
+```{r}
+fg <- fgsea(pathways = pathways, stats = gene_list, minSize = 15, maxSize = 500, eps = 0)
+fg |> as_tibble() |> arrange(padj) |> dplyr::select(pathway, size, NES, padj) |> head(12)
+```
+
+```{r}
+#| fig-height: 6
+fg |>
+  as_tibble() |>
+  filter(padj < 0.05) |>
+  mutate(pathway = str_remove(pathway, "HALLMARK_") |> fct_reorder(NES)) |>
+  ggplot(aes(NES, pathway, fill = NES > 0)) +
+  geom_col() +
+  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "#0072B2"), guide = "none") +
+  labs(y = NULL, title = "Hallmark GSEA（padj < 0.05）")
+```
+
+```{r}
+plotEnrichment(pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], gene_list) +
+  labs(title = "HALLMARK_TNFA_SIGNALING_VIA_NFKB")
+```
+
+::: callout-important
+## 一个反直觉的结果：抗炎药让"TNFα/NF-κB 信号"集合 NES > 0？
+地塞米松是强效抗炎药，直觉上 `HALLMARK_TNFA_SIGNALING_VIA_NFKB` 应该被**抑制**（NES < 0），
+但这里它显著**为正**。原因藏在 leading edge 里：
+
+```{r}
+le <- fg |> as_tibble() |> filter(pathway == "HALLMARK_TNFA_SIGNALING_VIA_NFKB") |> pull(leadingEdge) |> unlist()
+deg |> filter(entrez %in% le) |> slice_max(stat, n = 12) |> dplyr::select(symbol, log2FC_shrunk, padj)
+```
+
+驱动富集的是 DUSP1、PER1、KLF9、CEBPD、TSC22D3、NFKBIA、TNFAIP3 等——它们本身就是
+**糖皮质激素受体（GR）的直接靶基因**，其中 DUSP1、NFKBIA（IκBα）、TNFAIP3（A20）
+正是 GR **抑制**炎症信号的效应分子。这个 Hallmark 集合是"TNFα 刺激后上调的基因"，
+与 GR 靶基因大量重叠；而 airway 的细胞**没有**受到炎症刺激，所以看不到"炎症基因被压低"。
+
+教训：
+1. 基因集的名字不等于其生物学方向，一定要看 **leading edge 基因**；
+2. 结论依赖实验背景——若先用 TNFα/IL-1β 刺激再加地塞米松，结果会截然不同；
+3. 糖皮质激素直接靶基因（KLF15、PER1、ZBTB16、FKBP5）位于排序顶端，
+   GO 中 "cellular response to glucocorticoid stimulus" 显著——这些是可靠的**阳性对照**。
+:::
+
+`clusterProfiler::GSEA()` 可以接受任意 `TERM2GENE` 表，结果对象可用 enrichplot 的全部绘图函数：
+
+```{r}
+#| eval: false
+gse_h <- GSEA(gene_list, TERM2GENE = hallmark |> dplyr::select(gs_name, ncbi_gene), eps = 0, seed = TRUE)
+```
+
+## 富集前的必修课：ID 映射损失与重复 {#sec-enrich-id}
+
+富集工具大多以 Entrez ID 为键，而我们的结果以 Ensembl ID 为键。映射这一步会**悄悄丢掉**一部分基因，
+还会制造重复：
+
+```{r}
+deg |>
+  mutate(sig = !is.na(padj) & padj < 0.05) |>
+  summarise(n = n(), no_entrez = sum(is.na(entrez)), pct_lost = round(100 * mean(is.na(entrez)), 1),
+            .by = c(sig, biotype)) |>
+  filter(n > 200) |> arrange(sig, desc(n))
+```
+
+显著基因中，蛋白编码基因几乎都能映射；lncRNA、假基因丢失率很高——但它们本来也很少出现在 GO/KEGG 中，
+影响有限。更隐蔽的是**重复**：
+
+```{r}
+dup <- deg |> filter(!is.na(entrez), !is.na(stat)) |> dplyr::count(entrez) |> filter(n > 1)
+nrow(dup)
+deg |> filter(entrez %in% dup$entrez) |> arrange(entrez) |>
+  dplyr::select(gene_id, symbol, entrez, baseMean, stat) |> head(8)
+```
+
+同一个 Entrez ID 对应多个 Ensembl ID（常见于 patch 上的拷贝、读通转录本）。GSEA 的排序向量里**不能有重复名字**，
+否则 fgsea 会给出警告、结果不确定。几种合并策略：
+
+```{r}
+collapse_stat <- function(d, how) {
+  d |> filter(!is.na(stat), !is.na(entrez)) |>
+    summarise(stat = switch(how,
+                            max_abs  = stat[which.max(abs(stat))],
+                            mean     = mean(stat),
+                            top_expr = stat[which.max(baseMean)]),
+              .by = entrez) |>
+    with(sort(setNames(stat, entrez), decreasing = TRUE))
+}
+lists <- lapply(c(max_abs = "max_abs", mean = "mean", top_expr = "top_expr"), \(h) collapse_stat(deg, h))
+fg_by <- lapply(lists, \(gl) fgsea(pathways, gl, minSize = 15, maxSize = 500, eps = 0) |>
+                  as_tibble() |> dplyr::select(pathway, NES))
+Reduce(\(a, b) inner_join(a, b, by = "pathway"), fg_by) |>
+  setNames(c("pathway", names(lists))) |>
+  dplyr::select(-pathway) |> cor() |> round(4)
+```
+
+只有 12 个 Entrez ID 有重复，对 Hallmark 这样的大基因集，合并策略几乎不影响结果（NES 相关 ≥ 0.98）；但对小基因集或单个基因的结论，
+应当在方法中写明所用的策略。**取"表达最高的那个 ID"**最容易解释，也是很多工具的默认。
+
+## 手写 ORA 与 GSEA：看清统计量 {#sec-enrich-by-hand}
+
+### ORA = 2 × 2 列联表
+
+```{r}
+term <- as.data.frame(ego_up)[1, ]
+term[, c("ID", "Description", "GeneRatio", "BgRatio", "pvalue")]
+k <- as.integer(sub("/.*", "", term$GeneRatio)); n <- as.integer(sub(".*/", "", term$GeneRatio))
+K <- as.integer(sub("/.*", "", term$BgRatio));   N <- as.integer(sub(".*/", "", term$BgRatio))
+matrix(c(k, n - k, K - k, N - K - n + k), 2,
+       dimnames = list(c("in_term", "not_in_term"), c("significant", "not_significant")))
+c(by_hand = phyper(k - 1, K, N - K, n, lower.tail = FALSE),   # 超几何上尾概率 P(X >= k)
+  clusterProfiler = term$pvalue)
+```
+
+手算的 p 值与 clusterProfiler 完全一致。注意 `N` 是背景中**有 GO 注释**的基因数，不是 `universe` 的长度——
+没有任何注释的基因在 ORA 中被自动排除。
+
+### GSEA 的游走统计量
+
+```{r}
+gsea_walk <- function(stats, set, p = 1) {
+  stats <- sort(stats, decreasing = TRUE)
+  hit <- names(stats) %in% set
+  w <- abs(stats)^p
+  step_hit  <- ifelse(hit, w / sum(w[hit]), 0)
+  step_miss <- ifelse(!hit, 1 / sum(!hit), 0)
+  running <- cumsum(step_hit - step_miss)
+  list(running = running, ES = running[which.max(abs(running))], hit = hit)
+}
+set_tnf <- pathways[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]]
+walk <- gsea_walk(gene_list, set_tnf)
+c(ES_by_hand = unname(walk$ES),
+  ES_fgsea   = fg$ES[fg$pathway == "HALLMARK_TNFA_SIGNALING_VIA_NFKB"])
+```
+
+```{r}
+#| fig-height: 3.5
+tibble(rank = seq_along(walk$running), running = walk$running, hit = walk$hit) |>
+  ggplot(aes(rank, running)) +
+  geom_line(colour = "darkgreen") +
+  geom_rug(data = \(d) filter(d, hit), sides = "b", alpha = 0.3) +
+  geom_hline(yintercept = 0) +
+  labs(x = "基因排序（按 Wald stat 从高到低）", y = "running enrichment score",
+       title = "手写 GSEA 游走：命中时上升（按 |stat| 加权），未命中时下降")
+```
+
+NES 是 ES 除以**置换得到的同大小随机基因集 ES 的均值**（正负分别计算）；fgsea 用自适应多层蒙特卡洛
+高效地估计极小的 p 值（`eps = 0` 时不截断）。
+
+## 基因长度偏差 {#sec-length-bias}
+
+第 6 章看到长基因计数更高、检验功效更强。如果某个 GO 术语恰好富含长基因（例如神经、细胞黏附相关），
+ORA 会因为**长度**而不是生物学而显著（Young et al. 2010，goseq）。先检验偏差是否存在：
+
+```{r}
+#| fig-height: 3.5
+dds_ann <- readRDS(file.path(DATA_DIR, "airway_annotated.rds"))
+len_tbl <- tibble(gene_id = rownames(dds_ann), length = SummarizedExperiment::rowData(dds_ann)$eff_length)
+bias <- deg |> filter(!is.na(padj)) |>
+  left_join(len_tbl, join_by(gene_id)) |>
+  mutate(sig = padj < 0.05, len_bin = ntile(length, 20))
+bias |>
+  summarise(p_sig = mean(sig), median_len = median(length), .by = len_bin) |>
+  ggplot(aes(median_len, p_sig)) + geom_point() + geom_smooth(se = FALSE) +
+  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +
+  labs(x = "基因有效长度（中位数，bp）", y = "显著比例", title = "长度越长，越容易显著")
+```
+
+一种直接而透明的校正：对每个基因集，用逻辑回归把**长度作为协变量**——
+"在长度相同的条件下，集合内的基因是否更可能显著？"这正是 goseq 背后的思想（goseq 用 Wallenius 分布实现）：
+
+```{r}
+bias_e <- bias |> filter(!is.na(entrez)) |> distinct(entrez, .keep_all = TRUE)
+test_set <- function(set_genes) {
+  in_set <- bias_e$entrez %in% set_genes
+  if (sum(in_set) < 15) return(c(naive = NA, length_adj = NA))
+  p_naive <- fisher.test(table(in_set, bias_e$sig), alternative = "greater")$p.value
+  fit <- glm(sig ~ in_set + splines::ns(log10(length), 3), family = binomial, data = bias_e)
+  co <- coef(summary(fit))["in_setTRUE", ]
+  p_adj <- pnorm(co["z value"], lower.tail = FALSE)          # 单侧：集合内更容易显著
+  c(naive = p_naive, length_adj = unname(p_adj))
+}
+len_res <- t(vapply(pathways, test_set, numeric(2))) |>
+  as_tibble(rownames = "pathway") |> filter(!is.na(naive)) |>
+  mutate(across(c(naive, length_adj), \(p) p.adjust(p, "BH"), .names = "{.col}_fdr"))
+len_res |> arrange(naive_fdr) |> head(10) |>
+  mutate(across(where(is.double), \(x) signif(x, 2)))
+```
+
+```{r}
+#| fig-height: 3.5
+ggplot(len_res, aes(-log10(naive), -log10(length_adj))) +
+  geom_point() + geom_abline(colour = "red") +
+  ggrepel::geom_text_repel(data = \(d) slice_max(d, abs(log10(naive) - log10(length_adj)), n = 5),
+                           aes(label = str_remove(pathway, "HALLMARK_")), size = 2.8, seed = 1) +
+  labs(x = "-log10 p（Fisher，未校正长度）", y = "-log10 p（校正长度后）")
+```
+
+大部分通路落在对角线附近；偏离对角线的通路就是结论受长度影响的那些。
+
+## 单样本通路得分：GSVA {#sec-gsva}
+
+ORA 与 GSEA 给出的是"组间比较"的通路结果。**GSVA** 把每个样本的基因表达转换为**通路得分矩阵**
+（样本 × 通路），之后可以像基因表达一样做聚类、热图、差异检验、与临床变量关联——
+在样本量较大的队列（如 TCGA）中特别有用。
+
+```{r}
+#| label: gsva
+library(GSVA)
+vsd <- readRDS(file.path(DATA_DIR, "airway_vsd.rds"))
+hall_ens <- split(hallmark$ensembl_gene, hallmark$gs_name)
+param <- gsvaParam(SummarizedExperiment::assay(vsd), hall_ens, minSize = 15, maxSize = 500)
+gsva_scores <- cached("airway_gsva_hallmark.rds", gsva(param, verbose = FALSE))
+dim(gsva_scores)
+gsva_scores[1:3, 1:4]
+```
+
+对通路得分用 limma 做配对的差异检验：
+
+```{r}
+library(limma)
+X <- model.matrix(~ cell + dex, as.data.frame(SummarizedExperiment::colData(vsd)))
+gsva_fit <- lmFit(gsva_scores, X) |> eBayes()
+gsva_tab <- topTable(gsva_fit, coef = "dextrt", n = Inf) |> as_tibble(rownames = "pathway")
+gsva_tab |> head(8) |> dplyr::select(pathway, logFC, t, adj.P.Val)
+```
+
+```{r}
+#| fig-height: 5
+top_pw <- head(gsva_tab$pathway, 15)
+ComplexHeatmap::Heatmap(
+  t(scale(t(gsva_scores[top_pw, ]))), name = "GSVA z",
+  row_labels = str_remove(top_pw, "HALLMARK_"),
+  column_split = vsd$dex, row_names_gp = grid::gpar(fontsize = 8),
+  top_annotation = ComplexHeatmap::HeatmapAnnotation(cell = vsd$cell)
+)
+```
+
+与 fgsea 的 NES 比较——两种方法回答的问题不同，但方向应大致一致：
+
+```{r}
+inner_join(gsva_tab |> dplyr::select(pathway, t), fg |> as_tibble() |> dplyr::select(pathway, NES),
+           join_by(pathway)) |>
+  with(cor(t, NES, method = "spearman"))
+```
+
+## 结论对阈值的敏感性 {#sec-enrich-threshold}
+
+ORA 依赖"显著"的定义。系统地改变阈值，看前几个术语是否稳定：
+
+```{r}
+#| label: ora-thresholds
+grid <- expand_grid(padj_cut = c(0.01, 0.05, 0.1), lfc_cut = c(0, 0.58, 1))
+ora_runs <- cached("airway_ora_thresholds.rds", pmap(grid, function(padj_cut, lfc_cut) {
+  genes <- deg |> filter(padj < padj_cut, log2FC_shrunk > lfc_cut, !is.na(entrez)) |> pull(entrez) |> unique()
+  e <- enrichGO(genes, universe = universe, OrgDb = org.Hs.eg.db, ont = "BP",
+                minGSSize = 15, maxGSSize = 500, pvalueCutoff = 0.05)
+  tibble(padj_cut, lfc_cut, n_genes = length(genes), n_terms = nrow(e),
+         top5 = list(head(as.data.frame(e)$Description, 5)))
+}) |> list_rbind())
+ora_runs |> dplyr::select(-top5)
+```
+
+```{r}
+top_terms <- unique(unlist(ora_runs$top5))
+presence <- sapply(ora_runs$top5, \(t) top_terms %in% t)
+dimnames(presence) <- list(str_trunc(top_terms, 50), paste0("p<", ora_runs$padj_cut, ",lfc>", ora_runs$lfc_cut))
+presence[order(-rowSums(presence)), ] * 1L
+```
+
+出现在大多数阈值组合中的术语是可靠的；只在某一个阈值下进入前 5 的术语不应被过度解读。
+这也是推荐**以 GSEA 为主、ORA 为辅**的原因之一。
+
+## 其他方法速览
+
+- **`limma::camera()` / `roast()`**：竞争性 / 自包含的基因集检验，考虑了基因间相关性；
+  在样本少时比置换 GSEA 更可靠。
+- **GSVA / ssGSEA**（`GSVA` 包）：把每个样本转换为"通路得分矩阵"，再做差异或聚类。
+- **`decoupleR` + PROGENy / CollecTRI**：推断通路与转录因子活性，适用于 bulk 与单细胞。
+- **语义相似度**：`GOSemSim` 用于比较术语或基因功能距离。
+
+## 常见陷阱
+
+1. ORA 用全基因组背景。
+2. Symbol 与 Entrez 混用、物种 OrgDb 选错。
+3. GSEA 用未收缩的 LFC 排序；或在同一个基因 ID 上存在重复值（必须先去重）。
+4. 只报告 "top 10 GO 术语" 而不做去冗余，结果全是同一模块的近义词。
+5. 把富集 p 值当作效应大小——同时报告 FoldEnrichment / NES 与基因数量。
+
+## 保存
+
+```{r}
+saveRDS(list(ego_up = ego_up_s, gse_go = gse_go, fgsea_hallmark = fg),
+        file.path(DATA_DIR, "airway_enrichment.rds"))
+```
+
+## 练习
+
+1. 不用 `universe` 参数重新运行 `enrichGO`（即默认使用 OrgDb 中所有有 GO 注释的基因作背景），
+   比较显著术语的数量和前 10 个术语的变化。
+2. 用 msigdbr 的 `collection = "C2", subcollection = "CP:REACTOME"` 做 fgsea。
+3. 把排序统计量换成 apeglm 收缩后的 LFC，重新做 Hallmark GSEA，比较 NES。
+4. 用 `fgsea::collapsePathways()` 找出 GO BP GSEA 结果中"独立"的通路。
+5. 用 `gsea_walk()` 画出 `HALLMARK_ANDROGEN_RESPONSE` 的游走曲线，并与 `plotEnrichment()` 对比。
+6. 对 GO BP（`msigdbr(collection = "C5", subcollection = "GO:BP")`）运行 `test_set()`，找出长度校正后不再显著的术语。
+7. 在 GSVA 得分矩阵上做层次聚类，样本是否按处理分开？
+
+::: {.callout-tip collapse="true"}
+## 参考答案（1 与 3）
+```r
+# 1
+ego_nobg <- enrichGO(sig_up, OrgDb = org.Hs.eg.db, ont = "BP", readable = TRUE)
+c(with_universe = nrow(ego_up), genome_background = nrow(ego_nobg))
+
+# 3
+r2 <- deg |> filter(!is.na(entrez), !is.na(log2FC_shrunk)) |>
+  summarise(lfc = log2FC_shrunk[which.max(abs(log2FC_shrunk))], .by = entrez)
+gl2 <- sort(setNames(r2$lfc, r2$entrez), decreasing = TRUE)
+fg2 <- fgsea(pathways, gl2, minSize = 15, maxSize = 500)
+inner_join(fg[, c("pathway", "NES")], fg2[, c("pathway", "NES")], by = "pathway") |>
+  with(cor(NES.x, NES.y))
+```
+:::

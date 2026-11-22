@@ -1,0 +1,663 @@
+# 单细胞 RNA-seq（一）：数据结构与质控 {#sec-scrna-qc}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：1.75 小时（详细版）
+>
+> 目标：理解液滴法单细胞数据从测序到计数矩阵的过程；熟悉 Seurat v5 对象（assay / layer）
+> 与 SingleCellExperiment；完成空液滴识别、细胞级 QC、自适应阈值过滤与双细胞检测。
+> 详细版新增：重复 symbol 与参考版本问题、稀疏矩阵上的 apply 陷阱与矩阵化技巧、SoupX 去除环境 RNA。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 技术背景 | 10x 原理、上游定量工具 | 10 min |
+| 数据 / dgCMatrix | PBMC 3k；CSC 稀疏格式 | 10 min |
+| @sec-sc-genes | 重复 symbol、Ensembl 行名、hg19 参考、MT 基因检查 | 10 min |
+| @sec-sparse-apply | apply 会稠密化；`@p`、sparseMatrixStats、矩阵乘法聚合 | 10 min |
+| 空液滴 | barcode rank、emptyDrops | 10 min |
+| @sec-soupx | 环境 RNA 估计与校正 | 15 min |
+| Seurat v5 对象 / QC 指标 / MAD 阈值 | | 15 min |
+| 双细胞 / 高表达基因 | scDblFinder | 10 min |
+| @sec-zeros | 零值是缺失吗？泊松/负二项预期 vs 观测 | 10 min |
+| @sec-mv-qc | 稳健马氏距离的多变量离群 | 5 min |
+:::
+
+```{r}
+library(tidyverse)
+library(Seurat)
+library(SingleCellExperiment)
+library(scuttle)
+library(DropletUtils)
+library(scDblFinder)
+library(patchwork)
+```
+
+## 技术背景
+
+### 10x Genomics Chromium 原理（3' 端）
+
+每个凝胶珠上的寡核苷酸 = **细胞条形码**（16 bp，标记细胞）+ **UMI**（10–12 bp，标记分子）
++ poly(dT)。细胞与凝胶珠在油滴中相遇，mRNA 被捕获并反转录；测序后：
+
+- Read 1：条形码 + UMI；Read 2：cDNA（比对到基因）。
+- 同一（条形码，UMI，基因）的 reads 去重计为 1 个分子 → **UMI 计数矩阵**。
+
+| 与 bulk 的不同 | 后果 |
+|---|---|
+| 每个细胞只捕获约 5–20% 的 mRNA | 矩阵极度稀疏（> 90% 为 0）；"dropout" |
+| UMI 去除了 PCR 扩增偏差 | 计数近似多项分布/泊松抽样 + 生物学变异 |
+| 绝大多数液滴为空 | 需要区分**空液滴**（只含游离 RNA）与真实细胞 |
+| 少数液滴包含 2 个细胞 | **双细胞**（doublet）会被误认为中间态或新类型 |
+| 解离与应激 | 线粒体 RNA 比例升高的低质量细胞 |
+
+### 上游定量工具
+
+| 工具 | 特点 |
+|---|---|
+| Cell Ranger | 10x 官方；STAR 比对；输出 `filtered_feature_bc_matrix` 与 `raw_feature_bc_matrix` |
+| STARsolo | Cell Ranger 的开源快速替代，结果几乎一致 |
+| alevin-fry / simpleaf | salmon 生态，速度快、内存低，可量化 spliced/unspliced |
+| kallisto \| bustools | 伪比对，极快 |
+
+```bash
+# 典型 Cell Ranger 命令（示意）
+cellranger count --id=pbmc --transcriptome=refdata-gex-GRCh38-2024-A \
+  --fastqs=fastqs/ --sample=pbmc --create-bam=false
+```
+
+## 数据：10x PBMC 3k
+
+健康供者外周血单个核细胞，约 2,700 个细胞，Cell Ranger 1.1 处理，参考基因组 hg19。
+这是 Seurat 官方入门教程使用的经典数据集。我们同时下载**过滤后**与**原始**矩阵。
+
+```{r}
+base_url <- "https://cf.10xgenomics.com/samples/cell/pbmc3k/"
+for (f in c("pbmc3k_filtered_gene_bc_matrices.tar.gz", "pbmc3k_raw_gene_bc_matrices.tar.gz")) {
+  tgz <- fetch(paste0(base_url, f))
+  untar(tgz, exdir = file.path(DATA_DIR, sub(".tar.gz", "", f)))
+}
+filtered_dir <- file.path(DATA_DIR, "pbmc3k_filtered_gene_bc_matrices/filtered_gene_bc_matrices/hg19")
+raw_dir      <- file.path(DATA_DIR, "pbmc3k_raw_gene_bc_matrices/raw_gene_bc_matrices/hg19")
+list.files(filtered_dir)
+```
+
+10x 的矩阵格式（Matrix Market）：`matrix.mtx`（稀疏三元组）、`genes.tsv` / `features.tsv`
+（Ensembl ID + symbol）、`barcodes.tsv`。新版 Cell Ranger 同时输出 HDF5 格式（`.h5`），用
+`Read10X_h5()` 读取。
+
+```{r}
+counts <- Read10X(filtered_dir)          # 默认用 symbol 作行名（重复的会加后缀 .1）
+class(counts)
+dim(counts)
+counts[c("CD3E", "MS4A1", "LYZ", "PPBP"), 1:8]
+
+# 稀疏程度
+1 - Matrix::nnzero(counts) / prod(dim(counts))
+format(object.size(counts), units = "MB")
+format(object.size(as.matrix(counts)), units = "MB")
+```
+
+### dgCMatrix：压缩稀疏列格式
+
+```{r}
+str(counts[1:5, 1:3])
+```
+
+三个向量：`@x`（非零值）、`@i`（非零值的行号，0 起始）、`@p`（每列在 `@x` 中的起始偏移）。
+列操作（每个细胞）很快，行操作（每个基因）较慢；`Matrix::colSums`、`rowSums`、
+`sparseMatrixStats::rowVars` 等都对稀疏矩阵优化。**不要**对大矩阵调用 `as.matrix()`。
+
+### 基因名、重复 symbol 与参考版本 {#sec-sc-genes}
+
+`Read10X()` 默认用 **symbol** 作行名，而 symbol 不唯一——同一个 symbol 对应多个 Ensembl ID 时，
+Seurat 用 `make.unique()` 加上 `.1`、`.2` 后缀。看看到底是哪些基因：
+
+```{r}
+genes_tsv <- read.delim(file.path(filtered_dir, "genes.tsv"), header = FALSE,
+                        col.names = c("ensembl", "symbol"))
+nrow(genes_tsv)
+dup_sym <- genes_tsv |> filter(symbol %in% symbol[duplicated(symbol)]) |> arrange(symbol)
+nrow(dup_sym); head(dup_sym, 8)
+grep("\\.1$", rownames(counts), value = TRUE) |> head()
+```
+
+后果：
+
+- `TLR9` 与 `TLR9.1` 被当作**两个不同的基因**，跨数据集合并时，另一个数据集里的 `TLR9` 可能对应的是这里的 `TLR9.1`；
+- 下游做富集或与其他数据比较时，带后缀的名字匹配不上任何数据库。
+
+**更稳妥的做法**：用 Ensembl ID 作行名读入，symbol 作为特征元数据保存，只在展示时使用：
+
+```{r}
+counts_ens <- Read10X(filtered_dir, gene.column = 1)     # 第 1 列：Ensembl ID
+head(rownames(counts_ens), 3)
+anyDuplicated(rownames(counts_ens))                      # 0：Ensembl ID 唯一
+```
+
+还有一个经常被忽视的问题：**这个矩阵用的是哪个参考？** PBMC 3k 由 Cell Ranger 1.1 处理，参考为 **hg19**
+（Ensembl 注释）。与 GRCh38 的数据合并时，基因集合并不相同：
+
+```{r}
+mt_genes <- grep("^MT-", genes_tsv$symbol, value = TRUE)
+mt_genes                                       # 13 个线粒体编码蛋白的基因
+```
+
+::: callout-warning
+## 线粒体比例"全是 0"是一个危险信号
+
+- 小鼠线粒体基因是小写 `mt-`；大鼠、斑马鱼等物种命名又各不相同；
+- 一些"pre-mRNA / 内含子"参考、或被自定义过滤的 GTF **不包含线粒体基因**；
+- 行名为 Ensembl ID 时，`^MT-` 不会匹配任何基因。
+
+以上任何一种情况都会让 `percent.mt` 全部为 0，而 QC 代码不会报错。**计算后先检查**
+`length(grep(pattern, rownames(obj)))` 是否为预期的数目（人/小鼠为 13）。
+:::
+
+### 稀疏矩阵上的 apply：不要这样写 {#sec-sparse-apply}
+
+第 1 章的 apply 家族在稀疏矩阵上有一个陷阱：`apply()` 会先把矩阵**转换成稠密矩阵**。
+对于一个 3.3 万基因 × 10 万细胞的数据集，这意味着约 26 GB 内存。比较几种计算"每个细胞检出基因数"的方法：
+
+```{r}
+bench::mark(
+  apply_dense = apply(counts[, 1:500], 2, \(x) sum(x > 0)),        # 先转稠密，再逐列循环
+  colSums     = Matrix::colSums(counts[, 1:500] > 0),               # 稀疏逻辑矩阵上的 C 实现
+  diff_p      = diff(counts[, 1:500]@p),                            # 直接读 CSC 结构
+  check = FALSE, iterations = 5
+)[, c("expression", "median", "mem_alloc")]
+all.equal(unname(Matrix::colSums(counts > 0)), diff(counts@p))   # 三种方法结果相同
+```
+
+最后一种利用了 dgCMatrix 的结构：`@p` 记录每列非零元素的起点，相邻差值就是每列的非零个数。
+需要更复杂的逐基因统计时，使用 `sparseMatrixStats` / `MatrixGenerics`：
+
+```{r}
+gene_var <- sparseMatrixStats::rowVars(counts)
+gene_det <- Matrix::rowSums(counts > 0)
+tibble(gene = rownames(counts), var = gene_var, detected_in = gene_det) |>
+  arrange(desc(var)) |> head(5)
+```
+
+**分组求和**（例如每个簇的伪 bulk）可以写成稀疏矩阵乘法——这是 `scuttle::aggregateAcrossCells` 等函数的核心思想：
+
+```{r}
+grp <- factor(sample(c("A", "B", "C"), ncol(counts), replace = TRUE))
+G <- Matrix::sparse.model.matrix(~ 0 + grp)       # 细胞 × 组 的 0/1 指示矩阵
+pseudo <- counts %*% G                             # 基因 × 组
+dim(pseudo)
+all.equal(as.numeric(pseudo[, "grpA"]), as.numeric(Matrix::rowSums(counts[, grp == "A"])))
+```
+
+## 空液滴：barcode rank 图与 emptyDrops
+
+原始矩阵包含所有条形码（数十万个），绝大多数是空液滴。
+
+```{r}
+raw <- Read10X(raw_dir)
+dim(raw)
+
+br <- barcodeRanks(raw)
+br_df <- as_tibble(as.data.frame(br)) |> filter(total > 0)
+
+ggplot(br_df, aes(rank, total)) +
+  geom_point(size = 0.4) +
+  geom_hline(yintercept = metadata(br)$knee, colour = "dodgerblue", linetype = "dashed") +
+  geom_hline(yintercept = metadata(br)$inflection, colour = "orange", linetype = "dashed") +
+  annotate("text", x = 10, y = metadata(br)$knee * 1.5, label = "knee", colour = "dodgerblue") +
+  annotate("text", x = 10, y = metadata(br)$inflection * 0.6, label = "inflection", colour = "orange") +
+  scale_x_log10() + scale_y_log10() +
+  labs(x = "Barcode rank", y = "Total UMI count", title = "Barcode rank plot")
+```
+
+"膝点"之前是高 UMI 的细胞，之后陡降为空液滴。Cell Ranger v1 的旧算法大致按 UMI 阈值切；
+**emptyDrops**（Lun et al. 2019）更精细：先用极低 UMI 的条形码估计"环境 RNA 谱"，
+再检验每个条形码的表达谱是否显著偏离环境谱，从而救回低 UMI 但真实的细胞（如小细胞、静息细胞）。
+
+```{r}
+ed <- cached("pbmc3k_emptydrops.rds", {
+  set.seed(100)
+  emptyDrops(raw, lower = 100, niters = 10000)
+})
+is_cell <- ed$FDR <= 0.001
+table(emptyDrops = is_cell, useNA = "ifany")
+
+table(emptyDrops = colnames(raw)[which(is_cell)] %in% colnames(counts),
+      useNA = "ifany")   # 与 Cell Ranger 过滤结果的一致性
+```
+
+`ed$Limited == TRUE` 且未显著的条形码，说明置换次数不足，可增大 `niters`。本章接下来继续使用
+Cell Ranger 的过滤结果，以与公开教程保持一致。
+
+::: callout-note
+## 环境 RNA 污染
+空液滴里的游离 RNA 同样会进入含细胞的液滴，给每个细胞叠加一层"背景"（例如在 T 细胞中
+检出少量血红蛋白或 LYZ）。`SoupX`、`decontX`（celda 包）、`CellBender` 可以估计并去除它。
+对于组织解离样本（背景更重）建议常规使用。
+:::
+
+## 环境 RNA：SoupX 实战 {#sec-soupx}
+
+我们同时有原始矩阵（含空液滴）和过滤矩阵，正好可以用 SoupX（Young & Behjati 2020）估计并去除环境 RNA。
+SoupX 需要一个粗略的聚类结果来判断"哪些基因在某簇中本不应表达"：
+
+```{r}
+#| label: soupx
+library(SoupX)
+quick_clusters <- function(m) {
+  s <- CreateSeuratObject(m) |> NormalizeData(verbose = FALSE) |>
+    FindVariableFeatures(verbose = FALSE) |> ScaleData(verbose = FALSE) |>
+    RunPCA(npcs = 20, verbose = FALSE) |> FindNeighbors(dims = 1:15, verbose = FALSE) |>
+    FindClusters(resolution = 0.5, verbose = FALSE)
+  setNames(as.character(s$seurat_clusters), colnames(s))
+}
+sc <- SoupChannel(tod = raw[rownames(counts), ], toc = counts, calcSoupProfile = TRUE)
+sc <- setClusters(sc, quick_clusters(counts))
+sc <- autoEstCont(sc, doPlot = FALSE, verbose = FALSE)
+sc$metaData$rho[1]                              # 估计的污染比例
+head(sc$soupProfile[order(-sc$soupProfile$est), ], 10)   # 环境 RNA 中最多的基因
+```
+
+估计的污染率约 5.7%。环境 RNA 中含量最高的是 *MALAT1*、*B2M*、*TMSB4X*、核糖体蛋白、*FTL* 和线粒体转录本——
+即所有细胞（特别是破损细胞）都大量释放的转录本。
+
+```{r}
+#| label: soupx-adjust
+corrected <- adjustCounts(sc, roundToInt = TRUE, verbose = 0)
+removed <- Matrix::rowSums(counts) - Matrix::rowSums(corrected)
+frac_removed <- removed / pmax(Matrix::rowSums(counts), 1)
+tibble(gene = rownames(counts), total = Matrix::rowSums(counts), removed = removed,
+       frac_removed = round(frac_removed, 3)) |>
+  filter(total > 500) |> arrange(desc(frac_removed)) |> head(10)
+round(frac_removed[c("LYZ", "S100A9", "PPBP", "CD3E", "MS4A1")], 3)
+```
+
+整体被去除比例最高的是**线粒体转录本**（约 15%）——它们在环境 RNA 中占比高，说明不少游离 RNA 来自破损细胞。
+细胞类型特异基因（*LYZ*、*S100A9*、*PPBP*）的总体去除比例不高，因为它们绝大部分 UMI 在"自己的"细胞里；
+但在**不该表达它们的细胞**中，校正的效果是显著的。看 T 细胞中的 *LYZ*：
+
+```{r}
+#| fig-height: 3.5
+t_like <- counts["CD3E", ] > 0 & counts["LYZ", ] < 50      # 粗略的 T 细胞
+tibble(before = counts["LYZ", t_like], after = corrected["LYZ", t_like]) |>
+  pivot_longer(everything(), names_to = "state", values_to = "LYZ_umi") |>
+  mutate(state = factor(state, levels = c("before", "after"))) |>
+  ggplot(aes(state, LYZ_umi + 1)) + geom_violin() + geom_jitter(width = 0.15, size = 0.3, alpha = 0.3) +
+  scale_y_log10() + labs(x = NULL, y = "LYZ UMI + 1", title = "CD3E+ 细胞中的 LYZ：SoupX 校正前后")
+```
+
+::: callout-note
+## 什么时候需要去除环境 RNA？
+
+PBMC 的污染率约 5% 左右，影响不大；**组织解离**样本（肿瘤、肺、脑）通常更高（10–30%），
+会导致"每种细胞都表达一点上皮基因"之类的假象，并让差异表达分析把环境 RNA 当作信号。
+校正后的矩阵用于聚类、注释和 marker 可视化；差异表达分析时是否使用校正后的计数，社区仍有争论，
+保守的做法是两种都跑一遍并比较。本书后续章节继续使用原始计数。
+:::
+
+## Seurat v5 对象
+
+```{r}
+pbmc <- CreateSeuratObject(counts = counts, project = "pbmc3k",
+                           min.cells = 3,      # 只保留至少在 3 个细胞中检出的基因
+                           min.features = 200) # 只保留至少检出 200 个基因的细胞
+pbmc
+```
+
+结构：
+
+```
+Seurat
+├── assays
+│   └── RNA (Assay5)
+│       └── layers: counts, data, scale.data   ← v5：取代 v4 的 slots
+├── meta.data            每个细胞一行：orig.ident, nCount_RNA, nFeature_RNA, ...
+├── reductions           pca, umap, harmony ...
+├── graphs               RNA_nn, RNA_snn
+└── active.ident         当前的细胞身份（聚类等）
+```
+
+```{r}
+Assays(pbmc)
+Layers(pbmc)
+head(pbmc@meta.data)
+
+LayerData(pbmc, assay = "RNA", layer = "counts")[1:3, 1:3]
+pbmc[["RNA"]]$counts[1:3, 1:3]        # 等价写法
+pbmc$nCount_RNA |> head(3)            # $ 访问 meta.data 的列
+```
+
+::: callout-warning
+## Seurat v4 → v5 的主要变化
+| v4 | v5 |
+|---|---|
+| `GetAssayData(obj, slot = "counts")` | `LayerData(obj, layer = "counts")` 或 `obj[["RNA"]]$counts` |
+| `slot =` 参数 | `layer =` 参数 |
+| 多样本先 `SplitObject` 再整合 | 一个对象内 `split()` 成多个 layer，`IntegrateLayers()` |
+| 只能内存矩阵 | 支持 BPCells 磁盘矩阵（百万细胞） |
+| `FindMarkers` 慢 | 安装 `presto` 后自动使用快速 Wilcoxon |
+:::
+
+## 细胞级 QC 指标
+
+| 指标 | 低质量信号 |
+|---|---|
+| `nCount_RNA`（总 UMI） | 过低：空液滴/破损细胞；过高：可能是双细胞 |
+| `nFeature_RNA`（检出基因数） | 同上 |
+| `percent.mt`（线粒体基因比例） | 过高：细胞膜破损，胞质 mRNA 流失而线粒体 RNA 保留 |
+| `percent.ribo`（核糖体蛋白基因比例） | 细胞类型相关，通常不作为过滤标准 |
+| `percent.hb`（血红蛋白） | PBMC 中提示红细胞污染 |
+| 复杂度 `log10(nFeature)/log10(nCount)` | 过低：少数基因占据大部分 UMI（例如红细胞、血小板） |
+
+```{r}
+pbmc[["percent.mt"]]   <- PercentageFeatureSet(pbmc, pattern = "^MT-")
+pbmc[["percent.ribo"]] <- PercentageFeatureSet(pbmc, pattern = "^RP[SL]")
+pbmc[["percent.hb"]]   <- PercentageFeatureSet(pbmc, pattern = "^HB[^(P|E|S)]")
+pbmc$complexity <- log10(pbmc$nFeature_RNA) / log10(pbmc$nCount_RNA)
+
+summary(pbmc@meta.data[, c("nCount_RNA", "nFeature_RNA", "percent.mt", "percent.hb", "complexity")])
+```
+
+::: callout-tip
+小鼠线粒体基因前缀是 `^mt-`（小写）；用 Ensembl ID 作行名时需通过注释表查出 MT 染色体基因。
+:::
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4
+VlnPlot(pbmc, features = c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo"),
+        ncol = 4, pt.size = 0.1, alpha = 0.3) &
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4.5
+md <- as_tibble(pbmc@meta.data, rownames = "barcode")
+
+p1 <- ggplot(md, aes(nCount_RNA, nFeature_RNA, colour = percent.mt)) +
+  geom_point(size = 0.5) + scale_x_log10() + scale_y_log10() +
+  scale_colour_viridis_c(option = "plasma") + labs(title = "UMI vs genes")
+p2 <- ggplot(md, aes(nCount_RNA, percent.mt)) +
+  geom_point(size = 0.5, alpha = 0.5) + scale_x_log10() + labs(title = "UMI vs %mito")
+p3 <- ggplot(md, aes(complexity)) + geom_histogram(bins = 60) + labs(title = "Complexity")
+p1 | p2 | p3
+```
+
+## 设定阈值：固定阈值 vs 自适应（MAD）阈值
+
+**固定阈值**（Seurat 教程）：`nFeature_RNA` 200–2500，`percent.mt < 5`。简单，但依赖数据集
+与组织类型（例如心肌、肝细胞线粒体含量天然很高）。
+
+**自适应阈值**（OSCA 推荐）：在 log 尺度上，偏离中位数超过 $k$ 倍 MAD（中位数绝对偏差，
+通常 $k = 3$–5）的细胞视为离群：
+
+$$
+\text{outlier} \iff |x - \operatorname{median}(x)| > k \cdot \operatorname{MAD}(x)
+$$
+
+```{r}
+md <- md |>
+  mutate(
+    out_count = isOutlier(nCount_RNA,   nmads = 4, log = TRUE, type = "both"),
+    out_feat  = isOutlier(nFeature_RNA, nmads = 4, log = TRUE, type = "both"),
+    out_mt    = isOutlier(percent.mt,   nmads = 4, type = "higher"),
+    fixed_fail = nFeature_RNA < 200 | nFeature_RNA > 2500 | percent.mt > 5,
+    mad_fail  = out_count | out_feat | out_mt
+  )
+attr(isOutlier(md$percent.mt, nmads = 4, type = "higher"), "thresholds")
+
+with(md, table(fixed = fixed_fail, MAD = mad_fail))
+```
+
+```{r}
+ggplot(md, aes(nCount_RNA, percent.mt, colour = interaction(fixed_fail, mad_fail, sep = " / "))) +
+  geom_point(size = 0.6) +
+  scale_x_log10() +
+  scale_colour_manual(values = c("FALSE / FALSE" = "grey70", "TRUE / FALSE" = "orange",
+                                 "FALSE / TRUE" = "purple", "TRUE / TRUE" = "red"),
+                      name = "fixed fail / MAD fail")
+```
+
+::: callout-important
+## QC 是迭代的
+- 先宽松过滤，聚类后检查：有没有一个**只由低质量细胞组成**的簇（高 %mt、低 UMI、
+  无特异 marker）？有的话再回头收紧。
+- 多样本数据要**按样本**计算 MAD 阈值（`isOutlier(..., batch = sample)`），
+  因为测序深度和质量随样本变化。
+- 不要过度过滤：某些真实细胞类型天然低 UMI（中性粒细胞）或高线粒体（心肌细胞）。
+:::
+
+本章采用固定阈值与 MAD 阈值的**并集**：
+
+```{r}
+keep_cells <- md$barcode[!(md$fixed_fail | md$mad_fail)]
+pbmc <- subset(pbmc, cells = keep_cells)
+pbmc
+```
+
+## 双细胞检测：scDblFinder
+
+10x 的双细胞率约为每 1,000 个回收细胞 0.8%（因此 3,000 个细胞约 2–3%，10,000 个约 8%）。
+scDblFinder（Germain et al. 2021）通过**模拟人工双细胞**（随机组合真实细胞的表达谱），
+训练梯度提升分类器，给每个细胞打分。
+
+```{r}
+sce <- SingleCellExperiment(assays = list(counts = LayerData(pbmc, layer = "counts")))
+set.seed(123)
+sce <- scDblFinder(sce, dbr = NULL)     # dbr = NULL：按 10x 经验公式自动估计期望双细胞率
+table(sce$scDblFinder.class)
+
+pbmc$doublet_score <- sce$scDblFinder.score
+pbmc$doublet_class <- sce$scDblFinder.class
+```
+
+```{r}
+as_tibble(pbmc@meta.data) |>
+  ggplot(aes(doublet_class, nCount_RNA, fill = doublet_class)) +
+  geom_violin(show.legend = FALSE) + scale_y_log10() +
+  labs(title = "双细胞的 UMI 数显著更高", x = NULL)
+```
+
+多样本时请指定 `samples =` 参数，让每个样本（每个 10x 通道）单独建模。
+是否直接删除双细胞，取决于下游：通常删除；但最好在聚类后检查双细胞是否聚成"混合 marker"的簇。
+
+```{r}
+pbmc <- subset(pbmc, subset = doublet_class == "singlet")
+pbmc
+```
+
+## 高表达基因
+
+```{r}
+#| fig-height: 5
+cts <- LayerData(pbmc, layer = "counts")
+frac <- Matrix::t(Matrix::t(cts) / Matrix::colSums(cts))
+top20 <- names(sort(Matrix::rowMeans(frac), decreasing = TRUE))[1:20]
+
+as.matrix(frac[top20, ]) |>
+  as_tibble(rownames = "gene") |>
+  pivot_longer(-gene, values_to = "fraction") |>
+  mutate(gene = fct_reorder(gene, fraction)) |>
+  ggplot(aes(fraction * 100, gene)) +
+  geom_boxplot(outlier.size = 0.3) +
+  labs(x = "% of cell's UMIs", y = NULL, title = "Top 20 highly expressed genes")
+```
+
+MALAT1、核糖体蛋白、线粒体基因位居前列是正常的。
+
+## 零值是"缺失"吗？dropout 与抽样 {#sec-zeros}
+
+单细胞矩阵 90% 以上是 0。早期文献把这些 0 称为 "dropout"，暗示"本该有值却丢失了"，并据此发展了大量**插补**方法
+（MAGIC、scImpute、SAVER……）。但对基于 UMI 的液滴数据，Svensson (2020, *Nat Biotechnol*) 指出：
+**观测到的零值数量与简单的计数抽样模型的预期一致**——0 是低表达基因在有限测序深度下的正常抽样结果，
+而不是额外的"技术缺失"。
+
+用 PBMC 数据检验这一点。若基因 $g$ 在细胞 $c$ 中的期望计数为 $\mu_{gc} = s_c \cdot \lambda_g$（$s_c$ 为细胞总 UMI 比例），
+
+- 泊松模型下 $P(0) = e^{-\mu_{gc}}$；
+- 负二项模型下 $P(0) = (1 + \phi\mu_{gc})^{-1/\phi}$。
+
+对每个基因，把所有细胞的期望零值概率求平均，与观测到的零值比例对比：
+
+```{r}
+#| label: zero-inflation
+lib <- Matrix::colSums(cts)
+s_c <- lib / sum(lib)                                   # 细胞的相对深度
+lambda <- Matrix::rowSums(cts)                          # 基因总计数
+keep_g <- lambda >= 5
+obs_zero <- 1 - Matrix::rowSums(cts[keep_g, ] > 0) / ncol(cts)
+mu <- outer(lambda[keep_g], s_c)                        # 基因 × 细胞 的期望计数（稠密，约 1 万 × 2.5 千）
+exp_zero_pois <- rowMeans(exp(-mu))
+phi <- 0.1                                              # 一个小的共同离散度
+exp_zero_nb <- rowMeans((1 + phi * mu)^(-1 / phi))
+rm(mu); invisible(gc())
+zero_df <- tibble(gene = names(obs_zero), mean = lambda[keep_g] / ncol(cts),
+                  observed = obs_zero, poisson = exp_zero_pois, nb = exp_zero_nb)
+```
+
+```{r}
+#| fig-height: 4
+zero_df |>
+  pivot_longer(c(poisson, nb), names_to = "model", values_to = "expected") |>
+  ggplot(aes(mean)) +
+  geom_point(aes(y = observed), size = 0.3, alpha = 0.3) +
+  geom_line(aes(y = expected, colour = model), data = \(d) arrange(d, mean), linewidth = 0.8) +
+  scale_x_log10() +
+  scale_colour_manual(values = c(poisson = "dodgerblue", nb = "firebrick"),
+                      labels = c(nb = "负二项 (φ = 0.1)", poisson = "泊松")) +
+  labs(x = "基因平均 UMI / 细胞（对数轴）", y = "零值比例", colour = "模型预期",
+       title = "观测到的零值比例（点）与抽样模型预期（线）")
+```
+
+```{r}
+zero_df |>
+  mutate(excess_vs_nb = observed - nb) |>
+  summarise(median_excess = median(excess_vs_nb),
+            pct_genes_excess_gt_0.1 = round(100 * mean(excess_vs_nb > 0.1), 1))
+zero_df |> mutate(excess = observed - nb) |> slice_max(excess, n = 8)
+```
+
+绝大多数基因的零值比例与负二项预期吻合；**明显超出**预期的少数基因，往往是只在某一细胞类型中表达的 marker
+（例如只在 B 细胞或单核细胞中表达）——它们的"多余的零"来自**生物学异质性**（在其他细胞类型中确实不表达），
+而不是技术缺失。
+
+::: callout-important
+## 对插补保持谨慎
+
+- 对 UMI 数据，0 本身是有效的观测，不需要也不应该"补"；
+- 插补会在细胞之间**共享信息**，使细胞不再独立，夸大基因间相关、制造虚假的差异表达（Andrews & Hemberg 2018）；
+- 可视化时若想让 marker 更平滑，可以用 kNN 平滑或 Nebulosa 密度图，但统计检验始终使用原始计数。
+
+全长测序（Smart-seq2，第 13 章）的非 UMI 数据中，扩增偏差确实可以带来额外的零值，情况有所不同。
+:::
+
+## 多变量 QC：稳健马氏距离 {#sec-mv-qc}
+
+逐个指标的 MAD 阈值看不到**组合**异常：一个细胞的 UMI 数、基因数、线粒体比例各自都"不算极端"，
+但它们的组合可能很不寻常（例如 UMI 很高但基因数偏低）。用稳健的协方差估计（MCD）计算每个细胞在 QC 指标空间中的马氏距离：
+
+```{r}
+qc_mat <- pbmc@meta.data |>
+  transmute(log_umi = log10(nCount_RNA), log_genes = log10(nFeature_RNA),
+            mito = percent.mt, ribo = percent.ribo) |> as.matrix()
+set.seed(1)
+rob <- MASS::cov.rob(qc_mat, method = "mcd")
+d2 <- mahalanobis(qc_mat, rob$center, rob$cov)
+cutoff <- qchisq(0.999, df = ncol(qc_mat))
+pbmc$mv_outlier <- d2 > cutoff
+table(mv_outlier = pbmc$mv_outlier)
+```
+
+```{r}
+#| fig-height: 4
+as_tibble(qc_mat) |> mutate(outlier = pbmc$mv_outlier) |>
+  ggplot(aes(log_umi, log_genes, colour = outlier)) +
+  geom_point(size = 0.6) +
+  scale_colour_manual(values = c(`FALSE` = "grey70", `TRUE` = "red")) +
+  labs(title = "已通过单变量过滤的细胞中，多变量离群者")
+```
+
+被标记的细胞远比预期的多（约 12%）。看看它们落在 SoupX 那一节的粗聚类中的哪些簇：
+
+```{r}
+soup_cl <- sc$metaData[colnames(pbmc), "clusters"]
+tibble(cluster = soup_cl, outlier = pbmc$mv_outlier) |>
+  summarise(n = n(), pct_outlier = round(100 * mean(outlier), 1), .by = cluster) |>
+  arrange(desc(pct_outlier))
+```
+
+离群细胞高度集中在少数几个簇里——这些是 UMI 数、核糖体比例与占多数的 T 细胞**天然不同**的细胞类型
+（例如单核细胞体积大、UMI 多、核糖体比例低）。QC 指标的分布本身是**多峰**的，MCD 把少数群体当成了"离群"。
+
+教训：**多变量离群检测会把生物学差异误判为质量问题**。要么在每个细胞类型（或粗聚类）内部分别计算，
+要么只把它当作提示标记、结合聚类结果人工判断。这里只做标记，保留这些细胞。
+
+## 保存
+
+```{r}
+saveRDS(pbmc, file.path(DATA_DIR, "pbmc3k_qc.rds"))
+```
+
+## 与 SingleCellExperiment 互转
+
+```{r}
+sce_pbmc <- as.SingleCellExperiment(pbmc)
+sce_pbmc
+colData(sce_pbmc)[1:3, 1:4]
+
+# SCE → Seurat：
+# as.Seurat(sce, counts = "counts", data = "logcounts")   # 需要 logcounts assay
+```
+
+第 13 章会完整地使用 Bioconductor（SCE）生态。
+
+## 练习
+
+1. 用 `isOutlier(..., nmads = 3)` 重新计算并比较被过滤的细胞数。
+2. 计算 `percent.mt` 与 `nCount_RNA` 的 Spearman 相关，并解释其符号。
+3. 在 emptyDrops 结果中，找出被 emptyDrops 判定为细胞、但 Cell Ranger 未保留的条形码，
+   它们的总 UMI 分布如何？
+4. 用 `scDblFinder(sce, clusters = TRUE)`（基于聚类的模拟）重新运行，比较双细胞判定的一致性。
+5. 用 `counts_ens`（Ensembl 行名）创建 Seurat 对象，并借助 `genes_tsv` 计算 `percent.mt`。
+6. 用稀疏矩阵乘法计算每个 SoupX 粗聚类的伪 bulk 计数，并找出每个簇中 CPM 最高的 5 个基因。
+7. 把 SoupX 的污染率手动设为 0.2（`setContaminationFraction()`），比较 `LYZ` 在 T 细胞中的去除效果，讨论过度校正的风险。
+8. 对 @sec-zeros 中"多余零值"最多的 20 个基因，查看它们在哪些 SoupX 粗聚类中表达，验证"多余的零来自细胞类型异质性"。
+
+::: {.callout-tip collapse="true"}
+## 参考答案（2 与 3）
+```r
+# 2
+cor(md$percent.mt, md$nCount_RNA, method = "spearman")
+# 弱负相关：线粒体比例高的细胞多为破损细胞，胞质 mRNA 已流失，总 UMI 偏低。
+
+# 3
+rescued <- colnames(raw)[which(is_cell)] |> setdiff(colnames(counts))
+summary(Matrix::colSums(raw[, rescued]))
+```
+:::

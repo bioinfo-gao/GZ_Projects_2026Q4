@@ -1,0 +1,650 @@
+# Bulk RNA-seq（三）：edgeR、limma-voom、复杂设计与批次效应 {#sec-edger-limma}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2 小时（详细版）
+>
+> 目标：掌握另外两个主流框架——edgeR（负二项 + 拟似然 F 检验）与 limma-voom
+> （线性模型 + 精度权重 + 经验贝叶斯）；学会用设计矩阵与对比矩阵表达任意比较；
+> 理解批次效应的建模、可视化去除与未知批次（SVA）的估计。详细版新增：满秩问题与嵌套设计、
+> 每个基因的方差分解（apply 与矩阵化实现）、样本质量权重、camera/fry 基因集检验、ComBat-seq 与部分混杂。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 设计矩阵 | 加性 / 交互 / 组均值参数化 | 10 min |
+| @sec-design-advanced | 不满秩、`nonEstimable`、个体嵌套于组、makeContrasts | 15 min |
+| pasilla：edgeR / limma-voom | QL F 检验、voom、对比矩阵 | 25 min |
+| 三框架比较（airway） | 一致性 | 10 min |
+| 批次效应 / SVA / 随机效应 | 模型内校正、removeBatchEffect、svaseq、duplicateCorrelation | 20 min |
+| @sec-variance-partition | 逐基因方差分解：apply vs 矩阵运算 | 15 min |
+| @sec-quality-weights | voomWithQualityWeights 处理 NCBI 计数中的问题样本 | 10 min |
+| @sec-gene-set-tests | camera vs fry | 10 min |
+| @sec-combat | ComBat-seq；不平衡设计的方差膨胀 | 10 min |
+:::
+
+```{r}
+library(tidyverse)
+library(edgeR)
+library(limma)
+library(DESeq2)
+library(patchwork)
+library(ggrepel)
+```
+
+## 设计矩阵：一切比较的语言
+
+三个框架都基于 GLM，**设计矩阵**决定了系数的含义，**对比**决定了检验什么。
+先用一个 2×2 玩具设计看清楚几种参数化方式：
+
+```{r}
+toy <- expand.grid(rep = 1:2, treat = c("ctrl", "drug"), geno = c("WT", "KO")) |>
+  mutate(treat = factor(treat), geno = factor(geno))
+
+# 1) 加性模型：处理效应在两种基因型中相同
+model.matrix(~ geno + treat, toy)
+
+# 2) 交互模型：treatdrug = WT 中的处理效应；genoKO:treatdrug = KO 与 WT 中处理效应之差
+model.matrix(~ geno * treat, toy)
+
+# 3) 组均值参数化（无截距）：每组一个系数，任意比较都写成对比
+toy$group <- interaction(toy$geno, toy$treat, sep = "_")
+design_g <- model.matrix(~ 0 + group, toy)
+colnames(design_g) <- levels(toy$group)
+design_g
+
+makeContrasts(
+  drug_in_WT   = WT_drug - WT_ctrl,
+  drug_in_KO   = KO_drug - KO_ctrl,
+  interaction  = (KO_drug - KO_ctrl) - (WT_drug - WT_ctrl),
+  drug_average = (WT_drug + KO_drug) / 2 - (WT_ctrl + KO_ctrl) / 2,
+  levels = design_g
+)
+```
+
+::: callout-tip
+## 交互项的直觉
+"交互作用显著"意味着"处理效应**依赖于**基因型"。交互检验的功效远低于主效应
+（需要估计差值的差值），通常需要更多重复。只关心某一组内的处理效应时，
+直接对比 `WT_drug - WT_ctrl` 即可。
+:::
+
+## 设计矩阵进阶：满秩、嵌套与不可估计 {#sec-design-advanced}
+
+### "Model matrix not full rank"
+
+DESeq2 / edgeR / limma 最常见的报错之一。原因是设计矩阵的某些列**线性相关**——
+某个系数无法从数据中唯一确定。三种典型情形：
+
+```{r}
+# 情形 1：完全混杂 —— 批次与处理一一对应
+conf <- data.frame(batch = factor(c("A", "A", "B", "B")), treat = factor(c("ctrl", "ctrl", "drug", "drug")))
+X1 <- model.matrix(~ batch + treat, conf)
+X1
+limma::is.fullrank(X1)
+limma::nonEstimable(X1)          # 告诉你哪一列无法估计
+```
+
+```{r}
+# 情形 2：某个组合没有样本（例如交互模型中缺一个格子）
+miss <- data.frame(geno = factor(c("WT", "WT", "KO", "KO", "WT", "WT")),
+                   treat = factor(c("ctrl", "ctrl", "ctrl", "ctrl", "drug", "drug")))
+X2 <- model.matrix(~ geno * treat, miss)
+limma::nonEstimable(X2)
+```
+
+**情形 3：个体嵌套在组内**——最常见也最容易处理。例如 3 位患者、3 位健康人，每人有处理前/后两个样本，
+想同时控制个体差异（配对）并比较"患者与健康人的处理效应差异"：
+
+```{r}
+nest <- data.frame(
+  status = factor(rep(c("healthy", "patient"), each = 6), levels = c("healthy", "patient")),
+  subject = factor(rep(paste0("S", 1:6), each = 2)),
+  time = factor(rep(c("pre", "post"), 6), levels = c("pre", "post"))
+)
+X3 <- model.matrix(~ status + subject + time, nest)
+limma::nonEstimable(X3)          # status 与 subject 共线：每个 subject 只属于一个 status
+```
+
+解决办法（DESeq2 vignette 推荐）：在**组内**重新给个体编号，用 `status:ind.n` 代替 `subject`：
+
+```{r}
+nest$ind.n <- factor(ave(as.integer(nest$subject), nest$status, FUN = \(x) as.integer(factor(x))))
+nest
+X4 <- model.matrix(~ status + status:ind.n + status:time, nest)
+colnames(X4)
+limma::is.fullrank(X4)
+```
+
+现在 `statushealthy:timepost` 与 `statuspatient:timepost` 分别是两组内的处理效应，
+二者之差就是"处理效应是否依赖疾病状态"——用 `contrast = list("statuspatient:timepost", "statushealthy:timepost")`。
+（若各组个体数不同，`model.matrix` 会产生全零列，需要手动删除。）
+
+### 多水平因子与对比矩阵
+
+`makeContrasts()` 用组名写出任意线性组合，是 limma/edgeR 中最不易出错的方式：
+
+```{r}
+grp <- factor(rep(c("ctrl", "low", "high"), each = 3), levels = c("ctrl", "low", "high"))
+Xg <- model.matrix(~ 0 + grp)
+colnames(Xg) <- levels(grp)
+cm <- makeContrasts(
+  low_vs_ctrl  = low - ctrl,
+  high_vs_ctrl = high - ctrl,
+  high_vs_low  = high - low,
+  any_dose     = (low + high) / 2 - ctrl,
+  levels = Xg
+)
+cm
+```
+
+多个对比可以**同时**检验（F 检验，"任一对比非零"）：`topTable(fit2, coef = c("low_vs_ctrl", "high_vs_ctrl"))`，
+等价于 DESeq2 的 LRT `reduced = ~ 1`。
+
+## 数据：pasilla
+
+Brooks et al. (2011)：果蝇 S2-DRSC 细胞中用 RNAi 敲低剪接因子 *pasilla*（人类 NOVA1/2 的同源基因）。
+7 个样本：3 个处理（敲低）+ 4 个对照；其中一部分是单端测序、一部分是双端测序——
+一个**真实的技术批次**。
+
+```{r}
+cts_file  <- system.file("extdata", "pasilla_gene_counts.tsv", package = "pasilla", mustWork = TRUE)
+anno_file <- system.file("extdata", "pasilla_sample_annotation.csv", package = "pasilla", mustWork = TRUE)
+
+cts <- as.matrix(read.csv(cts_file, sep = "\t", row.names = "gene_id"))
+coldata <- read.csv(anno_file, row.names = 1)[, c("condition", "type")]
+rownames(coldata) <- sub("fb$", "", rownames(coldata))
+cts <- cts[, rownames(coldata)]
+
+coldata <- coldata |>
+  mutate(condition = factor(condition, levels = c("untreated", "treated")),
+         type = factor(type, labels = c("paired", "single")))   # 原始水平：paired-end / single-read
+coldata
+dim(cts)
+```
+
+## edgeR
+
+### DGEList、过滤、归一化
+
+```{r}
+y <- DGEList(counts = cts, samples = coldata, group = coldata$condition)
+design <- model.matrix(~ type + condition, data = coldata)
+colnames(design)
+
+keep <- filterByExpr(y, design)           # 自动根据文库大小与最小组样本数计算 CPM 阈值
+table(keep)
+y <- y[keep, , keep.lib.sizes = FALSE]
+
+y <- normLibSizes(y)                      # edgeR 4 的新名字；旧名 calcNormFactors() 仍可用
+y$samples
+```
+
+### 探索：MDS 图
+
+```{r}
+mds <- plotMDS(y, plot = FALSE)
+tibble(sample = colnames(y), x = mds$x, y = mds$y) |>
+  bind_cols(coldata) |>
+  ggplot(aes(x, y, colour = condition, shape = type)) +
+  geom_point(size = 4) +
+  geom_text_repel(aes(label = sample), colour = "grey30", seed = 1) +
+  labs(x = sprintf("Leading logFC dim 1 (%.0f%%)", 100 * mds$var.explained[1]),
+       y = sprintf("Leading logFC dim 2 (%.0f%%)", 100 * mds$var.explained[2]),
+       title = "pasilla：处理与测序类型都影响表达谱")
+```
+
+### 离散度与 QL 拟合
+
+edgeR 推荐的流程是 **quasi-likelihood（QL）F 检验**：在负二项离散度之外，再为每个基因
+估计一个 QL 离散度并做经验贝叶斯收缩，从而更严格地控制错误率（小样本时尤其如此）。
+
+```{r}
+y <- estimateDisp(y, design, robust = TRUE)    # NB 离散度（用于 BCV 图；edgeR 4 的 QL 流程中可选）
+sqrt(y$common.dispersion)                       # 共同 BCV
+
+fit <- glmQLFit(y, design, robust = TRUE)
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4
+par(mfrow = c(1, 2))
+plotBCV(y, main = "BCV")
+plotQLDisp(fit, main = "QL dispersion")
+par(mfrow = c(1, 1))
+```
+
+### 检验
+
+```{r}
+qlf <- glmQLFTest(fit, coef = "conditiontreated")
+topTags(qlf, n = 8)
+summary(decideTests(qlf, p.value = 0.05))
+```
+
+带倍数阈值的正式检验（等价于 DESeq2 的 `lfcThreshold`）：`glmTreat()`
+
+```{r}
+tr <- glmTreat(fit, coef = "conditiontreated", lfc = log2(1.5))
+summary(decideTests(tr))
+```
+
+```{r}
+plotMD(qlf, status = decideTests(qlf), main = "treated vs untreated (edgeR QL)")
+abline(h = 0, col = "grey40")
+```
+
+pasilla 本身（FBgn0261552）应该是下调最显著的基因之一：
+
+```{r}
+topTags(qlf, n = Inf)$table["FBgn0261552", ]
+```
+
+## limma-voom
+
+### 思路
+
+对 log-CPM 做普通线性模型的问题在于**方差依赖均值**（异方差）。voom 估计每个观测值的
+均值–方差趋势，给出**精度权重**，然后进入 limma 的加权线性模型与**经验贝叶斯方差收缩**。
+优点：速度快、可以使用 limma 全部的工具（随机效应、`duplicateCorrelation`、
+`arrayWeights`、基因集检验 `camera`/`roast`……）。
+
+```{r}
+v <- voom(y, design, plot = TRUE)
+```
+
+voom 图中的趋势线应**平滑单调下降**；如果左端出现上翘，说明低表达基因过滤不足。
+
+```{r}
+fit_l <- lmFit(v, design)
+fit_l <- eBayes(fit_l, robust = TRUE)
+topTable(fit_l, coef = "conditiontreated", n = 8)
+summary(decideTests(fit_l))
+plotSA(fit_l, main = "残差方差 vs 平均表达（经验贝叶斯收缩后）")
+```
+
+edgeR 4 还提供了一步式的 `voomLmFit()`，能在估计权重时更好地处理零计数，
+并可同时估计样本质量权重：
+
+```{r}
+fit_vl <- voomLmFit(y, design, sample.weights = TRUE, plot = FALSE) |> eBayes()
+topTable(fit_vl, coef = "conditiontreated", n = 3)
+```
+
+### 对比矩阵
+
+用组均值参数化 + `makeContrasts()` 是 limma 的经典用法：
+
+```{r}
+grp <- factor(paste(coldata$condition, coldata$type, sep = "_"))
+design_g <- model.matrix(~ 0 + grp)
+colnames(design_g) <- levels(grp)
+colnames(design_g)
+
+cm <- makeContrasts(
+  KD_in_paired = treated_paired - untreated_paired,
+  KD_in_single = treated_single - untreated_single,
+  KD_average   = (treated_paired + treated_single - untreated_paired - untreated_single) / 2,
+  levels = design_g
+)
+
+v_g   <- voom(y, design_g)
+fit_g <- lmFit(v_g, design_g) |> contrasts.fit(cm) |> eBayes()
+summary(decideTests(fit_g))
+topTable(fit_g, coef = "KD_average", n = 3)
+```
+
+## 三个框架的比较（airway）
+
+在同一数据上，三者结论高度一致。
+
+```{r}
+de <- readRDS(file.path(DATA_DIR, "airway_de.rds"))
+dds <- de$dds
+
+ya <- DGEList(counts(dds), samples = as.data.frame(colData(dds)))
+da <- model.matrix(~ cell + dex, ya$samples)
+ya <- ya[filterByExpr(ya, da), , keep.lib.sizes = FALSE] |> normLibSizes()
+
+edgeR_res <- glmQLFit(ya, da, robust = TRUE) |> glmQLFTest(coef = "dextrt") |>
+  topTags(n = Inf) |> as.data.frame() |> as_tibble(rownames = "gene_id")
+limma_res <- voom(ya, da) |> lmFit(da) |> eBayes(robust = TRUE) |>
+  topTable(coef = "dextrt", n = Inf) |> as_tibble(rownames = "gene_id")
+deseq_res <- de$deg
+
+sig <- list(
+  DESeq2 = deseq_res |> filter(padj < 0.05) |> pull(gene_id),
+  edgeR  = edgeR_res |> filter(FDR < 0.05) |> pull(gene_id),
+  limma  = limma_res |> filter(adj.P.Val < 0.05) |> pull(gene_id)
+)
+lengths(sig)
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4.5
+p_venn <- ggVennDiagram::ggVennDiagram(sig, label_alpha = 0) +
+  scale_fill_distiller(palette = "Blues", direction = 1) + labs(title = "padj/FDR < 0.05")
+
+lfc <- deseq_res |> dplyr::select(gene_id, DESeq2 = log2FC_mle) |>
+  inner_join(edgeR_res |> dplyr::select(gene_id, edgeR = logFC), join_by(gene_id)) |>
+  inner_join(limma_res |> dplyr::select(gene_id, limma = logFC), join_by(gene_id))
+
+p_lfc <- ggplot(lfc, aes(DESeq2, limma)) +
+  geom_point(size = 0.3, alpha = 0.3) + geom_abline(colour = "red") +
+  annotate("text", x = -4, y = 5, label = sprintf("r = %.3f", cor(lfc$DESeq2, lfc$limma))) +
+  labs(title = "log2FC：DESeq2 vs limma-voom")
+
+p_venn | p_lfc
+```
+
+| | DESeq2 | edgeR (QL) | limma-voom |
+|---|---|---|---|
+| 分布 | NB | NB + QL | 加权正态 |
+| 离散度/方差收缩 | 向趋势经验贝叶斯 | 加权似然 + QL 经验贝叶斯 | 方差经验贝叶斯 |
+| 小样本 FDR 控制 | 好 | **最严格** | 好 |
+| 速度（大样本，> 100） | 较慢 | 快 | **最快** |
+| 随机效应 / 重复测量 | 无 | 无 | `duplicateCorrelation`、dream（variancePartition） |
+| LFC 收缩 | apeglm / ashr | `predFC` | 无（但方差收缩） |
+
+> 经验：样本数 3–10 时任选其一；> 50 个样本、复杂随机效应时首选 limma-voom / dream；
+> 单细胞伪 bulk（第 12 章）三者皆可。
+
+## 批次效应
+
+### 已知批次：放进模型
+
+正确做法：**把批次作为协变量放进设计**（就像 airway 中的 `cell`、pasilla 中的 `type`），
+而不是先"校正"数据再做差异分析。
+
+```{r}
+d_nobatch <- model.matrix(~ condition, coldata)
+fit_nb <- voom(y, d_nobatch) |> lmFit(d_nobatch) |> eBayes()
+c(without_batch = sum(p.adjust(fit_nb$p.value[, 2], "BH") < 0.05),
+  with_batch    = sum(p.adjust(fit_l$p.value[, "conditiontreated"], "BH") < 0.05))
+```
+
+### 可视化时去除批次
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4
+lcpm <- cpm(y, log = TRUE)
+lcpm_rbe <- removeBatchEffect(lcpm, batch = coldata$type, design = model.matrix(~ condition, coldata))
+
+pca_plot <- function(m, title) {
+  p <- prcomp(t(m[order(-matrixStats::rowVars(m))[1:500], ]))
+  tibble(PC1 = p$x[, 1], PC2 = p$x[, 2]) |> bind_cols(coldata) |>
+    ggplot(aes(PC1, PC2, colour = condition, shape = type)) + geom_point(size = 4) + labs(title = title)
+}
+(pca_plot(lcpm, "原始 logCPM") | pca_plot(lcpm_rbe, "removeBatchEffect 后")) +
+  plot_layout(guides = "collect")
+```
+
+::: callout-warning
+## 不要把"校正后的数据"再做差异分析
+`removeBatchEffect()`、ComBat 的输出已经"用掉"了自由度，再拿去做检验会低估方差、
+夸大显著性。它们只用于 **可视化、聚类、机器学习特征**。对计数数据如确需校正，
+用 `sva::ComBat_seq()`（保持整数计数），但模型内校正仍是首选。
+
+**设计阶段的混杂无法补救**：如果所有处理样本都在批次 A、所有对照都在批次 B，
+那么批次效应与处理效应在数学上不可区分。
+:::
+
+### 未知批次：SVA
+
+假装不知道 airway 中的 `cell` 变量，用 `svaseq` 从数据中估计"代理变量"（surrogate variables）：
+
+```{r}
+library(sva)
+norm_cts <- counts(dds, normalized = TRUE)
+norm_cts <- norm_cts[rowMeans(norm_cts) > 1, ]
+mod  <- model.matrix(~ dex, colData(dds))
+mod0 <- model.matrix(~ 1,   colData(dds))
+svobj <- svaseq(norm_cts, mod, mod0, n.sv = 2)
+
+tibble(SV1 = svobj$sv[, 1], SV2 = svobj$sv[, 2], cell = dds$cell, dex = dds$dex) |>
+  ggplot(aes(SV1, SV2, colour = cell, shape = dex)) + geom_point(size = 4) +
+  labs(title = "SVA 在不知道 cell 的情况下重新发现了它")
+```
+
+把代理变量加入设计：`design(dds) <- ~ SV1 + SV2 + dex`（先把 SV 列写入 `colData`）。
+另一类方法 RUVSeq 利用阴性对照基因（例如 ERCC spike-in 或"经验上不变"的基因）估计无用变异。
+
+## 重复测量与随机效应
+
+当同一个体有多个样本（例如 airway 中每个细胞系既有处理又有对照），除了把个体作为
+**固定效应**（`~ cell + dex`），limma 还可以把它当作**随机效应**：
+
+```{r}
+v_a   <- voom(ya, model.matrix(~ dex, ya$samples))
+corfit <- duplicateCorrelation(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell)
+corfit$consensus.correlation
+
+fit_re <- lmFit(v_a, model.matrix(~ dex, ya$samples), block = ya$samples$cell,
+                correlation = corfit$consensus.correlation) |> eBayes()
+sum(p.adjust(fit_re$p.value[, "dextrt"], "BH") < 0.05)
+```
+
+随机效应在**个体间比较**时不可或缺：例如"患者 vs 健康人，每人 3 个时间点"——
+个体嵌套在分组内，此时固定效应模型无法估计组效应。更完整的方案是
+`variancePartition::dream()`（limma 框架中的线性混合模型）。
+
+## 每个基因的方差来源 {#sec-variance-partition}
+
+一个基因的表达变异有多少来自处理、多少来自供者、多少是残差？对每个基因拟合一个线性模型、
+分解平方和——一个用 `apply()` 实现的"简化版 variancePartition"：
+
+```{r}
+v_air <- voom(ya, da)
+E <- v_air$E
+cell <- ya$samples$cell; dex <- ya$samples$dex
+var_frac <- t(apply(E, 1, function(yv) {
+  ss <- anova(lm(yv ~ cell + dex))[["Sum Sq"]]
+  setNames(ss / sum(ss), c("cell", "dex", "residual"))
+}))
+summary(var_frac)
+```
+
+逐基因调用 `lm()` 一万多次要十几秒。利用"多响应线性模型"，同样的计算可以完全向量化：
+
+```{r}
+vp_fast <- function(E, data, terms) {
+  # 对所有基因同时拟合：拟合值 = E %*% H，H 是"帽子矩阵"（n × n，对称）
+  rss <- function(f) {
+    X <- model.matrix(f, data)
+    H <- X %*% solve(crossprod(X), t(X))
+    rowSums((E - E %*% H)^2)
+  }
+  tss <- rowSums((E - rowMeans(E))^2)
+  # 序贯地加入各项，得到每一步的残差平方和（与 anova() 的 I 型平方和一致）
+  rss_seq <- vapply(seq_along(terms), \(k) rss(reformulate(terms[seq_len(k)])), numeric(nrow(E)))
+  ss <- cbind(tss, rss_seq)
+  frac <- (ss[, -ncol(ss), drop = FALSE] - ss[, -1, drop = FALSE]) / tss
+  out <- cbind(frac, rss_seq[, length(terms)] / tss)
+  colnames(out) <- c(terms, "residual")
+  out
+}
+vf <- vp_fast(E, data.frame(cell, dex), c("cell", "dex"))
+all.equal(unname(vf), unname(var_frac), tolerance = 1e-6)
+bench::mark(apply_lm = t(apply(E[1:500, ], 1, \(yv) anova(lm(yv ~ cell + dex))[["Sum Sq"]])),
+            matrix   = vp_fast(E[1:500, ], data.frame(cell, dex), c("cell", "dex")),
+            check = FALSE, iterations = 3)[, c("expression", "median")]
+```
+
+```{r}
+#| fig-height: 3.5
+as_tibble(var_frac, rownames = "gene_id") |>
+  pivot_longer(-gene_id, names_to = "source", values_to = "fraction") |>
+  mutate(source = factor(source, levels = c("dex", "cell", "residual"))) |>
+  ggplot(aes(source, fraction, fill = source)) +
+  geom_violin(scale = "width") + geom_boxplot(width = 0.1, outlier.shape = NA, fill = "white") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(x = NULL, y = "方差解释比例", title = "airway：每个基因的方差来源") +
+  theme(legend.position = "none")
+```
+
+```{r}
+as_tibble(var_frac, rownames = "gene_id") |>
+  mutate(symbol = rowData(dds)[gene_id, "gene_name"]) |>
+  slice_max(cell, n = 8) |> mutate(across(cell:residual, \(x) round(x, 3)))
+```
+
+供者效应最强的基因里有 *XIST* 和 Y 染色体基因——与第 6 章推断的性别（3 男 1 女）一致。
+多数基因的变异主要来自供者而非处理，这再次说明了**把供者放进模型**的重要性。
+
+## 样本质量权重 {#sec-quality-weights}
+
+第 7 章 @sec-two-pipelines 发现：NCBI 重处理的计数中有几个样本存在样本特异偏差，抬高了离散度、降低了检出数。
+与其删除这些样本，limma 可以**估计每个样本的质量权重**，让"噪声大"的样本在拟合中贡献更小：
+
+```{r}
+ncbi_file <- file.path(DATA_DIR, "GSE52778_raw_counts_GRCh38.p13_NCBI.tsv.gz")
+if (file.exists(ncbi_file)) {
+  ncbi <- data.table::fread(ncbi_file) |> as.data.frame() |> column_to_rownames("GeneID") |> as.matrix()
+  n8 <- ncbi[, as.character(dds$SampleName)]
+  colnames(n8) <- colnames(dds)
+  yn <- DGEList(n8, samples = as.data.frame(colData(dds)))
+  dn <- model.matrix(~ cell + dex, yn$samples)
+  yn <- yn[filterByExpr(yn, dn), , keep.lib.sizes = FALSE] |> normLibSizes()
+
+  v_plain <- voom(yn, dn)
+  v_qw    <- voomWithQualityWeights(yn, dn)
+  w <- v_qw$targets$sample.weights
+  tibble(run = colnames(yn), avgLength = yn$samples$avgLength, weight = round(w, 2))
+}
+```
+
+```{r}
+if (file.exists(ncbi_file)) {
+  n_sig <- function(v) {
+    lmFit(v, dn) |> eBayes(robust = TRUE) |> topTable(coef = "dextrt", n = Inf) |>
+      with(sum(adj.P.Val < 0.05))
+  }
+  c(voom = n_sig(v_plain), voom_quality_weights = n_sig(v_qw))
+}
+```
+
+两个值得注意的结果：
+
+1. 权重**并不**与读长对应——读长最短的 SRR1039520/21 反而得到了最高的权重。质量权重衡量的是
+   "该样本在模型拟合后的残差有多大"，而不是我们猜测的某个技术指标；第 7 章观察到的总计数差异
+   可能主要被 TMM 归一化吸收了。**不要先入为主地假设"哪个样本有问题"**，让数据说话。
+2. 在同一份 NCBI 计数上，limma-voom 检出的基因（数千个）远多于第 7 章 DESeq2 的结果（不到一千个）。
+   不同方法对样本特异偏差、离散度趋势的建模不同，结论差异如此之大本身就是一个**警示信号**：
+   在有疑问的数据上，用两种方法交叉验证，并检查 BCV、MDS 图与 p 值直方图。
+
+质量权重的思想（Ritchie et al. 2006；Liu et al. 2015）适用于"样本质量参差不齐但又不想丢弃"的情形，
+例如临床组织样本的 RIN 差异。加权后检出数略有增加。
+
+## 基因集检验：camera、roast 与 fry {#sec-gene-set-tests}
+
+第 9 章会系统讲富集分析；limma 自带的基因集检验直接在线性模型上工作，能正确处理复杂设计和基因间相关：
+
+| 函数 | 类型 | 零假设 | 特点 |
+|---|---|---|---|
+| `roast()` / `fry()` | **自包含**（self-contained） | 集合内**没有任何**基因差异表达 | 旋转检验；`fry` 是快速近似 |
+| `camera()` | **竞争性**（competitive） | 集合内基因**不比其他基因**更差异 | 校正了基因间相关（避免假阳性） |
+
+```{r}
+sym_a <- rowData(dds)$gene_name[match(rownames(ya), rownames(dds))]
+sets <- list(
+  GC_response  = c("DUSP1", "KLF15", "PER1", "TSC22D3", "FKBP5", "ZBTB16", "CRISPLD2", "ERRFI1"),
+  inflammation = c("IL6", "CXCL8", "PTGS2", "IL1B", "CCL2", "TNFAIP3"),
+  housekeeping = c("ACTB", "GAPDH", "TUBB", "RPLP0", "PGK1", "HPRT1")
+)
+idx <- ids2indices(sets, sym_a)
+lengths(idx)
+camera(v_air, idx, design = da, contrast = "dextrt")
+fry(v_air, idx, design = da, contrast = "dextrt")
+```
+
+`fry` 说明糖皮质激素应答基因集**有**差异表达（方向向上），`camera` 进一步说明它们比随机基因更差异；
+管家基因在有方向的检验中都不显著——但 `fry` 的 `PValue.Mixed`（不论方向，集合内基因是否有变化）显著，
+因为在上万个基因都有微小变化的强处理下，"完全不变"的零假设几乎总会被拒绝。这正是自包含检验需要谨慎解读的地方。注意：基因集小、或者只关心"这个集合有没有变化"时用 `fry`；
+关心"这个通路是否比其他通路更受影响"时用 `camera`。
+
+## 批次校正进阶：ComBat-seq 与部分混杂 {#sec-combat}
+
+`sva::ComBat_seq()` 在**计数**层面校正已知批次，输出仍是整数矩阵：
+
+```{r}
+cts_cb <- sva::ComBat_seq(cts[keep, ], batch = coldata$type, group = coldata$condition)
+cts_cb[1:3, ]
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4
+(pca_plot(cpm(cts[keep, ], log = TRUE), "原始") | pca_plot(cpm(cts_cb, log = TRUE), "ComBat-seq 后")) +
+  plot_layout(guides = "collect")
+```
+
+**部分混杂**时会发生什么？若处理在批次间不平衡，批次与处理的效应估计相关，标准误变大：
+
+```{r}
+balanced   <- data.frame(batch = factor(rep(c("A", "B"), each = 4)), treat = factor(rep(c("c", "t"), 4)))
+unbalanced <- data.frame(batch = factor(rep(c("A", "B"), each = 4)),
+                         treat = factor(c("c", "c", "c", "t", "t", "t", "t", "c")))
+se_factor <- function(df) {
+  X <- model.matrix(~ batch + treat, df)
+  sqrt(diag(solve(crossprod(X))))["treatt"]       # 处理系数的方差膨胀（相对于单位误差）
+}
+c(balanced = se_factor(balanced), unbalanced = se_factor(unbalanced))
+```
+
+同样的样本量，不平衡设计中处理效应的标准误更大——功效更低。这就是为什么**实验设计阶段**就要让处理在批次间平衡。
+
+## 练习
+
+1. 在 pasilla 上用交互模型 `~ type * condition` 检验"敲低效应是否依赖测序类型"。有多少显著基因？
+   这说明了什么？
+2. 用 edgeR 分析 airway，并对 `dextrt` 做 `glmTreat(lfc = 1)`，与 DESeq2 `lfcThreshold = 1` 的结果比较。
+3. 用 `limma::camera()` 检验 airway 中一组糖皮质激素应答基因
+   （DUSP1、KLF15、PER1、TSC22D3、FKBP5、ZBTB16）作为整体是否上调。
+4. 对 @sec-design-advanced 的嵌套设计 `nest`，构造一个 7 人（4 健康 + 3 患者）的版本，找出 `model.matrix` 产生的全零列并删除，验证满秩。
+5. 用 `vp_fast(lcpm, coldata, c("type", "condition"))` 对 pasilla 做方差分解，测序类型解释的方差比处理多吗？
+6. 在 @sec-quality-weights 中，把权重最低的样本直接删除后重新分析，与使用质量权重的结果比较检出数。
+
+::: {.callout-tip collapse="true"}
+## 参考答案（1 与 3）
+```r
+# 1
+d_int <- model.matrix(~ type * condition, coldata)
+fit_int <- glmQLFit(y, d_int, robust = TRUE)
+summary(decideTests(glmQLFTest(fit_int, coef = "typesingle:conditiontreated")))
+# 几乎没有显著基因：敲低效应在两种测序类型中一致，加性模型足够。
+
+# 3
+sym <- rowData(dds)$gene_name[match(rownames(ya), rownames(dds))]
+gc_set <- which(sym %in% c("DUSP1", "KLF15", "PER1", "TSC22D3", "FKBP5", "ZBTB16"))
+v_full <- voom(ya, da)
+camera(v_full, index = list(GC = gc_set), design = da, contrast = "dextrt")
+```
+:::

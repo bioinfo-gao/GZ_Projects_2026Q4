@@ -1,0 +1,682 @@
+# Bulk RNA-seq（一）：从 reads 到计数矩阵、归一化与质控 {#sec-rnaseq-qc}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2 小时（详细版）
+>
+> 目标：理解计数数据的统计特性与归一化的原理（为什么不能直接用 CPM 比较）；
+> 完成一套完整的样本级探索性分析（EDA）：文库大小、基因检出、分布、
+> 方差稳定变换、样本距离、PCA。详细版新增：计数矩阵完整性检查、样本身份（性别/配对）核查、
+> 长度/生物类型/GC 偏差、离群样本的量化检测、过滤阈值的影响。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 实验设计 / 上游流程 / tximeta | 设计原则；salmon → tximeta | 15 min |
+| @sec-count-sanity | NA、非整数、重复 ID、版本号、样本表错位 | 10 min |
+| @sec-sample-identity | XIST / Y 基因推断性别，配对一致性 | 10 min |
+| 计数的统计特性 / 样本级 QC | 过度离散、负二项；文库与检出 | 15 min |
+| 基因过滤 / @sec-gene-bias | 长度偏差、生物类型构成（rowsum）、GC 偏差 | 15 min |
+| @sec-outliers | connectivity、马氏距离、RLE | 10 min |
+| @sec-filter-effect | 五种过滤规则的比较 | 5 min |
+| 归一化 / VST / 距离 / PCA | 组成偏差、median-of-ratios、TPM、主成分解释 | 25 min |
+:::
+
+```{r}
+library(tidyverse)
+library(SummarizedExperiment)
+library(DESeq2)
+library(ggrepel)
+library(patchwork)
+library(ComplexHeatmap)
+library(circlize)
+```
+
+## 实验设计：分析开始之前就决定了结果
+
+在拿到数据之前，以下问题已经决定了你能得到什么结论：
+
+| 设计要素 | 建议 |
+|---|---|
+| **生物学重复** | 每组 ≥ 3，越多越好；增加重复比增加测序深度更能提升统计功效 |
+| **测序深度** | 差异表达通常 20–30 M reads/样本足够；低表达/可变剪切需要更深 |
+| **批次** | 处理组必须在批次（建库日期、测序 lane）之间**平衡**，否则批次与处理完全混杂、无法校正 |
+| **配对 / 区组** | 同一供者、同一细胞系的对照与处理是天然配对，模型中应包含该因素 |
+| **建库方式** | poly-A（mRNA）vs rRNA-depletion（含非编码 RNA、前体 mRNA）；链特异性 |
+
+airway 数据：4 个细胞系 × 2 种处理 = 8 个样本，完全平衡的**配对设计**。
+
+## 上游流程概览
+
+```
+FASTQ ──fastp/FastQC──► 质控、去接头
+      ──salmon quant──► 转录本定量（quant.sf）──tximeta──► 基因水平 SummarizedExperiment
+  或  ──STAR──► BAM ──featureCounts / HTSeq──► 基因计数矩阵
+```
+
+两条路线都很常见。**推荐 salmon + tximeta**：
+
+- 准比对（selective alignment）速度快，能处理多重比对 reads 的不确定性；
+- 校正 GC 偏差、序列偏差，并给出转录本有效长度；
+- `tximeta` 通过哈希值自动识别转录组版本，把来源注释（GENCODE/Ensembl 版本）
+  写入元数据，确保可复现。
+
+实际项目中建议直接使用 [nf-core/rnaseq](https://nf-co.re/rnaseq) 流程完成上游：
+
+```bash
+nextflow run nf-core/rnaseq -r 3.19.0 -profile docker \
+  --input samplesheet.csv --outdir results \
+  --genome GRCh38 --aligner star_salmon
+```
+
+### 用 tximeta 导入 salmon 定量结果
+
+`airway` 包内附带了两个样本的 salmon 输出，用于演示：
+
+```{r}
+dir <- system.file("extdata", package = "airway", mustWork = TRUE)
+list.files(file.path(dir, "quants"))
+```
+
+```{r}
+#| eval: false
+# 需要联网下载 GENCODE v29 的 GTF（首次运行），这里只展示写法
+library(tximeta)
+coldata <- read.csv(file.path(dir, "sample_table.csv"), row.names = 1, stringsAsFactors = FALSE)
+coldata <- coldata[1:2, ]
+coldata$names <- coldata$Run
+coldata$files <- file.path(dir, "quants", coldata$names, "quant.sf.gz")
+file.exists(coldata$files)
+
+se  <- tximeta(coldata)                 # 转录本水平；自动识别 GENCODE 版本
+gse <- summarizeToGene(se)              # 汇总到基因
+assayNames(gse)                         # counts, abundance (TPM), length（有效长度）
+
+dds <- DESeqDataSet(gse, design = ~ cell + dex)   # length 矩阵会被自动用作偏移量
+```
+
+::: callout-note
+## tximport 的三种计数模式
+- 默认：原始估计 counts + 平均转录本长度矩阵 → 交给 DESeq2 作为基因特异的偏移量（推荐）。
+- `countsFromAbundance = "lengthScaledTPM"`：将 TPM 按文库大小与长度还原为"计数"，
+  用于 limma-voom 等不支持偏移矩阵的方法。
+- `"dtuScaledTPM"`：用于差异转录本使用（DTU）分析。
+:::
+
+下面我们使用 `airway` 包中由 HTSeq 生成的**全部 8 个样本**的基因计数矩阵。
+
+## 加载数据
+
+```{r}
+airway <- readRDS(file.path(DATA_DIR, "airway_annotated.rds"))   # 来自第 5 章；含 eff_length
+# 若未运行第 5 章：
+# data(airway, package = "airway"); rowData(airway)$eff_length <- sum(width(reduce(rowRanges(airway))))
+assays(airway) <- assays(airway)["counts"]                         # 只保留原始计数
+
+airway$dex  <- relevel(airway$dex, ref = "untrt")
+airway$cell <- factor(airway$cell)
+colData(airway)[, c("cell", "dex", "avgLength")]
+```
+
+## 拿到计数矩阵后的第一件事：完整性检查 {#sec-count-sanity}
+
+无论计数矩阵来自自己的流程、合作者，还是 GEO 补充文件，都先做一轮"形状与内容"检查。
+把检查写成一个函数，每个项目复用：
+
+```{r}
+check_counts <- function(m, coldata = NULL, id_col = NULL) {
+  checks <- c(
+    is_matrix          = is.matrix(m) || is(m, "Matrix"),
+    numeric            = is.numeric(m),
+    no_NA              = !anyNA(m),
+    non_negative       = all(m >= 0, na.rm = TRUE),
+    integer_valued     = all(m == round(m), na.rm = TRUE),
+    unique_gene_ids    = !anyDuplicated(rownames(m)),
+    unique_sample_ids  = !anyDuplicated(colnames(m)),
+    no_version_suffix  = !any(grepl("^ENS[A-Z]*G\\d+\\.\\d+", rownames(m))),
+    genes_gt_samples   = nrow(m) > ncol(m)          # 防止矩阵被转置
+  )
+  if (!is.null(coldata)) {
+    ids <- if (is.null(id_col)) rownames(coldata) else coldata[[id_col]]
+    checks["coldata_aligned"] <- identical(colnames(m), as.character(ids))
+  }
+  checks
+}
+check_counts(assay(airway), colData(airway))
+```
+
+再看一个"有问题"的矩阵会被查出哪些问题——这些情况在 GEO 补充文件中都很常见：
+
+```{r}
+bad <- assay(airway)[1:1000, ]
+bad[5, 2] <- NA                                     # 缺失
+bad[10, 3] <- 12.7                                  # salmon 的估计计数（非整数）
+rownames(bad)[20] <- rownames(bad)[21]              # 重复 ID
+rownames(bad)[30] <- paste0(rownames(bad)[30], ".5")  # 带版本号
+cd_shuffled <- colData(airway)[c(2, 1, 3:8), ]      # 样本表顺序与矩阵不一致
+check_counts(bad, cd_shuffled)
+```
+
+::: callout-warning
+## 样本表与矩阵的顺序错位是最危险的错误
+
+R 不会帮你检查 `colData` 的行顺序是否与计数矩阵的列顺序一致——`DESeqDataSetFromMatrix()`
+只检查数目。错位的结果是**所有样本的标签都错了**，而分析流程照样跑完，甚至得出"显著"结果。
+始终用 `stopifnot(identical(colnames(counts), coldata$sample_id))`，必要时 `coldata[match(colnames(counts), coldata$sample_id), ]` 重排。
+:::
+
+处理非整数计数：tximport 的 `countsFromAbundance` 结果或 salmon 的 `NumReads` 是小数。
+DESeq2 的 `DESeqDataSetFromTximport()` 会自动处理；如果你手里只有一个小数矩阵，
+`round()` 后再输入 DESeq2 是社区公认可接受的做法。**不要**把 TPM 当作计数。
+
+## 样本身份核查：性别与配对 {#sec-sample-identity}
+
+样本标签错误（sample swap）在大型项目中的发生率可达数个百分点。表达数据本身可以帮助发现它：
+
+- **性别**：*XIST*（女性高表达）与 Y 染色体基因（*RPS4Y1*、*DDX3Y*、*KDM5D*、*UTY*、*EIF1AY*）
+  几乎是二元信号，与样本表中的性别比对；
+- **配对一致性**：同一个供者的对照与处理样本，性别（以及其他供者特异的表达特征）必须一致。
+
+```{r}
+sex_genes <- c("XIST", "RPS4Y1", "DDX3Y", "KDM5D", "UTY", "EIF1AY")
+id_sex <- setNames(rownames(airway), rowData(airway)$gene_name)[sex_genes]
+cpm_all <- t(t(assay(airway)) / colSums(assay(airway))) * 1e6
+sex_expr <- as_tibble(t(log2(cpm_all[id_sex, ] + 1)), rownames = "run") |>
+  setNames(c("run", sex_genes)) |>
+  mutate(cell = airway$cell, dex = airway$dex,
+         y_score = rowMeans(pick(RPS4Y1:EIF1AY)),
+         inferred_sex = if_else(y_score > 2 & XIST < 2, "male",
+                         if_else(y_score < 1 & XIST > 2, "female", "ambiguous")))
+sex_expr |> select(run, cell, dex, XIST, RPS4Y1, y_score, inferred_sex) |>
+  mutate(across(where(is.double), \(x) round(x, 1)))
+```
+
+```{r}
+#| fig-height: 3.5
+ggplot(sex_expr, aes(XIST, y_score, colour = cell, shape = dex)) +
+  geom_point(size = 4) +
+  labs(x = "XIST log2(CPM+1)", y = "Y 染色体基因平均 log2(CPM+1)",
+       title = "性别核查：每个供者的两个样本应落在同一位置")
+```
+
+```{r}
+sex_expr |> summarise(n_sex = n_distinct(inferred_sex), sex = paste(unique(inferred_sex), collapse = "/"), .by = cell)
+```
+
+每个细胞系的两个样本推断性别一致，配对关系可信。GEO 中 airway 的样本表**没有**记录性别——
+这正是表达数据可以补全元数据的例子：3 个细胞系来自男性，N061011 来自女性。由于 `cell` 已经在模型中，性别效应已被供者效应吸收，不需要额外加入协变量；但在非配对设计中，性别不平衡可能需要校正。
+
+::: callout-tip
+## 更强的身份核查：基因型
+
+表达只能区分性别；要严格确认"两个样本来自同一个体"，应在 RNA-seq reads 上调用常见 SNP
+（例如用 `bcftools mpileup` 在几千个高频 SNP 位点），比较样本间的基因型一致率。
+同一个体的一致率 > 0.9，不同个体约 0.5–0.6。工具：NGSCheckMate、Somalier。
+:::
+
+## 计数数据的统计特性
+
+### 离散度：为什么不是泊松分布
+
+对同一条件下的生物学重复，如果只有技术噪声，计数近似服从泊松分布（方差 = 均值）。
+实际上生物学变异使方差远大于均值——**过度离散**（overdispersion）。
+
+```{r}
+untrt <- assay(airway)[, airway$dex == "untrt"]
+untrt <- untrt[rowSums(untrt) > 0, ]
+sf <- colSums(untrt) / exp(mean(log(colSums(untrt))))     # 粗略的文库大小因子
+norm <- t(t(untrt) / sf)
+
+mv <- tibble(mean = rowMeans(norm), var = matrixStats::rowVars(norm)) |>
+  filter(mean > 0)
+
+ggplot(mv, aes(mean, var)) +
+  geom_hex(bins = 70) +
+  geom_abline(slope = 1, intercept = 0, colour = "red", linewidth = 1) +     # 泊松：var = mean
+  geom_smooth(se = FALSE, colour = "steelblue") +
+  scale_x_log10() + scale_y_log10() +
+  scale_fill_viridis_c(trans = "log10") +
+  labs(title = "4 个对照样本：均值–方差关系", subtitle = "红线：泊松（var = mean）")
+```
+
+负二项分布（Negative Binomial）把这一关系建模为：
+
+$$
+\operatorname{Var}(K) = \mu + \alpha \mu^2
+$$
+
+其中 $\alpha$ 是**离散度**（dispersion）。低表达时泊松噪声主导；高表达时
+$\alpha\mu^2$ 主导，$\sqrt{\alpha}$ 就是生物学变异系数（BCV）。DESeq2 和 edgeR
+都基于负二项 GLM。
+
+### 少数基因占据大量 reads
+
+```{r}
+lib <- assay(airway)
+top_share <- apply(lib, 2, \(x) { x <- sort(x, decreasing = TRUE); cumsum(x) / sum(x) })
+tibble(rank = seq_len(nrow(top_share)), share = rowMeans(top_share)) |>
+  filter(rank <= 5000) |>
+  ggplot(aes(rank, share)) + geom_line(linewidth = 1) +
+  scale_x_log10() + scale_y_continuous(labels = scales::label_percent()) +
+  labs(x = "基因秩次（按表达量）", y = "累计 reads 占比")
+```
+
+## 样本级 QC 指标
+
+```{r}
+rd <- rowData(airway)
+qc <- tibble(
+  run        = colnames(airway),
+  cell       = airway$cell,
+  dex        = airway$dex,
+  lib_M      = colSums(assay(airway)) / 1e6,
+  detected   = colSums(assay(airway) > 0),
+  pct_mito   = 100 * colSums(assay(airway)[rd$seq_name == "MT", ]) / colSums(assay(airway)),
+  pct_pc     = 100 * colSums(assay(airway)[rd$gene_biotype == "protein_coding", ]) / colSums(assay(airway))
+)
+qc
+
+qc |>
+  pivot_longer(lib_M:pct_pc) |>
+  ggplot(aes(run, value, fill = dex)) +
+  geom_col() +
+  facet_wrap(~ name, scales = "free_y", nrow = 1) +
+  scale_fill_manual(values = c(untrt = "grey60", trt = "firebrick")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.position = "top") +
+  labs(x = NULL, y = NULL)
+```
+
+没有任何样本是明显的离群者。在真实项目中，常见的危险信号是：
+文库大小相差 > 5 倍、检出基因数显著偏低、线粒体或 rRNA 占比异常高。
+上游工具（MultiQC 汇总的 FastQC、salmon mapping rate、RSeQC 基因体覆盖度、
+Qualimap）提供的信息应与这里的结果一起看。
+
+## 基因过滤
+
+低计数基因几乎没有统计功效，还会加重多重检验负担。常用规则：
+**在"最小组样本数"个样本中计数 ≥ 10**（edgeR 的 `filterByExpr` 会根据文库大小
+自动换算为 CPM 阈值）。
+
+```{r}
+keep <- rowSums(assay(airway) >= 10) >= 4      # 最小组有 4 个样本
+table(keep)
+airway_f <- airway[keep, ]
+```
+
+::: callout-note
+DESeq2 的**独立过滤**（independent filtering，第 7 章）会在结果阶段自动去除低均值基因，
+所以这里的预过滤主要是为了加速和减少内存；不要设置得过于严格。
+:::
+
+## 基因层面的偏差：长度与生物类型 {#sec-gene-bias}
+
+**基因长度偏差**：相同表达水平下，长基因产生更多片段，因此计数更高、检验功效更强。
+这不影响**同一基因在样本间**的比较（DESeq2/edgeR 的检验对象），但会影响**基因之间**的比较
+（例如富集分析中长基因更容易显著——第 9 章 goseq 的动机）。
+
+```{r}
+#| fig-height: 3.5
+gl <- tibble(gene_id = rownames(airway), len_kb = rowData(airway)$eff_length / 1e3,
+             mean_count = rowMeans(assay(airway))) |>
+  filter(len_kb > 0, mean_count > 0)
+ggplot(gl, aes(len_kb, mean_count)) +
+  geom_hex(bins = 60) + geom_smooth(colour = "red", se = FALSE) +
+  scale_x_log10() + scale_y_log10() + scale_fill_viridis_c(trans = "log10") +
+  labs(x = "有效长度 (kb)", y = "平均计数", title = "长基因计数更高")
+cor(log10(gl$len_kb), log10(gl$mean_count), method = "spearman")
+```
+
+**生物类型构成**：每个样本中各类 RNA 的 reads 占比。poly-A 文库应以蛋白编码为主；
+rRNA 占比高提示去除 rRNA 失败，snoRNA/snRNA 占比高可能提示总 RNA 文库或降解：
+
+```{r}
+#| fig-height: 3.5
+bt <- rowData(airway)$gene_biotype
+bt_lump <- forcats::fct_lump_n(bt, n = 6, w = rowSums(assay(airway)))
+comp <- rowsum(assay(airway), bt_lump)          # 第 1 章的 rowsum()：按生物类型汇总
+comp_pct <- sweep(comp, 2, colSums(comp), "/") * 100
+round(comp_pct, 2)
+as_tibble(comp_pct, rownames = "biotype") |>
+  pivot_longer(-biotype, names_to = "run", values_to = "pct") |>
+  ggplot(aes(run, pct, fill = biotype)) + geom_col() +
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(x = NULL, y = "% reads")
+```
+
+**GC 含量偏差**：PCR 扩增效率依赖 GC 含量，不同样本的偏差曲线不同时会产生样本特异的偏差
+（EDASeq / cqn 可以校正）。用第 5 章从 BioMart 缓存的 GC 含量画出每个样本的趋势：
+
+```{r}
+#| fig-height: 3.5
+bm_file <- file.path(DATA_DIR, "biomart_airway_grch37.rds")
+if (file.exists(bm_file) && !is.null(gc_tab <- readRDS(bm_file))) {
+  gc_df <- tibble(gene_id = rownames(airway)) |>
+    left_join(distinct(gc_tab, ensembl_gene_id, gc = percentage_gene_gc_content),
+              join_by(gene_id == ensembl_gene_id))
+  ok <- !is.na(gc_df$gc) & rowSums(assay(airway) >= 10) == ncol(airway)
+  lc <- log2(cpm_all[ok, ] + 1)
+  rel <- lc - rowMeans(lc)                        # 相对于基因均值的偏离
+  as_tibble(rel) |> mutate(gc = gc_df$gc[ok]) |>
+    pivot_longer(-gc, names_to = "run", values_to = "rel") |>
+    ggplot(aes(gc, rel, colour = run)) +
+    geom_smooth(se = FALSE, method = "loess", span = 0.5, linewidth = 0.7) +
+    labs(x = "基因 GC 含量 (%)", y = "log2 CPM − 基因均值", title = "每个样本的 GC 偏差曲线")
+}
+```
+
+曲线越接近水平越好；若某个样本的曲线明显偏离其他样本，说明它的建库 PCR 偏差不同。
+
+## 离群样本的系统检测 {#sec-outliers}
+
+用"看图"判断离群依赖经验。几种可以量化的指标：
+
+```{r}
+lcpm_f <- log2(cpm_all[rowSums(assay(airway) >= 10) >= 4, ] + 1)
+
+# 1) 与其他样本的平均相关性（connectivity）
+r <- cor(lcpm_f)
+diag(r) <- NA
+conn <- colMeans(r, na.rm = TRUE)
+z_conn <- (conn - median(conn)) / mad(conn)
+
+# 2) 基于稳健 PCA 距离：样本在前几个 PC 上到中位数的马氏距离
+pc <- prcomp(t(lcpm_f))$x[, 1:3]
+md <- mahalanobis(pc, center = apply(pc, 2, median), cov = cov(pc))
+
+# 3) 相对对数表达（RLE）：每个基因减去其中位数后，每个样本的中位数应接近 0
+rle_mat <- lcpm_f - matrixStats::rowMedians(lcpm_f)
+rle_med <- apply(rle_mat, 2, median)
+rle_iqr <- apply(rle_mat, 2, IQR)
+
+tibble(run = colnames(lcpm_f), cell = airway$cell, dex = airway$dex,
+       connectivity = round(conn, 4), z_conn = round(z_conn, 2),
+       mahalanobis = round(md, 2), rle_median = round(rle_med, 3), rle_iqr = round(rle_iqr, 3))
+```
+
+常用阈值：connectivity 的稳健 z 值 < −2（或 −3），RLE 中位数显著偏离 0 或 IQR 明显更大。
+8 个样本中没有样本超过阈值。
+
+```{r}
+#| fig-height: 3.5
+as_tibble(rle_mat) |> pivot_longer(everything(), names_to = "run", values_to = "rle") |>
+  ggplot(aes(run, rle)) + geom_boxplot(outlier.shape = NA) + coord_cartesian(ylim = c(-1.5, 1.5)) +
+  geom_hline(yintercept = 0, colour = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = NULL, y = "RLE", title = "相对对数表达（RLE）图：箱体应以 0 为中心且宽度相近")
+```
+
+::: callout-important
+## 发现离群样本之后
+
+不要因为"它让结果不好看"就删除。先追溯原因：RNA 质量（RIN）、建库批次、测序指标、样本标签。
+有明确技术原因时才移除，并在方法中报告；原因不明时，可以保留样本但使用对离群值稳健的方法
+（DESeq2 的 Cook's distance 替换、limma 的 `arrayWeights()` / `voomWithQualityWeights()` 降权，见第 8 章）。
+:::
+
+## 过滤阈值的影响 {#sec-filter-effect}
+
+不同的过滤规则保留的基因数差别很大，而它们会影响离散度估计和多重检验校正：
+
+```{r}
+grp <- airway$dex
+rules <- list(
+  "any count > 0"           = rowSums(assay(airway)) > 0,
+  "≥ 10 in ≥ 4 samples"     = rowSums(assay(airway) >= 10) >= 4,
+  "mean count ≥ 10"         = rowMeans(assay(airway)) >= 10,
+  "CPM ≥ 1 in ≥ 4 samples"  = rowSums(cpm_all >= 1) >= 4,
+  "edgeR::filterByExpr"     = edgeR::filterByExpr(assay(airway), group = grp)
+)
+vapply(rules, sum, integer(1))
+```
+
+`filterByExpr()` 根据最小组样本数与文库大小自动选择 CPM 阈值（约等于中位文库下 10 个 reads）。
+不同规则保留基因的重叠：
+
+```{r}
+#| fig-height: 3.5
+UpSet(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),
+      top_annotation = upset_top_annotation(make_comb_mat(lapply(rules[-1], \(k) rownames(airway)[k])),
+                                            add_numbers = TRUE))
+```
+
+各种合理规则保留的核心基因集合基本相同，差别在边缘的低表达基因——它们本就很难被检测为显著。
+
+## 归一化：在比较什么？
+
+### 文库大小不是全部：组成偏差
+
+假设样本 B 中有少数基因极度上调，占据了大量 reads；其他基因的真实表达不变，
+但由于"分母"被挤占，它们的 CPM 会**全部下降**——产生大量假阳性下调基因。
+这就是**组成偏差**（composition bias）。
+
+```{r}
+toy <- tibble(
+  gene = c(paste0("g", 1:8), "SUPER"),
+  A = c(rep(100, 8), 100),
+  B = c(rep(100, 8), 1000)          # 只有 SUPER 真的变了
+) |>
+  mutate(cpm_A = A / sum(A) * 1e6, cpm_B = B / sum(B) * 1e6,
+         log2FC_cpm = log2(cpm_B / cpm_A))
+toy
+```
+
+### DESeq2 的中位数比值法（median-of-ratios）
+
+思路：大部分基因不差异表达。对每个基因计算其在所有样本中的几何均值作为"伪参照"，
+每个样本的大小因子 = 该样本所有基因相对伪参照比值的**中位数**。
+
+```{r}
+counts_f <- assay(airway_f)
+
+log_geo_mean <- rowMeans(log(counts_f))           # 含 0 的基因 → -Inf，会被排除
+ok <- is.finite(log_geo_mean)
+size_factors_manual <- apply(counts_f[ok, ], 2, \(x) exp(median(log(x) - log_geo_mean[ok])))
+
+dds <- DESeqDataSet(airway_f, design = ~ cell + dex)
+dds <- estimateSizeFactors(dds)
+
+tibble(run = colnames(dds),
+       manual = size_factors_manual,
+       DESeq2 = sizeFactors(dds),
+       libsize_ratio = colSums(counts_f) / exp(mean(log(colSums(counts_f)))))
+```
+
+edgeR 的 **TMM**（trimmed mean of M-values）基于类似的假设，两者结果通常高度一致
+（第 8 章）。
+
+### TPM、FPKM 与"可比较"
+
+| 单位 | 校正 | 用途 |
+|---|---|---|
+| raw counts | — | **所有统计检验的输入** |
+| CPM | 文库大小 | 过滤、可视化 |
+| TPM | 基因长度 + 文库大小，样本内总和为 1e6 | 样本**内**基因比较、跨数据集粗略比较 |
+| FPKM/RPKM | 文库大小 + 长度 | 已过时：样本间总和不一致 |
+| DESeq2 normalized counts | 大小因子（组成偏差） | 样本**间**同一基因比较 |
+| VST / rlog | 上述 + 方差稳定 | 聚类、PCA、热图、机器学习 |
+
+```{r}
+len_kb <- rowData(airway_f)$eff_length / 1e3
+rpk <- counts_f / len_kb
+tpm <- t(t(rpk) / colSums(rpk)) * 1e6
+colSums(tpm) |> head(3)            # 每个样本都是 1e6
+
+assay(dds, "tpm") <- tpm
+```
+
+::: callout-warning
+## 不要把 TPM 输入 DESeq2/edgeR
+差异分析需要**原始计数**，因为负二项模型依赖计数的绝对大小来估计不确定性
+（100 个 reads 中的 2 倍变化比 10 个 reads 中的 2 倍变化可信得多）。
+:::
+
+## 方差稳定变换（VST）
+
+log 变换后，低表达基因的方差被放大（log 在 0 附近斜率陡）。PCA、聚类等方法假设各基因
+方差相近，因此低表达噪声会主导结果。DESeq2 提供两种变换：
+
+- **`vst()`**：基于拟合的离散度趋势的解析变换，快，推荐；
+- **`rlog()`**：正则化 log，对样本数少、文库大小差异大时更稳健，但慢（> 30 样本不建议）。
+
+```{r}
+vsd <- vst(dds, blind = FALSE)     # blind = FALSE：利用设计信息估计离散度趋势（但变换本身不使用组别）
+rld <- rlog(dds, blind = FALSE)
+log_norm <- log2(counts(dds, normalized = TRUE) + 1)
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 3.8
+msd <- function(mat, title) {
+  tibble(rank = rank(rowMeans(mat)), sd = matrixStats::rowSds(mat)) |>
+    ggplot(aes(rank, sd)) +
+    geom_hex(bins = 60, show.legend = FALSE) +
+    geom_smooth(colour = "red", se = FALSE, method = "gam") +
+    scale_fill_viridis_c(trans = "log10") +
+    labs(title = title, x = "均值秩次", y = "SD")
+}
+msd(log_norm, "log2(norm + 1)") | msd(assay(rld), "rlog") | msd(assay(vsd), "VST")
+```
+
+理想情况下红色趋势线应**接近水平**：VST/rlog 消除了低表达端的方差膨胀。
+
+## 样本间距离与层次聚类
+
+```{r}
+#| fig-height: 5
+sample_dist <- dist(t(assay(vsd)))
+dm <- as.matrix(sample_dist)
+rownames(dm) <- paste(vsd$cell, vsd$dex, sep = " · ")
+
+Heatmap(
+  dm, name = "Euclidean\ndistance",
+  col = colorRamp2(c(0, max(dm)), c("navy", "white")),
+  clustering_distance_rows = sample_dist,
+  clustering_distance_columns = sample_dist,
+  top_annotation = HeatmapAnnotation(
+    dex = vsd$dex, cell = vsd$cell,
+    col = list(dex = c(untrt = "grey70", trt = "firebrick"))
+  ),
+  show_column_names = FALSE,
+  row_names_gp = gpar(fontsize = 9)
+)
+```
+
+样本首先按处理分开，其次按细胞系——处理效应比个体差异大。
+
+另一种距离：**泊松距离**（`PoiClaClu::PoissonDistance`）直接基于原始计数，
+考虑了计数的固有方差结构；Pearson 相关距离 `as.dist(1 - cor(assay(vsd)))` 也常用。
+
+## PCA
+
+```{r}
+pca_data <- plotPCA(vsd, intgroup = c("dex", "cell"), ntop = 500, returnData = TRUE)
+pv <- round(100 * attr(pca_data, "percentVar"), 1)
+
+ggplot(pca_data, aes(PC1, PC2, colour = dex, shape = cell)) +
+  geom_point(size = 4) +
+  geom_text_repel(aes(label = name), colour = "grey30", size = 3, seed = 1) +
+  scale_colour_manual(values = c(untrt = "grey40", trt = "firebrick")) +
+  labs(x = paste0("PC1: ", pv[1], "%"), y = paste0("PC2: ", pv[2], "%")) +
+  coord_fixed()
+```
+
+### 哪些基因驱动了主成分？
+
+```{r}
+rv  <- matrixStats::rowVars(assay(vsd))
+sel <- order(rv, decreasing = TRUE)[1:500]
+pca <- prcomp(t(assay(vsd)[sel, ]))
+
+loadings <- tibble(gene_id = rownames(vsd)[sel], PC1 = pca$rotation[, 1], PC2 = pca$rotation[, 2]) |>
+  mutate(symbol = rowData(vsd)$gene_name[match(gene_id, rownames(vsd))])
+
+loadings |> slice_max(abs(PC1), n = 10) |> select(symbol, PC1)
+```
+
+PC1 载荷最高的基因（例如 ZBTB16、KLF15、DUSP1）正是已知的糖皮质激素应答基因，
+说明 PC1 捕获的是处理效应——这是一个很好的"生物学合理性检查"。
+
+### 主成分与协变量的关联
+
+当协变量很多时（批次、RIN、建库日期、性别……），可以系统地检验每个 PC 与哪些协变量相关：
+
+```{r}
+pcs <- as_tibble(pca$x[, 1:4]) |> mutate(dex = vsd$dex, cell = vsd$cell, avgLength = vsd$avgLength)
+map(c("dex", "cell", "avgLength"), \(v) {
+  map_dbl(paste0("PC", 1:4), \(pc) {
+    fit <- lm(reformulate(v, pc), data = pcs)
+    summary(fit)$r.squared
+  }) |> set_names(paste0("PC", 1:4))
+}) |> set_names(c("dex", "cell", "avgLength")) |> bind_rows(.id = "covariate")
+```
+
+（PCAtools 包的 `eigencorplot()` 提供了这类分析的完整可视化。）
+
+## 保存
+
+```{r}
+saveRDS(dds, file.path(DATA_DIR, "airway_dds.rds"))
+saveRDS(vsd, file.path(DATA_DIR, "airway_vsd.rds"))
+```
+
+## 小结
+
+- 计数数据是**过度离散**的，用负二项分布建模。
+- 归一化不只是除以文库大小：要校正**组成偏差**（median-of-ratios / TMM）。
+- 统计检验用**原始计数**；可视化、聚类用 **VST/rlog**。
+- EDA 的核心问题："样本是否按照预期的生物学变量分组？有无离群或批次？"
+
+## 练习
+
+1. 用 `cor(assay(vsd), method = "spearman")` 画一张样本相关性热图，与欧氏距离热图比较。
+2. 对 PC3 和 PC4 做 PCA 图，它们分别反映了什么？
+3. 人为把样本 `SRR1039508` 的 counts 乘以 3（模拟测序深度差异），重新计算大小因子与 VST，
+   PCA 结果有变化吗？如果用 `log2(CPM+1)` 而不做归一化呢？
+4. 用 `edgeR::calcNormFactors()`（或 `normLibSizes()`）计算 TMM 因子，与 DESeq2 大小因子比较
+   （注意 TMM 因子需乘以文库大小再标准化才可比）。
+5. 修改 `check_counts()`，使其返回一个 tibble：每项检查一行，包含是否通过以及不通过的元素个数/示例。
+6. 用 `rle_mat` 的思路，对**归一化后**（DESeq2 size factors）的数据重新画 RLE 图，箱体是否更集中？
+7. 假设样本表中 `SRR1039512` 与 `SRR1039513` 的 `cell` 标签被互换了，哪项检查能发现？（提示：两者属于同一供者吗？）
+
+::: {.callout-tip collapse="true"}
+## 参考答案（3 和 4）
+```r
+# 3
+a2 <- airway_f
+assay(a2)[, "SRR1039508"] <- assay(a2)[, "SRR1039508"] * 3L
+d2 <- DESeqDataSet(a2, ~ cell + dex) |> estimateSizeFactors()
+sizeFactors(d2)                      # SRR1039508 的因子约变为原来的 3 倍
+plotPCA(vst(d2), intgroup = "dex")   # PCA 基本不变
+
+# 4
+y <- edgeR::DGEList(counts_f) |> edgeR::normLibSizes()
+eff <- y$samples$lib.size * y$samples$norm.factors
+cbind(TMM = eff / exp(mean(log(eff))), DESeq2 = sizeFactors(dds))
+```
+:::
