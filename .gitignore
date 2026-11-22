@@ -388,3 +388,4 @@ logs/
 
 # R analysis runtime caches at any project depth
 rds_cache/
+*/pipeline_validation_*

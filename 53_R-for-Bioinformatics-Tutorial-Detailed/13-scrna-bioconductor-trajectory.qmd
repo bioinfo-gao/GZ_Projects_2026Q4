@@ -19,7 +19,8 @@ source("_common.R")
 #                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
 # common_file <- common_paths[file.exists(common_paths)][1]
 # if (is.na(common_file)) {
-#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd()).
+
 # }
 # setwd(dirname(normalizePath(common_file)))
 # source("_common.R")
