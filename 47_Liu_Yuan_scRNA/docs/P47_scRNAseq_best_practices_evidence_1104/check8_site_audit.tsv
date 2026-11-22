@@ -1,0 +1,2 @@
+label	chrom	pos	ref	alt	rec_all	rec_primary	rec_secondary	rec_supplementary	excl_not_primary	excl_CB_not_in_QC_cells	excl_no_UB	excl_mapq<20	kept_reads	molecules	molecules_conflict	cells_with_molecule	mol_ref	mol_alt	mol_other	alt_fraction_mol
+siteT	chrT	1001	C	T	68	67	1	0	1	1	1	1	64	60	1	2	30	30	0	0.5
