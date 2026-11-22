@@ -1,0 +1,724 @@
+# 可视化：ggplot2、ggrepel、patchwork 与热图 {#sec-viz}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2 小时（详细版）
+>
+> 目标：理解图形语法（grammar of graphics）的组合方式；能画出发表级的
+> 组学图表：密度/箱线图、PCA、MA 图、火山图（ggrepel 标注）、表达热图（ComplexHeatmap），
+> 并用 patchwork 拼图。详细版新增：分布图大全、缺失值与坐标范围、样本相关性、UpSet、
+> 基因组坐标图、批量作图、色盲友好配色、统计标注与交互式图。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 时长 |
+|---|---|---|
+| 准备数据 / 图形语法 | 朴素配对 t 检验得到绘图素材；五个组件 | 15 min |
+| 标度与颜色 / 火山图 / PCA / patchwork / 热图 | 发表级组学图 | 35 min |
+| @sec-viz-dist | ridgeline、ECDF、violin、beeswarm | 10 min |
+| @sec-viz-na | ggplot 如何丢弃 NA；`limits` vs `coord_cartesian` vs `squish` | 10 min |
+| @sec-viz-cor、@sec-viz-upset | 样本相关热图、层次聚类、UpSet 交集 | 15 min |
+| @sec-viz-genome | Manhattan 风格的基因组坐标图 | 10 min |
+| @sec-viz-programming | 在函数中使用 ggplot，批量出图 | 10 min |
+| @sec-viz-color、@sec-viz-stats、@sec-viz-interactive | 色盲友好、统计标注、plotly | 10 min |
+| 主题与导出 | 期刊格式、栅格化 | 5 min |
+:::
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(patchwork)
+library(scales)
+library(SummarizedExperiment)
+library(airway)
+```
+
+## 准备数据
+
+```{r}
+data(airway)
+airway$dex <- relevel(airway$dex, ref = "untrt")
+
+cnt <- assay(airway)
+cnt <- cnt[rowSums(cnt >= 10) >= 4, ]          # 至少 4 个样本 count ≥ 10
+logcpm <- log2(t(t(cnt) / colSums(cnt)) * 1e6 + 1)
+dim(logcpm)
+
+samples <- colData(airway) |> as_tibble(rownames = "run")
+symbol  <- rowData(airway)[rownames(logcpm), "gene_name"]
+```
+
+为了在本章就能画火山图，我们先做一个**朴素的配对 t 检验**
+（每个供者 trt − untrt 的 log 差值）——只作为绘图素材，正式分析见第 7 章：
+
+```{r}
+# 按供者排序后，trt 与 untrt 两个向量的第 i 个元素来自同一供者
+paired <- samples |> arrange(cell, dex)
+untrt  <- paired$run[paired$dex == "untrt"]
+trt    <- paired$run[paired$dex == "trt"]
+stopifnot(identical(paired$cell[paired$dex == "trt"], paired$cell[paired$dex == "untrt"]))
+
+d   <- logcpm[, trt] - logcpm[, untrt]
+tt  <- rowMeans(d) / (matrixStats::rowSds(d) / sqrt(ncol(d)))
+de <- tibble(
+  gene_id = rownames(logcpm),
+  symbol  = symbol,
+  baseMean_log = rowMeans(logcpm),
+  log2FC  = rowMeans(d),
+  pvalue  = 2 * pt(abs(tt), df = ncol(d) - 1, lower.tail = FALSE)
+) |>
+  mutate(padj = p.adjust(pvalue, "BH"))
+de |> arrange(pvalue) |> head()
+```
+
+## 图形语法的五个组件
+
+一张 ggplot 由下列层组合而成：
+
+1. **data** + **aesthetics mapping**（`aes()`：哪个变量映射到 x、y、颜色……）
+2. **geoms**（点、线、柱……）以及它们的 **stat**（计数、密度、平滑……）
+3. **scales**（数据值 → 视觉值，含坐标轴与图例）
+4. **coordinates** 与 **facets**
+5. **theme**（与数据无关的外观）
+
+```{r}
+long <- logcpm |>
+  as_tibble(rownames = "gene_id") |>
+  pivot_longer(-gene_id, names_to = "run", values_to = "logcpm") |>
+  left_join(samples, join_by(run))
+
+ggplot(long, aes(x = logcpm, colour = dex, group = run)) +
+  geom_density(linewidth = 0.6) +
+  scale_colour_manual(values = c(untrt = "grey40", trt = "firebrick")) +
+  labs(x = expression(log[2](CPM + 1)), y = "Density", colour = "Treatment",
+       title = "过滤后各样本的表达分布")
+```
+
+::: callout-note
+## ggplot2 3.4+/4.0 的 API 变化
+- 线宽用 **`linewidth`**，`size` 只用于点和文字。
+- 计算变量用 **`after_stat()`**（替代 `..count..`），例如 `aes(y = after_stat(density))`。
+- 图例放在面板内：`theme(legend.position = "inside", legend.position.inside = c(.9, .9))`。
+- 4.0 内部迁移到 S7；主题新增 `ink` / `paper` / `accent` 参数，`labs(dictionary =)`
+  可以统一翻译变量名；主题中可以设置默认调色板
+  `theme(palette.colour.discrete = ...)`。
+:::
+
+### 箱线图、小提琴图与分面
+
+```{r}
+#| fig-height: 5
+gc_targets <- c("DUSP1", "KLF15", "PER1", "ZBTB16", "TSC22D3", "FKBP5")
+gene_anno  <- tibble(gene_id = rownames(logcpm), symbol = symbol)
+
+long |>
+  left_join(gene_anno, join_by(gene_id)) |>
+  filter(symbol %in% gc_targets) |>
+  ggplot(aes(dex, logcpm)) +
+  geom_line(aes(group = cell), colour = "grey70") +          # 配对连线
+  geom_point(aes(colour = cell), size = 2.5) +
+  facet_wrap(~ symbol, scales = "free_y", nrow = 2) +
+  labs(x = NULL, y = expression(log[2](CPM + 1)), colour = "Donor") +
+  theme(legend.position = "bottom")
+```
+
+成对设计用连线表达最清楚——你能看到每个供者的方向一致。
+
+::: callout-warning
+## 数据掩码（data masking）陷阱
+直觉上的写法是 `mutate(symbol = symbol[match(gene_id, rownames(logcpm))])`，但它会让**所有** symbol
+变成 `NA`：`long` 中恰好有一列叫 `logcpm`，在 `mutate()` 内部，**列名优先于环境中的同名变量**，
+于是 `rownames(logcpm)` 取的是那一列数值向量（`rownames` 为 `NULL`）。
+
+解决办法：用 `.env$logcpm` 明确引用环境变量（见 @sec-metaprog），或者像上面那样
+先建一张注释表再 `join`——后者更清晰，也更不容易出错。
+:::
+
+## 标度（scales）与颜色
+
+```{r}
+p_ma <- ggplot(de, aes(baseMean_log, log2FC)) +
+  geom_hex(bins = 80) +
+  scale_fill_viridis_c(trans = "log10", option = "magma", name = "Genes") +
+  geom_hline(yintercept = 0, colour = "steelblue", linewidth = 0.8) +
+  labs(x = "Mean log2 CPM", y = "log2 fold change (trt / untrt)", title = "MA plot")
+p_ma
+```
+
+颜色选择原则：
+
+- **连续**：viridis 系列（感知均匀、色盲友好）——`scale_*_viridis_c()`。
+- **发散**（以 0 为中心，例如 log2FC、z-score）：`scale_*_gradient2()` 或
+  `scale_*_distiller(palette = "RdBu")`。
+- **分类**：`scale_*_brewer(palette = "Set2")`、`ggokabeito`，或手工 `scale_*_manual()`。
+- 轴标签格式：`scales::label_percent()`、`label_comma()`、`label_log()`、`label_pvalue()`。
+
+```{r}
+ggplot(de, aes(pvalue)) +
+  geom_histogram(binwidth = 0.025, boundary = 0, fill = "grey60", colour = "white") +
+  scale_y_continuous(labels = label_comma()) +
+  labs(title = "p 值分布", subtitle = "左侧尖峰 = 真实信号；右侧平坦 = 零假设下的均匀分布")
+```
+
+::: callout-tip
+## 先看 p 值直方图
+在任何多重检验前先画 p 值直方图。若分布呈"U 形"或右侧上翘，往往说明模型设定错误
+（例如漏掉了批次/配对变量）。
+:::
+
+## 火山图与 ggrepel
+
+ggrepel 的 `geom_text_repel()` / `geom_label_repel()` 在标签之间和标签与点之间
+施加"斥力"，自动避免重叠。
+
+```{r}
+#| fig-height: 5.5
+de_plot <- de |>
+  mutate(
+    status = case_when(
+      padj < 0.1 & log2FC >  1 ~ "Up",
+      padj < 0.1 & log2FC < -1 ~ "Down",
+      .default = "NS"
+    ),
+    neglog10p = -log10(pvalue)
+  )
+
+to_label <- de_plot |>
+  filter(status != "NS") |>
+  slice_min(pvalue, n = 20) |>
+  bind_rows(de_plot |> filter(symbol %in% gc_targets)) |>
+  distinct(gene_id, .keep_all = TRUE)
+
+p_volcano <- ggplot(de_plot, aes(log2FC, neglog10p)) +
+  geom_point(aes(colour = status), size = 0.8, alpha = 0.6) +
+  geom_point(data = to_label, shape = 21, size = 2, colour = "black", fill = NA) +
+  geom_text_repel(
+    data = to_label, aes(label = symbol),
+    size = 3, max.overlaps = Inf,
+    box.padding = 0.4, point.padding = 0.2,
+    min.segment.length = 0, segment.colour = "grey50",
+    seed = 1
+  ) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed", colour = "grey50") +
+  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey75")) +
+  labs(x = "log2 fold change", y = expression(-log[10](p)), colour = NULL,
+       title = "Dexamethasone vs control (naive paired t-test)")
+p_volcano
+```
+
+ggrepel 常用参数：
+
+| 参数 | 作用 |
+|---|---|
+| `max.overlaps` | 超过此重叠数的标签会被丢弃；设 `Inf` 强制全部显示 |
+| `box.padding` / `point.padding` | 标签与标签、标签与点之间的间距 |
+| `min.segment.length` | 引导线最短长度；`0` 表示总是画线 |
+| `nudge_x` / `nudge_y` | 初始偏移，可用来把上调基因的标签推到右边 |
+| `direction` | `"both"`、`"x"`、`"y"`：限制移动方向 |
+| `xlim` / `ylim` | 限制标签区域，例如 `xlim = c(3, NA)` 把标签放在右侧空白 |
+| `seed` | 固定布局，保证可复现 |
+
+一个更"出版风"的变体：上调基因标签统一推到右侧、下调推到左侧：
+
+```{r}
+#| fig-height: 5
+lab_up   <- to_label |> filter(log2FC > 0)
+lab_down <- to_label |> filter(log2FC < 0)
+
+ggplot(de_plot, aes(log2FC, neglog10p)) +
+  geom_point(aes(colour = status), size = 0.8, alpha = 0.6, show.legend = FALSE) +
+  geom_label_repel(data = lab_up, aes(label = symbol), xlim = c(4, NA),
+                   direction = "y", hjust = 0, size = 2.8, label.size = 0.1,
+                   min.segment.length = 0, max.overlaps = Inf, seed = 1) +
+  geom_label_repel(data = lab_down, aes(label = symbol), xlim = c(NA, -4),
+                   direction = "y", hjust = 1, size = 2.8, label.size = 0.1,
+                   min.segment.length = 0, max.overlaps = Inf, seed = 1) +
+  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey75")) +
+  scale_x_continuous(limits = c(-8, 8), breaks = seq(-6, 6, 2)) +
+  labs(x = "log2 fold change", y = expression(-log[10](p)))
+```
+
+## PCA 图
+
+```{r}
+top_var <- order(matrixStats::rowVars(logcpm), decreasing = TRUE)[1:500]
+pca <- prcomp(t(logcpm[top_var, ]), center = TRUE, scale. = FALSE)
+var_expl <- pca$sdev^2 / sum(pca$sdev^2)
+
+pca_df <- as_tibble(pca$x[, 1:4], rownames = "run") |> left_join(samples, join_by(run))
+
+p_pca <- ggplot(pca_df, aes(PC1, PC2, colour = dex, shape = cell)) +
+  geom_point(size = 3.5) +
+  geom_text_repel(aes(label = run), size = 2.8, colour = "grey30", seed = 2) +
+  scale_colour_manual(values = c(untrt = "grey40", trt = "firebrick")) +
+  labs(x = sprintf("PC1 (%.1f%%)", 100 * var_expl[1]),
+       y = sprintf("PC2 (%.1f%%)", 100 * var_expl[2]),
+       title = "PCA (top 500 variable genes)") +
+  coord_fixed(ratio = sqrt(var_expl[2] / var_expl[1]))   # 让轴比例反映方差比例
+p_pca
+```
+
+PC1 分开了处理组，PC2 主要由供者（细胞系）驱动——这正是为什么 DESeq2 设计公式
+要写 `~ cell + dex`。
+
+## patchwork：拼图
+
+```{r}
+#| fig-width: 11
+#| fig-height: 8
+scree <- tibble(PC = factor(1:8), var = var_expl) |>
+  ggplot(aes(PC, var)) + geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = label_percent()) + labs(y = "Variance explained", title = "Scree")
+
+(p_pca | scree) / (p_ma | p_volcano) +
+  plot_layout(heights = c(1, 1.2), guides = "collect") +
+  plot_annotation(tag_levels = "A", title = "airway: exploratory overview") &
+  theme(legend.position = "bottom")
+```
+
+patchwork 运算符：`|` 横向、`/` 纵向、`+` 自动网格、`&` 把主题应用到所有子图，
+`plot_layout(design = "AAB\nCCB")` 自定义布局，`inset_element()` 插图。
+
+## 热图：ComplexHeatmap
+
+`pheatmap` 足够快速；`ComplexHeatmap` 在注释、分割、多图拼接上更强大，是生信热图的事实标准。
+
+```{r}
+#| fig-height: 7
+library(ComplexHeatmap)
+library(circlize)
+
+top_genes <- de |> slice_min(pvalue, n = 40) |> pull(gene_id)
+z <- logcpm[top_genes, ] |> t() |> scale() |> t()          # 行 z-score
+rownames(z) <- symbol[match(top_genes, rownames(logcpm))]
+
+col_anno <- HeatmapAnnotation(
+  Treatment = samples$dex,
+  Donor     = samples$cell,
+  Depth     = anno_barplot(colSums(cnt) / 1e6, height = unit(1, "cm")),
+  col = list(Treatment = c(untrt = "grey70", trt = "firebrick"),
+             Donor = setNames(RColorBrewer::brewer.pal(4, "Set2"), unique(samples$cell)))
+)
+
+Heatmap(
+  z, name = "z-score",
+  col = colorRamp2(c(-2, 0, 2), c("#2166AC", "white", "#B2182B")),
+  top_annotation = col_anno,
+  column_split = samples$dex,
+  row_split = ifelse(de$log2FC[match(top_genes, de$gene_id)] > 0, "Up", "Down"),
+  cluster_column_slices = FALSE,
+  row_names_gp = gpar(fontsize = 8),
+  column_names_gp = gpar(fontsize = 8),
+  column_title = "Top 40 genes"
+)
+```
+
+要点：
+
+- 先对**行做 z-score**，否则高表达基因主导配色。
+- 颜色映射用 `circlize::colorRamp2()` 固定断点，避免不同热图之间颜色不可比。
+- `column_split` / `row_split` 比单纯聚类更具解释力。
+- 多张热图横向拼接：`ht1 + ht2`；纵向：`ht1 %v% ht2`。
+- 导出：`png("x.png", 6, 8, units = "in", res = 300); draw(ht); dev.off()`。
+
+## 分布图大全 {#sec-viz-dist}
+
+QC 的第一步几乎总是"看分布"。同一组数据可以有多种表达方式，各有侧重：
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+library(ggridges)
+library(ggbeeswarm)
+
+lib <- tibble(run = colnames(cnt), lib_M = colSums(cnt) / 1e6) |> left_join(samples, join_by(run))
+
+p1 <- ggplot(long, aes(logcpm, run, fill = dex)) +
+  geom_density_ridges(scale = 2, alpha = 0.7, linewidth = 0.3) +
+  scale_fill_manual(values = c(untrt = "grey60", trt = "firebrick")) +
+  labs(title = "ridgeline：多样本分布并排", x = "log2 CPM", y = NULL)
+
+p2 <- ggplot(long, aes(logcpm, colour = run)) +
+  stat_ecdf(linewidth = 0.4) +
+  labs(title = "ECDF：分位数一目了然", x = "log2 CPM", y = "累积比例") +
+  theme(legend.position = "none")
+
+p3 <- ggplot(long, aes(run, logcpm, fill = dex)) +
+  geom_violin(scale = "width", linewidth = 0.2) +
+  geom_boxplot(width = 0.15, outlier.shape = NA, fill = "white", linewidth = 0.3) +
+  scale_fill_manual(values = c(untrt = "grey60", trt = "firebrick")) +
+  labs(title = "violin + box", x = NULL, y = "log2 CPM") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
+p4 <- ggplot(lib, aes(dex, lib_M, colour = cell)) +
+  geom_beeswarm(size = 3, cex = 3) +
+  labs(title = "beeswarm：小样本时显示每个点", x = NULL, y = "文库大小 (M reads)")
+
+(p1 | p2) / (p3 | p4)
+```
+
+::: callout-tip
+## 样本量小时别只画箱线图
+
+n = 4 的箱线图会把 4 个点"统计化"成五数概括，掩盖真实分布。小样本时直接画点（`geom_point`、
+`geom_beeswarm`），配对设计加连线；样本量大时再用箱线/小提琴/山脊图。
+:::
+
+## 缺失值、异常值与坐标范围 {#sec-viz-na}
+
+ggplot2 遇到缺失值会**删除这些行并给出警告**（"Removed n rows containing missing values"）。
+这条警告值得每次都读：它可能意味着 `log(0)`、连接失败或坐标范围设置不当。
+
+```{r}
+d_na <- tibble(x = c(1, 2, 3, 4, NA), y = c(2, NA, 5, 3, 1), grp = c("a", "b", NA, "a", "b"))
+ggplot(d_na, aes(x, y, colour = grp)) + geom_point(size = 3)
+```
+
+分类变量的 `NA` 会显示成一个灰色的图例项；用 `na.value` 控制颜色，或用 `na.translate = FALSE` 隐藏：
+
+```{r}
+#| fig-height: 3
+ggplot(d_na, aes(x, y, colour = grp)) + geom_point(size = 3) +
+  scale_colour_manual(values = c(a = "steelblue", b = "orange"), na.value = "red")
+```
+
+### 设置坐标范围的两种方式：结果截然不同
+
+`scale_y_continuous(limits = ...)` / `ylim()` 会把超出范围的数据**变成 NA 再丢掉**——
+它们不参与箱线图、平滑线等统计计算；`coord_cartesian()` 只是**放大镜头**，统计量基于全部数据：
+
+```{r}
+#| fig-width: 10
+#| fig-height: 3.5
+dusp <- long |> filter(gene_id == "ENSG00000120129")
+base_p <- ggplot(long |> filter(gene_id %in% sample(unique(gene_id), 300)), aes(dex, logcpm)) +
+  geom_boxplot()
+(base_p + labs(title = "完整数据")) |
+  (base_p + scale_y_continuous(limits = c(4, 8)) + labs(title = "limits：数据被删除，箱线图改变")) |
+  (base_p + coord_cartesian(ylim = c(4, 8)) + labs(title = "coord_cartesian：仅缩放"))
+```
+
+对于火山图中极端的点，第三种选择是 `oob = scales::squish`——把超出范围的值**压到边界上**并保留它们：
+
+```{r}
+#| fig-height: 3.5
+ggplot(de_plot, aes(log2FC, neglog10p, colour = status)) +
+  geom_point(size = 0.7) +
+  scale_y_continuous(limits = c(0, 6), oob = scales::squish) +
+  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey75")) +
+  labs(subtitle = "-log10(p) > 6 的点被压在顶部边界上")
+```
+
+### 热图中的缺失值
+
+ComplexHeatmap 默认把 `NA` 显示为灰色（`na_col`），聚类时按两两完整的观测计算距离。
+缺失比例很高的行/列应该先删掉，否则距离不可靠：
+
+```{r}
+#| fig-height: 3.5
+m_na <- z_demo <- t(scale(t(logcpm[1:30, ])))
+m_na[sample(length(m_na), 25)] <- NA
+ComplexHeatmap::Heatmap(m_na, name = "z", na_col = "black", show_row_names = FALSE,
+                        column_title = "NA 显示为黑色")
+```
+
+## 样本相关性与层次聚类 {#sec-viz-cor}
+
+样本-样本相关性热图是 RNA-seq QC 的标配，可以发现样本标签错误、离群样本和批次效应：
+
+```{r}
+#| fig-height: 5
+library(ComplexHeatmap)
+library(circlize)
+cor_mat <- cor(logcpm, method = "pearson")
+anno <- HeatmapAnnotation(Treatment = samples$dex, Donor = samples$cell,
+                          col = list(Treatment = c(untrt = "grey70", trt = "firebrick"),
+                                     Donor = setNames(RColorBrewer::brewer.pal(4, "Set2"), unique(samples$cell))))
+Heatmap(cor_mat, name = "Pearson r",
+        col = colorRamp2(c(min(cor_mat), 1), c("white", "darkred")),
+        top_annotation = anno,
+        clustering_distance_rows = function(m) as.dist(1 - cor(t(m))),
+        clustering_distance_columns = function(m) as.dist(1 - cor(t(m))),
+        cell_fun = function(j, i, x, y, w, h, fill) grid.text(sprintf("%.3f", cor_mat[i, j]), x, y,
+                                                              gp = gpar(fontsize = 7)))
+```
+
+相关系数都在 0.97 以上——RNA-seq 样本之间总是高度相关，所以**颜色范围要从数据最小值开始**，
+否则整张图都是同一种颜色。
+
+层次聚类树可以单独画出来：
+
+```{r}
+#| fig-height: 3.5
+hc <- hclust(as.dist(1 - cor_mat), method = "average")
+plot(hc, main = "1 - Pearson 距离，平均连接", xlab = "", sub = "", cex = 0.8)
+```
+
+处理组被聚在一起，说明处理效应强于供者效应——这与 PCA 的 PC1 一致。
+
+## 集合交集：UpSet 图 {#sec-viz-upset}
+
+维恩图超过 3 个集合就无法阅读。UpSet 图用矩阵表示集合组合、用条形图表示交集大小。
+用每个供者的配对差值，找出各自"上调 > 2 倍"的基因，看它们的重叠：
+
+```{r}
+#| fig-height: 4.5
+up_sets <- lapply(setNames(seq_along(trt), paired$cell[paired$dex == "trt"]), function(i) {
+  rownames(logcpm)[logcpm[, trt[i]] - logcpm[, untrt[i]] > 1]
+})
+lengths(up_sets)
+m_comb <- make_comb_mat(up_sets)
+UpSet(m_comb, comb_order = order(-comb_size(m_comb)),
+      top_annotation = upset_top_annotation(m_comb, add_numbers = TRUE),
+      right_annotation = upset_right_annotation(m_comb, add_numbers = TRUE))
+```
+
+四个供者共有的上调基因是最可信的应答基因；只在一个供者中出现的大多是噪声——
+这正是差异分析模型要正式处理的变异来源。
+
+## 基因组坐标图 {#sec-viz-genome}
+
+把每个基因的效应画在它的染色体位置上，可以发现**区域性**信号（拷贝数改变、
+染色体区域的共调控、或者注释错误）：
+
+```{r}
+#| fig-width: 11
+#| fig-height: 4
+rd <- rowData(airway)[de$gene_id, ]
+chr_levels <- c(1:22, "X", "Y", "MT")
+gpos <- de |>
+  mutate(chr = rd$seq_name, pos = (rd$gene_seq_start + rd$gene_seq_end) / 2) |>
+  filter(chr %in% chr_levels) |>
+  mutate(chr = factor(chr, levels = chr_levels)) |>
+  arrange(chr, pos)
+
+# 计算每条染色体在拼接坐标上的偏移量
+chr_len <- gpos |> summarise(len = max(pos), .by = chr) |>
+  mutate(offset = lag(cumsum(as.numeric(len)), default = 0))
+gpos <- gpos |> left_join(chr_len, join_by(chr)) |> mutate(gpos = pos + offset)
+axis_df <- chr_len |> mutate(center = offset + len / 2)
+
+ggplot(gpos, aes(gpos, log2FC, colour = as.integer(chr) %% 2 == 0)) +
+  geom_point(size = 0.5, alpha = 0.6) +
+  geom_text_repel(data = gpos |> slice_max(abs(log2FC) * -log10(pvalue), n = 12),
+                  aes(label = symbol), colour = "black", size = 2.8, seed = 1, max.overlaps = Inf) +
+  scale_colour_manual(values = c("grey30", "steelblue"), guide = "none") +
+  scale_x_continuous(breaks = axis_df$center, labels = axis_df$chr, expand = c(0.01, 0)) +
+  labs(x = "染色体", y = "log2 fold change", title = "基因组坐标上的效应（Manhattan 风格）") +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank())
+```
+
+同样的布局也用于 GWAS 的 Manhattan 图（y 轴换成 −log10 p）和拷贝数片段图。
+
+## 用函数批量作图 {#sec-viz-programming}
+
+在函数里使用 ggplot2 时，需要把列名"转发"给 `aes()`——与第 1 章 @sec-metaprog 的 tidy evaluation 一样：
+
+```{r}
+plot_gene <- function(data, gene, value = logcpm, group = dex) {
+  data |>
+    filter(symbol == gene) |>
+    ggplot(aes({{ group }}, {{ value }})) +
+    geom_line(aes(group = cell), colour = "grey70") +
+    geom_point(aes(colour = cell), size = 2.5) +
+    labs(title = gene, x = NULL) +
+    theme(legend.position = "none")
+}
+long_sym <- long |> left_join(gene_anno, join_by(gene_id))
+plot_gene(long_sym, "FKBP5")
+```
+
+列名以字符串传入时用 `.data[[var]]`：
+
+```{r}
+#| fig-height: 3
+plot_by <- function(data, x_var, y_var) {
+  ggplot(data, aes(.data[[x_var]], .data[[y_var]])) + geom_point() +
+    labs(x = x_var, y = y_var)
+}
+plot_by(lib, "lib_M", "cell")
+```
+
+结合 `purrr::map()` 批量生成图，再交给 patchwork 拼接（`wrap_plots()` 接受图的列表）或逐个保存：
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+plots <- map(gc_targets, \(g) plot_gene(long_sym, g))
+wrap_plots(plots, nrow = 2)
+```
+
+```{r}
+#| eval: false
+dir.create("figures/genes", recursive = TRUE, showWarnings = FALSE)
+walk2(plots, gc_targets, \(p, g) ggsave(file.path("figures/genes", paste0(g, ".pdf")), p,
+                                         width = 3, height = 3))
+```
+
+## 颜色：色盲友好与一致性 {#sec-viz-color}
+
+约 8% 的男性有红绿色觉缺陷。经典的"红-绿"热图对他们几乎不可读。几条实用原则：
+
+- 分类变量优先用 **Okabe-Ito** 调色板（base R 4.0+ 内置：`palette.colors(palette = "Okabe-Ito")`）；
+- 连续变量用 **viridis**；发散用 **RdBu / 蓝-白-红**；
+- **同一个变量在全文所有图中用同一套颜色**：把颜色定义为命名向量，统一引用。
+
+```{r}
+#| fig-height: 2.5
+okabe <- palette.colors(palette = "Okabe-Ito")
+names(okabe) <- c("black", "orange", "skyblue", "bluishgreen", "yellow",
+                  "blue", "vermillion", "reddishpurple", "gray")
+okabe
+tibble(name = names(okabe), col = unname(okabe), x = seq_along(okabe)) |>
+  ggplot(aes(x, 1, fill = col)) + geom_tile() + geom_text(aes(label = name), angle = 90, size = 3) +
+  scale_fill_identity() + theme_void()
+```
+
+用 colorspace 模拟色觉缺陷下的观感：
+
+```{r}
+#| fig-height: 2.5
+pal <- c(Up = "#D55E00", Down = "#0072B2", NS = "grey75", RedGreen_up = "red", RedGreen_down = "green3")
+colorspace::swatchplot(
+  "原始" = pal,
+  "红色盲 (protan)" = colorspace::protan(pal),
+  "绿色盲 (deutan)" = colorspace::deutan(pal)
+)
+```
+
+在模拟图中，橙/蓝组合依然可区分，而纯红/纯绿几乎变成了同一种颜色。
+
+全书统一颜色的做法：
+
+```{r}
+#| eval: false
+pal_dex <- c(untrt = "grey50", trt = "#D55E00")
+options(ggplot2.discrete.colour = list(pal_dex))   # 或在每张图中 scale_colour_manual(values = pal_dex)
+```
+
+## 统计标注 {#sec-viz-stats}
+
+在图上标 p 值很常见，但要注意：**图上的检验必须与你的统计分析一致**。
+比如 airway 是配对设计，`ggpubr::stat_compare_means()` 默认的非配对 Wilcoxon 检验就是错的：
+
+```{r}
+#| fig-height: 3.5
+fk <- long_sym |> filter(symbol == "FKBP5") |> arrange(cell, dex)
+t.test(logcpm ~ dex, data = fk)$p.value                        # 非配对：忽略了供者
+with(fk, t.test(logcpm[dex == "trt"], logcpm[dex == "untrt"], paired = TRUE))$p.value  # 配对
+```
+
+更可控的方法：自己计算统计量，再用 `annotate()` / `geom_text()` 画上去：
+
+```{r}
+#| fig-height: 3.5
+p_paired <- with(fk, t.test(logcpm[dex == "trt"], logcpm[dex == "untrt"], paired = TRUE))$p.value
+ggplot(fk, aes(dex, logcpm)) +
+  geom_line(aes(group = cell), colour = "grey70") +
+  geom_point(aes(colour = cell), size = 3) +
+  annotate("segment", x = 1, xend = 2, y = max(fk$logcpm) + 0.3, yend = max(fk$logcpm) + 0.3) +
+  annotate("text", x = 1.5, y = max(fk$logcpm) + 0.55,
+           label = sprintf("paired t-test p = %s", format.pval(p_paired, digits = 2))) +
+  labs(title = "FKBP5", x = NULL)
+```
+
+`stat_summary()` 可以直接画均值与置信区间：
+
+```{r}
+#| fig-height: 3.5
+long_sym |>
+  filter(symbol %in% gc_targets) |>
+  ggplot(aes(symbol, logcpm, colour = dex)) +
+  stat_summary(fun.data = mean_cl_normal, position = position_dodge(width = 0.5)) +
+  scale_colour_manual(values = c(untrt = "grey50", trt = "#D55E00")) +
+  labs(x = NULL, y = "mean ± 95% CI")
+```
+
+## 交互式图形 {#sec-viz-interactive}
+
+探索阶段，悬停查看基因名比标注更高效。`plotly::ggplotly()` 可以把大多数 ggplot 直接变成交互式图（HTML 输出中可用）：
+
+```{r}
+#| eval: !expr knitr::is_html_output()
+p_int <- ggplot(de_plot |> filter(pvalue < 0.5), aes(log2FC, neglog10p, colour = status, text = symbol)) +
+  geom_point(size = 0.8) +
+  scale_colour_manual(values = c(Up = "#D55E00", Down = "#0072B2", NS = "grey75"))
+plotly::ggplotly(p_int, tooltip = c("text", "x", "y"))
+```
+
+## 主题与导出
+
+```{r}
+theme_pub <- function(base_size = 11) {
+  theme_classic(base_size = base_size) +
+    theme(
+      axis.text = element_text(colour = "black"),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      legend.key.size = unit(0.4, "cm"),
+      plot.title.position = "plot"
+    )
+}
+p_pca + theme_pub()
+```
+
+```{r}
+#| eval: false
+ggsave("figures/volcano.pdf", p_volcano, width = 6, height = 5)                # 矢量
+ggsave("figures/volcano.png", p_volcano, width = 6, height = 5, dpi = 300)
+ggsave("figures/volcano.tiff", p_volcano, width = 6, height = 5, dpi = 600,
+       compression = "lzw")                                                     # 期刊常要求
+```
+
+点很多（例如单细胞 10 万个细胞）时，PDF 会非常大：用 `ggrastr::rasterise(geom_point(), dpi = 300)`
+把点层栅格化，而保留文字与坐标轴为矢量。
+
+## 练习
+
+1. 用 `geom_violin()` + `geom_jitter()` 画出 6 个糖皮质激素靶基因在两组中的表达，按基因分面，
+   并用 `ggrepel` 把每个点标上供者 ID。
+2. 修改火山图：只标注 `|log2FC| > 3` 且 `padj < 0.05` 的基因，并用 `nudge_y` 把标签整体上移。
+3. 用 patchwork 的 `design` 参数，把 PCA 放在左侧占两行，右侧上下放 MA 图与 p 值直方图。
+4. 在 ComplexHeatmap 中增加一个行注释，显示每个基因的 log2FC（条形图）。
+5. 用 `plot_gene()` 的思路写一个 `plot_genes(genes)`，对任意基因向量返回一张分面图；
+   当某个基因不在数据中时给出警告而不是报错。
+6. 把 UpSet 图换成下调基因（差值 < −1），四个供者共有的下调基因有多少？
+7. 在基因组坐标图中，只保留蛋白编码基因，并把 |log2FC| > 2 的点着色。
+
+::: {.callout-tip collapse="true"}
+## 参考答案（3 和 4）
+```r
+p_hist <- ggplot(de, aes(pvalue)) + geom_histogram(binwidth = .025, boundary = 0)
+p_pca + p_ma + p_hist + plot_layout(design = "AB\nAC")
+
+row_anno <- rowAnnotation(
+  log2FC = anno_barplot(de$log2FC[match(top_genes, de$gene_id)],
+                        gp = gpar(fill = "grey40"), width = unit(2, "cm"))
+)
+Heatmap(z, name = "z", right_annotation = row_anno, top_annotation = col_anno)
+```
+:::

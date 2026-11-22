@@ -1,0 +1,909 @@
+# Bioconductor 核心数据结构 {#sec-bioc}
+
+```{r}
+#| include: false
+# 把工作目录设为本 qmd 文件所在目录：
+# - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
+# - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+}
+source("_common.R")
+
+# 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
+# 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
+# 并非在整个磁盘中搜索任意位置的文件。
+# common_paths <- c("_common.R",
+#                   "R-for-Bioinformatics-Tutorial-Detailed/_common.R",
+#                   "R/R-for-Bioinformatics-Tutorial-Detailed/_common.R")
+# common_file <- common_paths[file.exists(common_paths)][1]
+# if (is.na(common_file)) {
+#   stop("找不到 _common.R，请先将工作目录设为 R-for-Bioinformatics-Tutorial-Detailed 目录；当前目录：", getwd())
+# }
+# setwd(dirname(normalizePath(common_file)))
+# source("_common.R")
+```
+
+> 预计用时：2.5 小时（详细版）
+>
+> 目标：理解 Bioconductor 的设计哲学与几个"万物之基"的类：`IRanges` / `GRanges`、
+> `Biostrings`、`SummarizedExperiment`；掌握基因 ID 注释映射的正确方式。详细版新增：
+> **参考基因组版本/命名的混乱与 liftOver**、注释版本漂移、ID 映射的一对多与别名、**biomaRt 实战**。
+
+::: {.callout-note appearance="default"}
+## 本章路线
+
+| 节 | 内容 | 真实数据 | 时长 |
+|---|---|---|---|
+| 设计哲学 / IRanges / GRanges | 区间代数、链感知、重叠 | airway 外显子模型 | 25 min |
+| Biostrings | 序列操作 | 酵母 ORF | 10 min |
+| @sec-genome-chaos | GRCh37 vs GRCh38、`1` vs `chr1`、patch/contig、liftOver、版本嗅探、BED 坐标 | airway (GRCh37) + UCSC hg38 TxDb + UCSC chain | 30 min |
+| SummarizedExperiment | 容器、同步取子集、tidy 互通、HDF5 | airway | 20 min |
+| OrgDb / EnsDb | 注释包 | org.Hs.eg.db | 10 min |
+| @sec-annotation-drift | Ensembl 75 → 86：ID 退役、symbol 改名 | airway + EnsDb v86 | 10 min |
+| @sec-id-mapping | multiVals、别名、三种数据源对比 | airway | 15 min |
+| @sec-biomart | 版本/基因组选择、健壮查询、XML 本质、常用模式 | Ensembl GRCh37 BioMart | 20 min |
+:::
+
+```{r}
+library(tidyverse)          # 先加载 tidyverse……
+library(GenomicRanges)      # ……再加载 Bioconductor，让 IRanges::reduce 等 S4 泛型优先
+library(GenomeInfoDb)       # seqlevelsStyle() 等；Bioc 3.22 起不再随 GenomicRanges 自动加载
+library(Biostrings)
+library(SummarizedExperiment)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+library(airway)
+```
+
+::: callout-warning
+## 加载顺序与命名冲突
+Bioconductor 的 `S4Vectors`、`IRanges`、`AnnotationDbi` 导出了 `select`、`rename`、
+`first`、`desc`、`slice`、`reduce` 等与 dplyr / purrr 同名的函数，**后加载者胜出**。
+如果先加载 GenomicRanges 再加载 tidyverse，`reduce(granges)` 会调用 `purrr::reduce`
+并报出令人困惑的 "IRanges objects don't support [[" 错误。
+
+本章的做法：先 tidyverse 后 Bioconductor，并在 tidyverse 侧显式写
+`dplyr::select()`、`dplyr::count()`。也可以用 `conflicted` 包统一声明偏好：
+
+```r
+conflicted::conflict_prefer("select", "dplyr")
+conflicted::conflict_prefer("filter", "dplyr")
+```
+:::
+
+## Bioconductor 的设计哲学
+
+1. **共享数据结构**：几千个包都接受 `SummarizedExperiment` / `GRanges` /
+   `SingleCellExperiment`，因此可以自由组合。
+2. **S4 + 访问器**：通过 `assay()`、`colData()`、`rowRanges()` 等稳定接口访问数据。
+3. **元数据与数据同步**：对对象取子集时，计数、样本信息、基因注释**同时**被切片，
+   不可能"错位"——这是相对于"一个矩阵 + 两张表"最大的优势。
+4. **半年一次的版本发布**，与 R 版本绑定；用 `BiocManager::install()` 安装、
+   `BiocManager::valid()` 检查一致性。
+
+帮助与文档：每个包都有 vignette（`browseVignettes("DESeq2")`），
+Bioconductor 支持论坛 <https://support.bioconductor.org>，以及工作流书籍
+（OSCA、rnaseqGene 等）。
+
+## IRanges：整数区间
+
+```{r}
+ir <- IRanges(start = c(1, 8, 14, 15, 19, 34, 40), width = c(12, 6, 6, 15, 6, 2, 7))
+ir
+start(ir); end(ir); width(ir)
+```
+
+**区间代数**是一切基因组运算的基础：
+
+```{r}
+reduce(ir)            # 合并重叠区间
+disjoin(ir)           # 拆分为互不重叠的最小片段
+gaps(ir)              # 区间之间的空隙
+coverage(ir)          # 每个位置的覆盖深度（Rle：游程编码）
+flank(ir, 3, start = TRUE)
+shift(ir, 10)
+resize(ir, 1, fix = "center")
+```
+
+`Rle`（run-length encoding）是 Bioconductor 用于存储"大量重复值的长向量"的压缩表示，
+覆盖度、染色体名都用它：
+
+```{r}
+cov <- coverage(ir)
+class(cov)
+runValue(cov); runLength(cov)
+as.integer(cov)[1:20]
+```
+
+## GRanges：基因组区间
+
+`GRanges` = 染色体（`seqnames`）+ `IRanges` + 链（`strand`）+ 任意元数据列（`mcols`）。
+
+```{r}
+gr <- GRanges(
+  seqnames = c("chr1", "chr1", "chr2", "chr2"),
+  ranges   = IRanges(c(100, 500, 1000, 1200), width = c(200, 100, 300, 50)),
+  strand   = c("+", "-", "+", "*"),
+  gene     = c("geneA", "geneB", "geneC", "geneD"),
+  score    = c(5.2, 1.1, 3.3, 0.2)
+)
+gr
+mcols(gr)
+gr[gr$score > 1]
+```
+
+::: callout-important
+## 坐标系约定
+Bioconductor 使用 **1-based、闭区间** `[start, end]`，与 GTF/GFF、SAM、VCF 一致。
+**BED 文件是 0-based 半开区间**，`rtracklayer::import()` 会自动转换；
+手工读 BED 时记得 `start + 1`。
+:::
+
+### 链感知操作
+
+```{r}
+promoters(gr, upstream = 2000, downstream = 200)   # 负链的"上游"在坐标更大的一侧
+flank(gr, 100)                                      # 同样链感知
+```
+
+### 重叠查询
+
+```{r}
+peaks <- GRanges(c("chr1", "chr1", "chr2"), IRanges(c(150, 900, 1250), width = 20))
+
+hits <- findOverlaps(peaks, gr, ignore.strand = TRUE)
+hits
+queryHits(hits); subjectHits(hits)
+
+countOverlaps(gr, peaks, ignore.strand = TRUE)
+subsetByOverlaps(gr, peaks, ignore.strand = TRUE)
+distanceToNearest(peaks, gr, ignore.strand = TRUE)
+```
+
+`findOverlaps` 基于 **NCList** 区间树实现，百万级区间查询也只需几秒。
+
+### 真实数据：airway 中的外显子模型
+
+`airway` 的 `rowRanges` 是一个 `GRangesList`：每个基因对应一组外显子（来自 Ensembl GRCh37 注释）。
+
+```{r}
+data(airway)
+exons_by_gene <- rowRanges(airway)
+class(exons_by_gene)
+length(exons_by_gene)
+
+exons_by_gene[["ENSG00000120129"]]       # DUSP1 的外显子
+```
+
+`GRangesList` 上的运算会**逐元素**执行：
+
+```{r}
+# 基因的"有效长度" = 合并重叠外显子后的总长度（用于 TPM / RPKM）
+gene_len <- sum(width(reduce(exons_by_gene)))
+head(gene_len)
+summary(gene_len[gene_len > 0])
+
+# 基因跨度（第一个外显子起点到最后一个外显子终点）
+gene_span <- range(exons_by_gene)
+gene_span[["ENSG00000120129"]]
+
+# 每个基因的外显子数
+n_exons <- lengths(exons_by_gene)
+table(cut(n_exons, c(-Inf, 0, 1, 5, 20, Inf)))
+```
+
+把基因长度存回对象，供第 6 章计算 TPM：
+
+```{r}
+rowData(airway)$eff_length <- gene_len
+```
+
+找出 1 号染色体某区域内的基因：
+
+```{r}
+region <- GRanges("1", IRanges(1e6, 2e6))
+hit_genes <- subsetByOverlaps(airway, region)    # 直接对 SummarizedExperiment 做区间筛选！
+dim(hit_genes)
+rowData(hit_genes)$gene_name |> head(15)
+```
+
+::: callout-note
+## seqlevels 风格
+Ensembl 用 `1, 2, ..., X, MT`；UCSC 用 `chr1, ..., chrX, chrM`。两者混用会导致
+`findOverlaps` 静默返回零结果。用 `seqlevelsStyle(gr) <- "UCSC"` 统一，
+并注意基因组版本（GRCh37/hg19 vs GRCh38/hg38）必须一致。
+:::
+
+## Biostrings：序列
+
+```{r}
+orf_file <- system.file("extdata", "someORF.fa", package = "Biostrings")
+orfs <- readDNAStringSet(orf_file)        # 酵母 7 个真实 ORF
+orfs
+width(orfs)
+names(orfs) |> str_trunc(50)
+```
+
+```{r}
+letterFrequency(orfs, c("G", "C"), as.prob = TRUE) |> rowSums() |> round(3)  # GC 含量
+reverseComplement(orfs[1]) |> subseq(1, 30)
+translate(orfs[2:3])                         # 标准遗传密码
+vcountPattern("ATG", orfs)                   # 每条序列中 ATG 出现次数
+matchPattern("TATAAA", orfs[[1]], max.mismatch = 1)
+oligonucleotideFrequency(orfs[1], width = 2)
+```
+
+`DNAStringSet` 也是基因组 FASTA（`BSgenome`）、读段（`ShortRead`）、引物设计等工作流的基础。
+完整基因组：`BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38`，配合
+`getSeq(genome, gr)` 按 `GRanges` 提取序列。
+
+## 参考基因组的"混乱"：版本、命名与坐标 {#sec-genome-chaos}
+
+"把两份数据按坐标对上"是生信中最常见、也最容易**静默出错**的操作。
+出错的原因几乎总是下面四类之一：
+
+| 问题 | 例子 | 后果 |
+|---|---|---|
+| **基因组版本**不同 | GRCh37/hg19 vs GRCh38/hg38 vs T2T-CHM13 | 同一基因坐标相差几十 kb 到几 Mb；重叠结果错误但不报错 |
+| **染色体命名**不同 | `1` / `chr1` / `NC_000001.11` / `CM000663.2`；`MT` / `chrM` | `findOverlaps` 返回 0 个结果 |
+| **序列集合**不同 | 是否包含 alt contig、patch、decoy、HLA、EBV | 比对与计数结果不同；`seqlevels` 不兼容 |
+| **注释版本**不同 | Ensembl 75 vs 115；GENCODE 19 vs 48 | 基因 ID 退役、symbol 改名、外显子边界变化 |
+
+### 主要的参考基因组"方言"
+
+| 来源 | GRCh37 时代 | GRCh38 时代 | 染色体命名 | 线粒体 |
+|---|---|---|---|---|
+| GRC / NCBI | GRCh37.p13 | GRCh38.p14 | `NC_000001.11` | `NC_012920.1` |
+| Ensembl | GRCh37（release 75 起冻结） | GRCh38（release 76+） | `1`、`X`、`MT` | `MT` |
+| UCSC | hg19 | hg38 | `chr1`、`chrX`、`chrM` | `chrM` |
+| GENCODE | v19 | v20+ | `chr1`（UCSC 风格） | `chrM` |
+| 1000 Genomes | hs37d5（含 decoy） | GRCh38_full_analysis_set | `1` / `chr1` | `MT` / `chrM` |
+
+::: callout-warning
+## hg19 的 chrM 与 GRCh37 的 MT **不是同一条序列**
+
+UCSC hg19 的 `chrM` 来自旧的 NC_001807（16,571 bp），而 GRCh37 的 `MT` 是修订版剑桥参考序列 rCRS
+（NC_012920，16,569 bp）。两者坐标不能直接互换——线粒体突变分析中经常因此出错。
+从 hg38 开始，UCSC 的 `chrM` 也改用了 rCRS。
+:::
+
+### 实例：airway 用的是哪个基因组？
+
+airway 的 `rowRanges` 来自 Ensembl 75（GRCh37）。看它的 `seqinfo`：
+
+```{r}
+si_airway <- seqinfo(airway)
+si_airway
+genome(si_airway) |> unique()               # 没有记录基因组版本！
+seqlevels(airway) |> head(30)
+seqlevels(airway) |> length()
+```
+
+`genome` 字段是 `NA`——**对象没有告诉你它属于哪个基因组版本**，这是很多数据集的常态。
+除了标准染色体外，还有大量 `GL000xxx`（未定位 contig）和 `HG/HSCHR` 开头的 **patch**（修补序列）：
+
+```{r}
+lv <- seqlevels(airway)
+table(type = case_when(
+  lv %in% c(1:22, "X", "Y", "MT") ~ "标准染色体",
+  str_starts(lv, "GL")           ~ "未定位/随机 contig (GL)",
+  str_detect(lv, "PATCH|HSCHR|HG") ~ "patch / 替代单倍型",
+  .default = "其他"
+))
+```
+
+**如何判断一个数据集的基因组版本？** 最可靠的办法是看几个已知基因的坐标。例如 *DUSP1*：
+
+```{r}
+dusp1_37 <- range(rowRanges(airway)[["ENSG00000120129"]])
+dusp1_37
+```
+
+GRCh37 中 *DUSP1* 位于 5 号染色体约 172.19 Mb；GRCh38 中约 172.77 Mb。下面用 hg38 的 TxDb 验证。
+
+### 命名不一致导致"静默零结果"
+
+`TxDb.Hsapiens.UCSC.hg38.knownGene` 是 UCSC hg38 的 GENCODE 转录本模型，使用 `chr` 前缀：
+
+```{r}
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
+genes_hg38 <- genes(txdb)                   # ENTREZ 基因 ID 作为名字
+genes_hg38
+seqlevels(genes_hg38) |> length()
+seqlevels(genes_hg38)[c(1:3, 25:28, 700:702)]
+genome(genes_hg38) |> unique()
+```
+
+直接把 airway 的 DUSP1 区间与 hg38 基因求重叠：
+
+```{r}
+countOverlaps(dusp1_37, genes_hg38)          # 0 —— 没有任何报错
+intersect(seqlevels(dusp1_37), seqlevels(genes_hg38))   # 根本没有共同的染色体名
+```
+
+修正命名风格。`seqlevelsStyle()` 依据 GenomeInfoDb 内置的映射表在风格间转换：
+
+```{r}
+dusp1_37_ucsc <- dusp1_37
+seqlevelsStyle(dusp1_37_ucsc) <- "UCSC"
+dusp1_37_ucsc
+seqinfo(dusp1_37_ucsc)["chr5"]                 # 携带了 GRCh37 的染色体长度
+try(subsetByOverlaps(genes_hg38, dusp1_37_ucsc))
+```
+
+这一次 Bioconductor **拦住了我们**：两个对象中 `chr5` 的长度不一样（180,915,260 vs 181,538,259），
+说明它们来自不同的基因组版本。**这就是 `seqinfo` 的价值**——只要对象带着完整的 seqinfo，
+版本不一致会变成显式报错。
+
+但很多数据来源（BED 文件、从数据框构造的 GRanges、别人给的表格）**没有** seqinfo。
+模拟这种情况：
+
+```{r}
+dusp1_no_info <- GRanges(as.character(seqnames(dusp1_37_ucsc)), ranges(dusp1_37_ucsc))
+seqinfo(dusp1_no_info)                         # 长度未知
+hits <- subsetByOverlaps(genes_hg38, dusp1_no_info)
+hits                                           # 没有报错，也有重叠——但它是 DUSP1 吗？
+```
+
+```{r}
+dusp1_entrez <- mapIds(org.Hs.eg.db, "DUSP1", "ENTREZID", "SYMBOL")
+genes_hg38[dusp1_entrez]                      # hg38 中真正的 DUSP1
+names(hits) %in% dusp1_entrez
+```
+
+**命名统一了，但版本不一致**：GRCh37 的 DUSP1 坐标在 hg38 中落在了**别的位置**（如果碰巧重叠到某个基因，那是错误的基因）。
+这是比"零结果"更危险的情况，因为结果看起来正常。
+
+### liftOver：在版本之间转换坐标
+
+UCSC 的 chain 文件描述了两个版本之间的对应关系，`rtracklayer::liftOver()` 读取它：
+
+```{r}
+library(rtracklayer)
+chain_gz <- fetch("https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz")
+chain_file <- sub("\\.gz$", "", chain_gz)
+if (!file.exists(chain_file)) R.utils::gunzip(chain_gz, destname = chain_file, remove = FALSE)
+ch <- import.chain(chain_file)
+ch
+
+dusp1_38 <- liftOver(dusp1_no_info, ch)       # 返回 GRangesList：一个区间可能映射为多段
+dusp1_38
+unlist(dusp1_38) |> range()
+genes_hg38[dusp1_entrez]
+```
+
+转换后的坐标与 hg38 注释中的 DUSP1 吻合。批量转换整张表时要检查三件事：
+
+```{r}
+all_genes_37 <- unlist(range(rowRanges(airway)[lengths(rowRanges(airway)) > 0]))
+all_genes_37 <- keepStandardChromosomes(all_genes_37, pruning.mode = "coarse")
+seqlevelsStyle(all_genes_37) <- "UCSC"
+lifted <- liftOver(all_genes_37, ch)
+n_pieces <- lengths(lifted)
+table(pieces = pmin(n_pieces, 3))            # 0 = 无法转换；>1 = 被拆成多段
+```
+
+- **0 段**：该区域在新版本中被删除或改动太大；
+- **多段**：区域内有插入/删除，基因被拆开——对于基因级区间，通常取 `range()` 并检查长度变化；
+- **换了染色体**：极少数区域在版本间被移到另一条染色体。
+
+```{r}
+lifted_ok <- lifted[n_pieces >= 1]
+lifted_range <- unlist(range(lifted_ok))
+# range() 跨染色体时会返回多个区间；只保留单染色体的结果
+one_chr <- lengths(range(lifted_ok)) == 1
+lifted_range <- unlist(range(lifted_ok[one_chr]))
+len_ratio <- width(lifted_range) / width(all_genes_37[names(lifted_range)])
+summary(len_ratio)
+sum(abs(log2(len_ratio)) > 0.1)              # 长度变化超过约 7% 的基因数
+```
+
+::: callout-tip
+## 能重新比对就不要 liftOver
+
+liftOver 适合**区间注释**（peaks、CNV 片段、GWAS 位点）。对于**表达定量**，正确做法是用目标版本的
+参考基因组和注释**重新定量**——salmon 重新跑一遍通常只要几十分钟。
+对于 **VCF 变异**，需要专门的工具（Picard `LiftoverVcf`、CrossMap、bcftools +liftover），
+因为参考等位基因可能在版本间改变，还可能出现链翻转。
+:::
+
+### 标准化 seqinfo 的一套固定操作
+
+```{r}
+gr_demo <- GRanges(c("1", "chr2", "MT", "GL000192.1", "X"), IRanges(c(100, 200, 300, 400, 500), width = 10))
+gr_demo                                          # 混合风格：真实数据合并时常见
+# 1) 统一风格（需要先修正混用的名字）
+seqlevels(gr_demo) <- sub("^chr", "", seqlevels(gr_demo))
+seqlevelsStyle(gr_demo) <- "UCSC"
+seqlevels(gr_demo)
+# 2) 只保留标准染色体
+gr_demo <- keepStandardChromosomes(gr_demo, pruning.mode = "coarse")
+seqlevels(gr_demo)
+# 3) 按自然顺序排列 seqlevels（chr1, chr2, ..., chr10 而不是字典序）
+gr_demo <- sortSeqlevels(gr_demo) |> sort()
+# 4) 用参考的 seqinfo 补全长度与版本信息，便于后续检查越界
+seqinfo(gr_demo) <- seqinfo(genes_hg38)[seqlevels(gr_demo)]   # seqlevels 相同且同序时可直接替换
+seqinfo(gr_demo)
+```
+
+一个快速的"版本嗅探"：标准染色体的长度在 GRCh37 与 GRCh38 中不同，
+数据中**最大坐标**超过某个版本的染色体长度时，就不可能属于该版本：
+
+```{r}
+chr_len_38 <- seqlengths(genes_hg38)[paste0("chr", c(1:22, "X", "Y"))]
+max_pos_airway <- tapply(end(all_genes_37), as.character(seqnames(all_genes_37)), max)
+tibble(chr = names(chr_len_38), len_hg38 = chr_len_38,
+       max_pos_airway = max_pos_airway[names(chr_len_38)]) |>
+  mutate(exceeds_hg38 = max_pos_airway > len_hg38) |>
+  arrange(desc(exceeds_hg38)) |> head(6)
+```
+
+1 号染色体上有基因的终点（249.23 Mb）超出了 hg38 中 chr1 的长度（248.96 Mb），
+所以 airway **不可能**是 hg38 坐标。
+
+（这一检查只能**排除**版本，不能证明版本；最终仍以已知基因坐标为准。）
+
+### 坐标约定：0-based 与 1-based
+
+```{r}
+bed_txt <- "chr5\t172195000\t172195100\tpeak1\nchr5\t172196000\t172196001\tsnv_like"
+bed_file <- tempfile(fileext = ".bed"); writeLines(bed_txt, bed_file)
+import(bed_file)                      # rtracklayer 自动 +1：起点变成 172195001
+read.delim(bed_file, header = FALSE)  # 手工读入则保持 0-based —— 直接建 GRanges 会差 1
+```
+
+BED 中长度为 1 的区间 `172196000–172196001` 对应 1-based 坐标 172196001，即一个碱基。
+VCF 的 `POS` 是 1-based；而 MAF、GTF、SAM 也都是 1-based。
+
+## SummarizedExperiment：组学数据的标准容器
+
+```
+                        colData(x)  —— 每个样本一行
+                     ┌──────────────────────────────┐
+                     │ Run   cell     dex   ...      │
+                     └──────────────────────────────┘
+                           S1    S2    S3   ...  Sn
+ rowData / rowRanges ┌───┬─────────────────────────┐
+ 每个基因一行         │g1 │                         │
+ (gene_id, symbol,   │g2 │   assay(x, "counts")    │  ← 可以有多个 assay：
+  GRanges ...)       │...│   assay(x, "logcpm")    │    counts / cpm / vst ...
+                     │gm │                         │    维度与行列完全对齐
+                     └───┴─────────────────────────┘
+                     metadata(x) —— 任意列表
+```
+
+```{r}
+airway
+```
+
+| 组件 | 访问器 | 含义 |
+|---|---|---|
+| `assays` | `assay(x, "counts")`、`assays(x)` | 一个或多个基因 × 样本矩阵 |
+| `colData` | `colData(x)`、`x$col` | 样本元数据（`DataFrame`） |
+| `rowData` / `rowRanges` | `rowData(x)`、`rowRanges(x)` | 特征元数据 / 基因组位置 |
+| `metadata` | `metadata(x)` | 任意列表（实验描述、参数……） |
+
+```{r}
+assayNames(airway)
+colData(airway)
+airway$dex                                  # $ 直接访问 colData 的列
+rowData(airway)[1:3, c("gene_id", "gene_name", "gene_biotype")]
+metadata(airway)[[1]]                        # MIAME 实验描述
+```
+
+### 同步取子集
+
+```{r}
+pc <- airway[rowData(airway)$gene_biotype == "protein_coding", airway$dex == "trt"]
+dim(pc)
+colData(pc)$run                              # 样本元数据随之被切片
+```
+
+### 添加 assay
+
+```{r}
+cpm <- t(t(assay(airway)) / colSums(assay(airway))) * 1e6
+assay(airway, "cpm") <- cpm
+assay(airway, "logcpm") <- log2(cpm + 1)
+assayNames(airway)
+```
+
+### 与 tidyverse 互通
+
+```{r}
+se_long <- airway[c("ENSG00000120129", "ENSG00000163884"), ] |>
+  (\(x) assay(x, "logcpm"))() |>
+  as_tibble(rownames = "gene_id") |>
+  pivot_longer(-gene_id, names_to = "Run", values_to = "logcpm") |>
+  left_join(as_tibble(colData(airway)), join_by(Run))
+se_long |> dplyr::select(gene_id, Run, cell, dex, logcpm) |> head()
+```
+
+`tidySummarizedExperiment` 包让 `SummarizedExperiment` 可以**直接**使用 dplyr / ggplot2
+动词（把它看作一张长表），适合交互探索；本教程坚持显式转换，以免混淆两种语义。
+
+### 合并与重排
+
+```{r}
+cbind(airway[, 1:2], airway[, 3:4]) |> dim()      # 按样本合并（行必须一致）
+airway[, order(airway$dex, airway$cell)]$Run      # 重排样本
+```
+
+### 大于内存的数据：DelayedArray / HDF5Array
+
+`assay` 可以是任何"类矩阵"对象：普通矩阵、`dgCMatrix` 稀疏矩阵，或 `DelayedArray`
+（延迟计算，数据可以在 HDF5 磁盘文件上）。这是 `SingleCellExperiment` 处理百万细胞的基础：
+
+```{r}
+#| eval: false
+library(HDF5Array)
+h5 <- writeHDF5Array(assay(airway, "counts"), filepath = "data/airway_counts.h5", name = "counts")
+class(h5)
+colSums(h5)               # 分块读取，内存占用极小
+saveHDF5SummarizedExperiment(airway, dir = "data/airway_h5", replace = TRUE)
+```
+
+## 基因注释与 ID 映射
+
+### OrgDb：物种级 ID 映射
+
+```{r}
+org.Hs.eg.db
+columns(org.Hs.eg.db) |> head(20)
+keytypes(org.Hs.eg.db) |> length()
+```
+
+**推荐 `mapIds()`**：保证返回与输入**等长、同序**的向量（一对多时选第一个），可以直接作为新列：
+
+```{r}
+ens <- rownames(airway)[1:8]
+mapIds(org.Hs.eg.db, keys = ens, keytype = "ENSEMBL", column = "SYMBOL", multiVals = "first")
+```
+
+`AnnotationDbi::select()` 返回**长表**，会因一对多映射而**行数膨胀**：
+
+```{r}
+AnnotationDbi::select(org.Hs.eg.db, keys = c("ENSG00000120129", "ENSG00000204580"),
+                      keytype = "ENSEMBL", columns = c("SYMBOL", "ENTREZID", "GENENAME"))
+```
+
+一对多的统计：
+
+```{r}
+all_map <- AnnotationDbi::select(org.Hs.eg.db, keys = rownames(airway),
+                                 keytype = "ENSEMBL", columns = "ENTREZID")
+all_map |>
+  dplyr::count(ENSEMBL, name = "n_entrez") |>
+  dplyr::count(n_entrez, name = "n_ensembl")
+```
+
+::: callout-warning
+## ID 映射的现实
+- 约 30–40% 的 Ensembl ID（多为 lncRNA、假基因）没有 Entrez/Symbol 对应。
+- 一个 Ensembl ID 可能对应多个 Entrez ID，反之亦然。
+- Symbol **不稳定**（会改名），**不唯一**（不同物种/历史）。分析中使用 Ensembl / Entrez
+  作为主键，Symbol 只用于展示。
+- 注释数据库版本应与比对时的基因组注释版本**尽量一致**。
+:::
+
+### EnsDb / TxDb：转录组模型
+
+```{r}
+#| eval: false
+library(AnnotationHub)
+ah <- AnnotationHub()
+query(ah, c("EnsDb", "Homo sapiens", "115"))      # 选择与比对注释一致的 Ensembl 版本
+edb <- ah[["AH119325"]]                            # 编号随版本变化，请以 query 结果为准
+
+genes(edb, filter = ~ gene_biotype == "protein_coding")
+transcripts(edb, filter = GeneNameFilter("DUSP1"))
+exonsBy(edb, by = "gene")                           # 与 airway 的 rowRanges 结构相同
+promoters(genes(edb), upstream = 2000, downstream = 200)
+
+# tx2gene 表：tximport 需要它把转录本定量汇总到基因
+tx2gene <- transcripts(edb, columns = c("tx_id", "gene_id"), return.type = "data.frame")
+```
+
+## 注释版本的"漂移"：同一个 ID 在不同版本中 {#sec-annotation-drift}
+
+airway 的注释来自 **Ensembl 75（2014，GRCh37）**。`EnsDb.Hsapiens.v86` 是 **Ensembl 86（2016，GRCh38）**。
+比较两者，可以量化"两年的注释更新"带来多少变化：
+
+```{r}
+library(EnsDb.Hsapiens.v86)
+edb <- EnsDb.Hsapiens.v86
+edb
+g86 <- genes(edb, columns = c("gene_id", "gene_name", "gene_biotype"))
+g86
+ann75 <- as_tibble(rowData(airway)) |> dplyr::select(gene_id, gene_name, gene_biotype)
+ann86 <- as_tibble(mcols(g86)) |> dplyr::select(gene_id, gene_name_86 = gene_name, gene_biotype_86 = gene_biotype)
+
+drift <- ann75 |> left_join(ann86, join_by(gene_id))
+drift |>
+  summarise(
+    n_v75            = n(),
+    retired_in_v86   = sum(is.na(gene_name_86)),
+    symbol_changed   = sum(!is.na(gene_name_86) & gene_name != gene_name_86),
+    biotype_changed  = sum(!is.na(gene_biotype_86) & gene_biotype != gene_biotype_86)
+  )
+```
+
+看几个 symbol 改名的例子，以及退役 ID 的生物类型：
+
+```{r}
+drift |> dplyr::filter(!is.na(gene_name_86), gene_name != gene_name_86, gene_biotype == "protein_coding") |>
+  dplyr::select(gene_id, gene_name, gene_name_86) |> head(10)
+drift |> dplyr::filter(is.na(gene_name_86)) |> dplyr::count(gene_biotype, sort = TRUE) |> head(6)
+```
+
+几点观察：
+
+- 8,583 个 ID（13%）在两年后就**退役**了，其中以 miRNA、假基因为主，但也有两千多个蛋白编码基因——
+  大多数位于 patch / 替代单倍型上（GRCh38 换了一套），也有被合并到其他 ID 的；
+- 3,267 个 symbol **改名**，例如 `KAL1 → ANOS1`、`GPR124 → ADGRA2`（黏附类 GPCR 的系统性重命名）；
+- 1.5 万个 biotype 变化**主要是分类细化**（`pseudogene` 拆成 `processed_pseudogene` 等），
+  但也有几百个 `protein_coding → lincRNA/antisense`——这些会影响"只分析蛋白编码基因"时的基因集合。
+**结论**：差异表达结果、基因集、外部表格之间的连接，必须以**同一版本**为基准；
+发表时写清楚注释版本（"Ensembl release 75"、"GENCODE v44"）。
+
+## ID 映射深入 {#sec-id-mapping}
+
+### `mapIds()` 的 `multiVals`
+
+一对多是常态而非例外。`multiVals` 决定如何处理：
+
+```{r}
+syms <- c("DUSP1", "KLF15", "HLA-A", "MEMO1", "NOTAGENE")
+mapIds(org.Hs.eg.db, syms, "ENSEMBL", "SYMBOL", multiVals = "first")       # 默认：取第一个（任意！）
+mapIds(org.Hs.eg.db, syms, "ENSEMBL", "SYMBOL", multiVals = "list")        # 全部保留
+mapIds(org.Hs.eg.db, syms, "ENSEMBL", "SYMBOL", multiVals = "asNA")        # 一对多 → NA（最保守）
+mapIds(org.Hs.eg.db, syms, "ENSEMBL", "SYMBOL", multiVals = "CharacterList") |> lengths()
+```
+
+`HLA-A` 对应多个 Ensembl ID（`"asNA"` 时变为 `NA`），因为 MHC 区域在 patch / alt 单倍型上有多个拷贝；`"first"` 选中哪一个**没有任何生物学依据**。
+
+### 别名（alias）与过时 symbol
+
+```{r}
+old <- c("SEPT7", "MARCH1", "C10orf10", "FAM46A", "KIAA0101", "DUSP1")
+mapIds(org.Hs.eg.db, old, "SYMBOL", "SYMBOL")                 # 直接查 SYMBOL：旧名查不到
+mapIds(org.Hs.eg.db, old, "SYMBOL", "ALIAS", multiVals = "list")   # 按别名查：可能一对多
+limma::alias2SymbolTable(old, species = "Hs")                 # limma：唯一时返回，冲突时返回 NA
+```
+
+### 同一映射，不同数据源，不同答案
+
+```{r}
+ids <- rownames(airway)
+src <- tibble(
+  gene_id = ids,
+  airway_v75 = rowData(airway)$gene_name,
+  ensdb_v86  = mapIds(edb, ids, "SYMBOL", "GENEID"),
+  orgdb      = mapIds(org.Hs.eg.db, ids, "SYMBOL", "ENSEMBL")
+)
+src |>
+  summarise(
+    n           = n(),
+    na_ensdb86  = sum(is.na(ensdb_v86)),
+    na_orgdb    = sum(is.na(orgdb)),
+    all_agree   = sum(airway_v75 == ensdb_v86 & ensdb_v86 == orgdb, na.rm = TRUE),
+    v86_vs_org_disagree = sum(ensdb_v86 != orgdb, na.rm = TRUE)
+  )
+src |> dplyr::filter(ensdb_v86 != orgdb) |> head(8)
+```
+
+org.Hs.eg.db 以 **NCBI Gene** 为核心（Ensembl ID 是交叉引用，每半年更新一次），EnsDb 以 **Ensembl** 为核心。
+它们对 lncRNA、新命名基因的处理不同。实践中：
+
+| 场景 | 推荐 |
+|---|---|
+| 数据用 Ensembl/GENCODE 注释定量 | 用**同版本**的 EnsDb（AnnotationHub）或 GTF 本身的 `gene_name` |
+| 需要 Entrez ID（KEGG、clusterProfiler） | org.Hs.eg.db；报告映射失败的比例 |
+| 外部 symbol 列表 | HGNChelper / `alias2SymbolTable` 先规范化，再映射 |
+| 跨物种同源 | biomaRt（Ensembl Compara）或 `babelgene`/`orthogene` |
+
+## biomaRt 实战 {#sec-biomart}
+
+BioMart 是 Ensembl 提供的**在线查询服务**：选择一个 *mart*（数据库）→ *dataset*（物种）→
+*filters*（查询条件）→ *attributes*（返回字段）。它能查到本地注释包没有的信息（同源基因、
+外部数据库交叉引用、序列、变异），但**依赖网络和服务器状态**。
+
+### 连接：选对版本和基因组
+
+```{r}
+#| eval: false
+library(biomaRt)
+listEnsemblArchives() |> head()                  # 所有存档版本及其网址
+mart_now <- useEnsembl("genes", "hsapiens_gene_ensembl")              # 当前版本（GRCh38）
+mart_115 <- useEnsembl("genes", "hsapiens_gene_ensembl", version = 115) # 固定版本：可复现
+mart_37  <- useEnsembl("genes", "hsapiens_gene_ensembl", GRCh = 37)    # GRCh37 专用服务器
+```
+
+::: callout-warning
+## 查询 GRCh37 的数据要用 GRCh37 的 mart
+
+默认的 mart 永远是**最新的 GRCh38**。用它查询 airway 的基因，得到的是 GRCh38 坐标，
+与数据本身的 GRCh37 坐标不一致；某些在 GRCh37 存在的 ID 也已经退役。
+`useEnsembl(GRCh = 37)` 指向 `grch37.ensembl.org`，其注释冻结在 release 75 附近——正好与 airway 一致。
+:::
+
+### 一个健壮的查询包装
+
+真实环境中 Ensembl 服务器经常响应缓慢、重定向到存档站点或者暂时不可用（写作本章时，
+`www.ensembl.org` 就多次超时，而 `grch37.ensembl.org` 正常）。可复现的分析应当：
+**缓存结果、捕获错误、验证返回内容**：
+
+```{r}
+#| label: biomart-query
+bm_query <- function(values, attributes, filters = "ensembl_gene_id", GRCh = 37) {
+  mart <- biomaRt::useEnsembl("genes", "hsapiens_gene_ensembl", GRCh = GRCh)
+  res <- biomaRt::getBM(attributes = attributes, filters = filters, values = values, mart = mart)
+  # 验证：返回的键必须是查询键的子集（服务器出错时有可能返回整库！）
+  stopifnot("返回了未查询的键" = all(res[[filters]] %in% values))
+  res
+}
+
+bm_ann <- cached("biomart_airway_grch37.rds", tryCatch(
+  bm_query(rownames(airway),
+           c("ensembl_gene_id", "external_gene_name", "gene_biotype", "chromosome_name",
+             "start_position", "end_position", "strand", "percentage_gene_gc_content", "description")),
+  error = function(e) { message("BioMart 不可用：", conditionMessage(e)); NULL }
+))
+if (!is.null(bm_ann)) {
+  dim(bm_ann)
+  head(bm_ann, 3)
+}
+```
+
+BioMart 能提供 airway 注释中没有的列，例如基因 GC 含量和描述。顺便核对一下坐标是不是 GRCh37：
+
+```{r}
+if (!is.null(bm_ann)) {
+  bm_ann |> dplyr::filter(external_gene_name == "DUSP1")
+  # 与 airway 自带的坐标比较
+  chk <- bm_ann |>
+    inner_join(as_tibble(rowData(airway)) |> dplyr::select(gene_id, gene_seq_start),
+               join_by(ensembl_gene_id == gene_id))
+  mean(chk$start_position == chk$gene_seq_start)      # 应当接近 1
+}
+```
+
+### 理解 BioMart 的本质：一个 XML-over-HTTP 查询
+
+biomaRt 包只是帮你拼装了一个 XML 查询并通过 HTTP 发送。自己写一遍，有助于理解它、并在包出问题时调试：
+
+```{r}
+bm_rest <- function(values, filter = "ensembl_gene_id",
+                    attributes = c("ensembl_gene_id", "external_gene_name"),
+                    host = "https://grch37.ensembl.org", chunk = 25) {
+  one <- function(v) {
+    xml <- sprintf(paste0('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query>',
+                          '<Query virtualSchemaName="default" formatter="TSV" header="1" uniqueRows="1">',
+                          '<Dataset name="hsapiens_gene_ensembl" interface="default">',
+                          '<Filter name="%s" value="%s"/>%s</Dataset></Query>'),
+                   filter, paste(v, collapse = ","),
+                   paste0('<Attribute name="', attributes, '"/>', collapse = ""))
+    resp <- httr2::request(host) |> httr2::req_url_path("biomart/martservice") |>
+      httr2::req_url_query(query = xml) |> httr2::req_timeout(60) |>
+      httr2::req_retry(max_tries = 3) |> httr2::req_perform()
+    out <- read.delim(text = httr2::resp_body_string(resp), col.names = attributes, check.names = FALSE)
+    stopifnot("服务器返回了未查询的键" = all(out[[1]] %in% v))
+    out
+  }
+  # 分批：GET 请求的 URL 长度有限，过长时服务器会**忽略过滤条件、返回整库**
+  chunks <- split(values, ceiling(seq_along(values) / chunk))
+  do.call(rbind, lapply(chunks, one))
+}
+rest_res <- cached("biomart_rest_demo.rds", tryCatch(
+  bm_rest(c("ENSG00000120129", "ENSG00000163884", "ENSG00000179094", "ENSG00000096060")),
+  error = function(e) { message("REST 查询失败：", conditionMessage(e)); NULL }))
+rest_res
+```
+
+::: callout-important
+## 一次真实的"静默错误"
+
+写作本章时测试发现：当一次 GET 请求中放入 50 个以上 ID 时，服务器**没有报错**，而是忽略了过滤条件，
+返回了全部约 6.4 万个基因。如果不做 `all(out$id %in% v)` 这样的验证，下游会悄悄得到错误的注释。
+**对任何外部服务返回的结果都要做"形状"检查**：行数、键是否为查询键的子集、有无重复。
+:::
+
+### 常用查询模式
+
+```{r}
+#| eval: false
+mart <- useEnsembl("genes", "hsapiens_gene_ensembl", version = 115)
+
+# 1) 找属性名：属性有上千个，用关键词搜索
+searchAttributes(mart, "homolog")    |> head()
+searchFilters(mart, "chromosome")    |> head()
+
+# 2) 区域内的所有蛋白编码基因（多个 filter 是"与"关系）
+getBM(c("ensembl_gene_id", "external_gene_name", "start_position"),
+      filters = c("chromosome_name", "start", "end", "biotype"),
+      values  = list("5", 172e6, 173e6, "protein_coding"), mart = mart)
+
+# 3) 人 → 小鼠同源基因
+getBM(c("ensembl_gene_id", "external_gene_name",
+        "mmusculus_homolog_ensembl_gene", "mmusculus_homolog_associated_gene_name",
+        "mmusculus_homolog_orthology_type"),
+      filters = "external_gene_name", values = c("DUSP1", "KLF15", "FKBP5"), mart = mart)
+
+# 4) 转录本层面：tx2gene 表、规范转录本（MANE Select）
+getBM(c("ensembl_transcript_id", "ensembl_gene_id", "transcript_mane_select", "transcript_biotype"),
+      filters = "external_gene_name", values = "DUSP1", mart = mart)
+
+# 5) 序列
+getSequence(id = "DUSP1", type = "hgnc_symbol", seqType = "coding", mart = mart)
+
+# 6) 外部数据库交叉引用：Entrez、UniProt、RefSeq
+getBM(c("ensembl_gene_id", "entrezgene_id", "uniprotswissprot", "refseq_mrna"),
+      filters = "ensembl_gene_id", values = "ENSG00000120129", mart = mart)
+```
+
+::: callout-tip
+## biomaRt 使用守则
+
+1. **固定版本**：`useEnsembl(version = )`，并把版本写进方法部分；
+2. **缓存结果**：`cached()` / `saveRDS()`，不要在每次渲染时都在线查询；
+3. **attribute 不要跨 page**：BioMart 把属性分成若干"页"（基因、同源、序列、结构……），一次查询只能取同一页的属性；
+4. **验证返回**：键是子集、记录行数、检查一对多；
+5. 能用本地带版本的注释包（EnsDb / OrgDb / TxDb）解决的，优先本地。
+:::
+
+## ExperimentHub 与数据包
+
+本教程的单细胞数据集来自 `ExperimentHub`（第 12、13 章）：
+
+```{r}
+#| eval: false
+library(ExperimentHub)
+eh <- ExperimentHub()
+query(eh, "Kang")         # 列出 Kang 2018 相关资源
+```
+
+数据只在首次使用时下载，缓存在 `~/.cache/R/ExperimentHub`。
+
+## 保存 airway 的增强版本
+
+```{r}
+saveRDS(airway, file.path(DATA_DIR, "airway_annotated.rds"))
+```
+
+## 练习
+
+1. 计算 airway 中**单外显子基因**的比例，并比较它们与多外显子基因的平均表达量（log CPM）。
+2. 为每个基因构建 TSS（转录起始位点）`GRanges`：对 `range(exons_by_gene)` 使用
+   `resize(width = 1, fix = "start")`，然后求每个基因到最近的**其他**基因 TSS 的距离分布。
+3. 用 `mapIds()` 给 airway 加上 `ENTREZID` 列，统计有多少蛋白编码基因没有 Entrez ID。
+4. 读入 `someORF.fa`，找出 GC 含量最高的 ORF，并统计其编码蛋白中每种氨基酸的频率。
+5. 用 liftOver 把 airway 中 **所有** 5 号染色体基因转换到 hg38，并用 `findOverlaps` 与 `genes_hg38` 求重叠；
+   有多少基因转换后**没有**与任何 hg38 基因重叠？
+6. 在 `drift` 中找出 v75 → v86 期间 symbol 改变的蛋白编码基因，用 `HGNChelper::checkGeneSymbols()` 检查旧名是否被识别为别名。
+7. （需联网）用 `bm_query()` 的思路，查询 `DUSP1`、`KLF15`、`FKBP5` 的小鼠同源基因，并验证返回结果。
+
+::: {.callout-tip collapse="true"}
+## 参考答案
+```r
+# 1
+single <- lengths(exons_by_gene) == 1
+tapply(rowMeans(assay(airway, "logcpm")), single, mean)
+
+# 2
+tss <- resize(unlist(range(exons_by_gene[lengths(exons_by_gene) > 0])), width = 1, fix = "start")
+d <- distanceToNearest(tss, ignore.strand = TRUE)     # 不给 subject 时，自动排除自身
+summary(mcols(d)$distance)
+
+# 3
+rowData(airway)$entrez <- mapIds(org.Hs.eg.db, rownames(airway), "ENTREZID", "ENSEMBL")
+with(rowData(airway), sum(gene_biotype == "protein_coding" & is.na(entrez)))
+
+# 4
+gc <- rowSums(letterFrequency(orfs, c("G", "C"), as.prob = TRUE))
+best <- orfs[which.max(gc)]
+alphabetFrequency(translate(best), as.prob = TRUE)[, AA_STANDARD] |> sort(decreasing = TRUE) |> head()
+```
+:::
