@@ -6,6 +6,7 @@ Plan Date（创建）: 2026-10-29
 - 2026-10-29 — 阅读 Gmail、调研 GitHub 原仓库、建立待确认的证据模型与配色方案。仅调研，未启动正式分析。
 - 2026-11-04 — 新增方法学调研 [P47_scRNAseq_best_practices_github_survey_1104.md](P47_scRNAseq_best_practices_github_survey_1104.md)；其 §6 与 §8 含待确认的计划修订建议，本计划正文未改。未启动正式分析。
 - 2026-11-21 — 经用户同意新建两个项目专用环境（[../scripts/1_setup_envs.sh](../scripts/1_setup_envs.sh)，日志在 `../logs/`）：`/mnt/ex_8T_SSD/conda_envs/p47_r`（SoupX 1.6.2、celda 1.26.0、scDblFinder 1.24.10 + xgboost 3.3.1.1、DESeq2、edgeR、zellkonverter、DropletUtils）与 `/mnt/ex_8T_SSD/conda_envs/p47_allele`（cellsnp-lite 1.2.3、maegatk 0.2.0、samtools 1.24、pysam 0.24.1）。表达主线仍用 `sc_tut_main`（scanpy 1.11.5）。玩具数据冒烟：SoupX/decontX/cellsnp-lite 阳性对照通过；maegatk 只验证到加载。**待定**：xgboost 钉在 3.3.1 后 scDblFinder 阳性对照异质群 recall 反而低于 3.4.2.1（0.80/0.72 vs 0.93/0.78），用哪个版本未定。全机无 Cell Ranger，上游定量方案未定。未启动正式分析。
+- 2026-11-22 — 新增开跑前缺陷清单 [P47_readiness_gaps_1122.md](P47_readiness_gaps_1122.md)（客户输入 / 设计固有限制 / 工具缺口 / 待确认口径）。未启动正式分析。
 
 ## 1. 已知事实与输入状态
 
