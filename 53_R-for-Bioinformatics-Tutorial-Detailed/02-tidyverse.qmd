@@ -5,11 +5,15 @@
 # 把工作目录设为本 qmd 文件所在目录：
 # - quarto render 时 knitr 已自动这样做（此时 interactive() 为 FALSE，下面的 if 不执行）；
 # - 在 Positron / RStudio 中逐块交互运行时，通过 rstudioapi 获取当前编辑器中文件的路径。
-if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-  this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
-  if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
-}
-source("_common.R")
+
+# if (interactive() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
+#   this_file <- tryCatch(rstudioapi::getSourceEditorContext()$path, error = function(e) "")
+#   if (nzchar(this_file)) setwd(dirname(normalizePath(this_file)))
+# }
+
+#暂时改成这个
+setwd("/mnt/ex_8T_SSD/projects_2026Q4/53_R-for-Bioinformatics-Tutorial-Detailed")  # 固定工作目录为项目根
+source("_common.R")  # 加载全书公共设置与辅助函数
 
 # 备用：自动查找 _common.R。上面已设置工作目录并加载该文件，本代码不需要运行。
 # 如需使用，可取消下面代码的注释；支持从教程目录、R 目录或工作区根目录查找，
@@ -23,69 +27,64 @@ source("_common.R")
 # }
 # setwd(dirname(normalizePath(common_file)))
 # source("_common.R")
+
+                        
 ```
 
 > 预计用时：2 小时（详细版）
 >
-> 目标：掌握 dplyr 1.1/1.2 的现代写法（`.by`、`join_by()`、`pick()`、`reframe()`、
-> `filter_out()`、`recode_values()`），tidyr 的整形，purrr 的函数式迭代，
-> stringr 的正则——并且全部在真实 RNA-seq 数据上练习。详细版新增：连接键诊断（Excel 日期化、
-> 过时 symbol）、多列整形、窗口函数、forcats、GEO 元数据清洗，以及基于 naniar 的**缺失值完整工作流**。
+> 目标：掌握 dplyr 1.1/1.2 的现代写法（`.by`、`join_by()`、`pick()`、`reframe()`、 `filter_out()`、`recode_values()`），tidyr 的整形，purrr 的函数式迭代， stringr 的正则——并且全部在真实 RNA-seq 数据上练习。详细版新增：连接键诊断（Excel 日期化、 过时 symbol）、多列整形、窗口函数、forcats、GEO 元数据清洗，以及基于 naniar 的**缺失值完整工作流**。
 
 ::: {.callout-note appearance="default"}
 ## 本章路线
 
 | 节 | 内容 | 真实数据 | 时长 |
-|---|---|---|---|
+|------------------|------------------|------------------|------------------|
 | tibble / dplyr 核心动词 | filter、mutate、`.by`、across、case_when | airway 注释 | 25 min |
 | 连接 + @sec-join-keys | join_by、不等连接、**键诊断**、HGNChelper | airway + 脏 symbol 列表 | 20 min |
 | tidyr / @sec-pivot-advanced | 长宽转换、`.value`、names_pattern | airway 计数 | 15 min |
 | stringr / readr | GTF 属性解析、条形码 | GTF 片段 | 10 min |
-| @sec-window、@sec-forcats | lag/cum*/rank、consecutive_id、rowwise、因子 | — | 15 min |
+| @sec-window、@sec-forcats | lag/cum\*/rank、consecutive_id、rowwise、因子 | — | 15 min |
 | @sec-geo | GEOquery、characteristics 解析、2×2 设计 | GSE52778 | 10 min |
 | @sec-tidy-missing | 隐式缺失、naniar、影子矩阵、coalesce、清洗决策 | TCGA-LUAD 临床表 | 20 min |
 | purrr / 综合练习 | map、nest、safely；文库 QC 表 | airway | 10 min |
 :::
 
 ```{r}
-library(SummarizedExperiment)
-library(airway)
+library(SummarizedExperiment)  # Bioconductor 的表达矩阵容器
+library(airway)  # 示例数据包：气道平滑肌细胞 ± 地塞米松
 library(tidyverse)   # dplyr, tidyr, readr, purrr, stringr, forcats, tibble, ggplot2, lubridate
 ```
 
 ::: callout-tip
 ## 加载顺序决定谁"遮蔽"谁
 
-Bioconductor 的 S4Vectors / IRanges / matrixStats 也定义了 `first()`、`desc()`、`count()`、`rename()`、`reduce()` 等函数。
-**后加载的包优先**。本章以 tidyverse 为主，所以最后加载它；Bioconductor 章节反过来，
-并在需要时写 `dplyr::count()`。`conflicted` 包可以把这类歧义变成显式报错。
+Bioconductor 的 S4Vectors / IRanges / matrixStats 也定义了 `first()`、`desc()`、`count()`、`rename()`、`reduce()` 等函数。 **后加载的包优先**。本章以 tidyverse 为主，所以最后加载它；Bioconductor 章节反过来， 并在需要时写 `dplyr::count()`。`conflicted` 包可以把这类歧义变成显式报错。
 :::
 
 ## 数据：airway
 
-`airway` 包收录了 Himes et al. (2014) 的 RNA-seq 数据：4 个人气道平滑肌细胞系，
-每个细胞系分别用 1 µM 地塞米松（dexamethasone，一种糖皮质激素）处理或不处理 18 小时。
-这里我们先把它当作**普通表格数据**来处理；第 5 章再正式介绍 `SummarizedExperiment`。
+`airway` 包收录了 Himes et al. (2014) 的 RNA-seq 数据：4 个人气道平滑肌细胞系， 每个细胞系分别用 1 µM 地塞米松（dexamethasone，一种糖皮质激素）处理或不处理 18 小时。 这里我们先把它当作**普通表格数据**来处理；第 5 章再正式介绍 `SummarizedExperiment`。
 
 ```{r}
-data(airway)
-airway
+data(airway)  # 载入 airway 对象
+airway  # 打印对象概况
 
-samples <- colData(airway) |> as_tibble(rownames = "run")
-samples
+samples <- colData(airway) |> as_tibble(rownames = "run")  # 样本信息转 tibble，行名存为 run 列
+samples  # 打印样本信息
 
-genes <- rowData(airway) |> as_tibble()
-genes
+genes <- rowData(airway) |> as_tibble()  # 基因注释转 tibble
+genes  # 打印基因注释
 
-counts_mat <- assay(airway, "counts")
-counts_mat[1:4, 1:4]
+counts_mat <- assay(airway, "counts")  # 原始计数矩阵
+counts_mat[1:4, 1:4]  # 看左上角
 ```
 
 ## tibble：更严格的数据框
 
 ```{r}
 tb <- tibble(x = 1:3, y = x^2, `log y` = log(y))   # 列可以引用之前的列
-tb
+tb  # tibble 的打印更紧凑
 tb$z        # tibble 不做部分匹配，给警告并返回 NULL
 ```
 
@@ -93,41 +92,38 @@ tb$z        # tibble 不做部分匹配，给警告并返回 NULL
 
 - 不会把字符转成因子，不会修改列名（`log y` 保留空格）；
 - `[` 永远返回 tibble（不 drop）；
-- 不使用 row names——这在 Bioconductor 世界会产生摩擦，所以经常要
-  `as_tibble(rownames = "gene_id")` 和 `column_to_rownames("gene_id")` 来回转换。
+- 不使用 row names——这在 Bioconductor 世界会产生摩擦，所以经常要 `as_tibble(rownames = "gene_id")` 和 `column_to_rownames("gene_id")` 来回转换。
 
 ## dplyr 核心动词
 
 ### 行：`filter()`、`filter_out()`、`arrange()`、`slice_*()`
 
 ```{r}
-genes |>
-  filter(gene_biotype == "protein_coding", seq_name %in% c(1:22, "X", "Y")) |>
-  arrange(desc(gene_seq_end - gene_seq_start)) |>
-  select(gene_id, gene_name, seq_name, gene_seq_start, gene_seq_end) |>
-  slice_head(n = 5)
+genes |>  # 从基因注释出发
+  filter(gene_biotype == "protein_coding", seq_name %in% c(1:22, "X", "Y")) |>  # 只要常染色体与性染色体上的蛋白编码基因
+  arrange(desc(gene_seq_end - gene_seq_start)) |>  # 按基因长度降序
+  select(gene_id, gene_name, seq_name, gene_seq_start, gene_seq_end) |>  # 只保留需要的列
+  slice_head(n = 5)  # 取前 5 行
 ```
 
-dplyr 1.2 新增的 `filter_out()` 表达"**删除**满足条件的行"，与 `filter(!cond)`
-最大的区别在于它对 `NA` 的处理：
+dplyr 1.2 新增的 `filter_out()` 表达"**删除**满足条件的行"，与 `filter(!cond)` 最大的区别在于它对 `NA` 的处理：
 
 ```{r}
-toy <- tibble(gene = c("A", "B", "C"), padj = c(0.01, NA, 0.5))
+toy <- tibble(gene = c("A", "B", "C"), padj = c(0.01, NA, 0.5))  # 含 NA 的示例表
 toy |> filter(!(padj < 0.05))     # NA 行被丢掉了（!NA 仍是 NA）
 toy |> filter_out(padj < 0.05)    # 只删除确定显著的行，保留 NA
 ```
 
-在过滤基因时，你几乎总是想要 `filter_out()` 的语义：
-"删掉线粒体基因"不应该顺便删掉染色体信息缺失的基因。
+在过滤基因时，你几乎总是想要 `filter_out()` 的语义： "删掉线粒体基因"不应该顺便删掉染色体信息缺失的基因。
 
 `slice_*()` 系列：`slice_max(n = 3, by = group)`、`slice_sample(prop = 0.1)` 等。
 
 ### 列：`select()`、`mutate()`、`rename()`、`relocate()`
 
 ```{r}
-genes |>
-  select(gene_id, name = gene_name, starts_with("gene_seq"), where(is.character), -symbol) |>
-  mutate(
+genes |>  # 演示 select 的多种选择方式
+  select(gene_id, name = gene_name, starts_with("gene_seq"), where(is.character), -symbol) |>  # 重命名、按前缀、按类型选列，并去掉 symbol
+  mutate(  # 新增两列，放在 name 之后
     length_kb = (gene_seq_end - gene_seq_start + 1) / 1e3,
     is_mito   = seq_name == "MT",
     .after = name
@@ -135,35 +131,33 @@ genes |>
   head(3)
 ```
 
-tidyselect 辅助函数：`starts_with()`、`ends_with()`、`contains()`、`matches(regex)`、
-`where(predicate)`、`all_of(chr_vec)`（严格）、`any_of(chr_vec)`（宽松）、`everything()`、`last_col()`。
+tidyselect 辅助函数：`starts_with()`、`ends_with()`、`contains()`、`matches(regex)`、 `where(predicate)`、`all_of(chr_vec)`（严格）、`any_of(chr_vec)`（宽松）、`everything()`、`last_col()`。
 
 ### 分组汇总：`.by` 优先于 `group_by()`
 
 dplyr 1.1 引入了**按次分组**（per-operation grouping）——不再需要 `group_by() |> ... |> ungroup()`：
 
 ```{r}
-genes |>
-  summarise(
+genes |>  # 按 biotype 分组汇总
+  summarise(  # 基因数与长度中位数
     n         = n(),
     median_kb = median((gene_seq_end - gene_seq_start) / 1e3),
     .by = gene_biotype
   ) |>
-  arrange(desc(n)) |>
+  arrange(desc(n)) |>  # 按基因数降序
   head(8)
 ```
 
-`.by` 返回的结果**永远是未分组的**，且保持组在数据中首次出现的顺序。
-`group_by()` 仍然适用于需要持续分组的场景（例如分组后多次 mutate）。
+`.by` 返回的结果**永远是未分组的**，且保持组在数据中首次出现的顺序。 `group_by()` 仍然适用于需要持续分组的场景（例如分组后多次 mutate）。
 
 ### `reframe()`：每组返回任意行数
 
 `summarise()` 要求每组只返回 1 行；`reframe()` 允许多行：
 
 ```{r}
-genes |>
-  filter(gene_biotype %in% c("protein_coding", "lincRNA")) |>
-  reframe(
+genes |>  # 每个 biotype 的长度分位数
+  filter(gene_biotype %in% c("protein_coding", "lincRNA")) |>  # 只看两类
+  reframe(  # reframe：每组返回多行
     q     = c(0.1, 0.5, 0.9),
     len   = quantile(gene_seq_end - gene_seq_start, q),
     .by   = gene_biotype
@@ -173,17 +167,17 @@ genes |>
 ### `across()` 与 `pick()`
 
 ```{r}
-lib_stats <- counts_mat |>
-  as_tibble(rownames = "gene_id") |>
-  summarise(across(where(is.numeric), list(total = sum, detected = \(x) sum(x > 0))))
-lib_stats |> pivot_longer(everything(), names_to = c("run", ".value"), names_sep = "_")
+lib_stats <- counts_mat |>  # 每个样本的文库大小与检测基因数
+  as_tibble(rownames = "gene_id") |>  # 矩阵转 tibble，行名变成列
+  summarise(across(where(is.numeric), list(total = sum, detected = \(x) sum(x > 0))))  # 对每个样本列同时计算两个统计量
+lib_stats |> pivot_longer(everything(), names_to = c("run", ".value"), names_sep = "_")  # 宽表转长表：列名拆成 run 与统计量
 ```
 
 `pick()` 在数据掩码中选出一个子 tibble，常与需要数据框的函数配合：
 
 ```{r}
-samples |>
-  mutate(id = vctrs::vec_group_id(pick(cell, dex))) |>
+samples |>  # 给 cell×dex 组合编号
+  mutate(id = vctrs::vec_group_id(pick(cell, dex))) |>  # pick() 选出列交给 vctrs 分组编号
   select(run, cell, dex, id) |>
   head()
 ```
@@ -191,8 +185,8 @@ samples |>
 ### 条件改写：`if_else`、`case_when`、`recode_values`
 
 ```{r}
-samples |>
-  mutate(
+samples |>  # 派生分析用的列
+  mutate(  # 重编码、分档、重命名供者
     treatment = recode_values(dex, "untrt" ~ "Control", "trt" ~ "Dexamethasone"),
     read_class = case_when(
       avgLength >= 120 ~ "long",
@@ -201,44 +195,44 @@ samples |>
     ),
     donor = factor(cell) |> fct_relabel(\(x) paste0("Donor_", seq_along(x)))
   ) |>
-  select(run, cell, donor, treatment, avgLength, read_class)
+  select(run, cell, donor, treatment, avgLength, read_class)  # 只保留需要的列
 ```
 
-| 场景 | 推荐 |
-|---|---|
-| 两分支 | `if_else()`（类型严格） |
-| 多个条件 | `case_when(..., .default =)` |
-| 值 → 值映射 | `recode_values()`（dplyr 1.2，取代 `case_match()`） |
-| 只替换部分值 | `replace_values()` / `replace_when()` |
-| 因子水平 | `forcats::fct_recode()` / `fct_relevel()` |
+| 场景         | 推荐                                                |
+|--------------|-----------------------------------------------------|
+| 两分支       | `if_else()`（类型严格）                             |
+| 多个条件     | `case_when(..., .default =)`                        |
+| 值 → 值映射  | `recode_values()`（dplyr 1.2，取代 `case_match()`） |
+| 只替换部分值 | `replace_values()` / `replace_when()`               |
+| 因子水平     | `forcats::fct_recode()` / `fct_relevel()`           |
 
 查找表风格的 `recode_values()` 特别适合**用外部表格做映射**：
 
 ```{r}
-lookup <- tibble(from = c("N61311", "N052611", "N080611", "N061011"),
+lookup <- tibble(from = c("N61311", "N052611", "N080611", "N061011"),  # 旧值 → 新值的对照表
                  to   = c("D1", "D2", "D3", "D4"))
-recode_values(samples$cell, from = lookup$from, to = lookup$to)
+recode_values(samples$cell, from = lookup$from, to = lookup$to)  # 按对照表批量重编码
 ```
 
 ## 连接（join）：`join_by()`
 
 ```{r}
-de_like <- tibble(
+de_like <- tibble(  # 模拟差异分析结果（含一个假 ID）
   gene_id = c("ENSG00000120129", "ENSG00000189221", "ENSG00000163884", "ENSG_FAKE"),
   log2FC  = c(2.9, 3.4, 4.5, 1.0)
 )
 
-de_like |> left_join(genes |> select(gene_id, gene_name), join_by(gene_id))
+de_like |> left_join(genes |> select(gene_id, gene_name), join_by(gene_id))  # 左连接补上 gene_name
 de_like |> anti_join(genes, join_by(gene_id))         # 找出注释中不存在的 ID
 ```
 
 `join_by()` 支持**不等连接**与**区间连接**——基因组区间注释的 tidy 写法：
 
 ```{r}
-peaks <- tibble(chr = c("1", "1", "X"), pos = c(1.5e6, 2.5e7, 7.4e7))
+peaks <- tibble(chr = c("1", "1", "X"), pos = c(1.5e6, 2.5e7, 7.4e7))  # 三个峰的位置
 
-peaks |>
-  inner_join(
+peaks |>  # 非等值连接：峰落在哪个基因区间内
+  inner_join(  # 按染色体相等且位置在区间内连接
     genes |> filter(gene_biotype == "protein_coding") |>
       select(gene_name, seq_name, gene_seq_start, gene_seq_end),
     join_by(chr == seq_name, between(pos, gene_seq_start, gene_seq_end))
@@ -247,22 +241,20 @@ peaks |>
 
 （对于大规模区间运算，第 5 章的 `GenomicRanges` 快几个数量级。）
 
-`relationship = "many-to-one"` 和 `unmatched = "error"` 参数可以把"连接后行数意外膨胀"
-这类静默 bug 变成显式报错：
+`relationship = "many-to-one"` 和 `unmatched = "error"` 参数可以把"连接后行数意外膨胀" 这类静默 bug 变成显式报错：
 
 ```{r}
-de_like |>
-  left_join(genes |> select(gene_id, gene_name), join_by(gene_id),
+de_like |>  # 声明连接关系，不符合时报错
+  left_join(genes |> select(gene_id, gene_name), join_by(gene_id),  # 期望多对一：每个 gene_id 在注释中唯一
             relationship = "many-to-one")
 ```
 
 ### 连接前的键诊断：真实的 symbol 有多乱 {#sec-join-keys}
 
-从论文补充表、合作者的 Excel、旧版数据库拿到的基因列表，几乎总是**与当前注释对不上**。
-下面这个列表混合了生信中最常见的五类问题：
+从论文补充表、合作者的 Excel、旧版数据库拿到的基因列表，几乎总是**与当前注释对不上**。 下面这个列表混合了生信中最常见的五类问题：
 
 ```{r}
-messy <- tibble(
+messy <- tibble(  # 常见脏 symbol：大小写、空格、Excel 日期化、过时名
   symbol_raw = c("DUSP1", "klf15", " PER1", "FKBP5 ", "1-Sep", "2-Mar", "SEPT7",
                  "MARCH1", "C10orf10", "TSC22D3", "ACTB", "GAPDH", "NOT_A_GENE"),
   score = c(5.1, 4.8, 4.0, 3.9, 2.1, 1.8, 1.5, 1.4, 1.2, 4.5, 0.1, 0.0, 3.3)
@@ -270,17 +262,17 @@ messy <- tibble(
 messy |> anti_join(genes, join_by(symbol_raw == gene_name))    # 有多少对不上？
 ```
 
-1. **大小写 / 空白**：`klf15`、`" PER1"` —— 用 `str_trim()`、`str_to_upper()`（人类基因 symbol 全大写；小鼠首字母大写）；
-2. **Excel 日期化**：`1-Sep`（SEPT1）、`2-Mar`（MARCH2）—— Excel 自动把基因名当日期；
-3. **过时的 symbol**：`SEPT7` → `SEPTIN7`、`MARCH1` → `MARCHF1`（HGNC 2020 年为了避免 Excel 问题改名）、`C10orf10` → `DEPP1`；
-4. **注释版本差异**：airway 用的是 Ensembl 75（2014 年）注释，**新名字反而在旧注释里找不到**；
-5. **根本不存在的基因**。
+1.  **大小写 / 空白**：`klf15`、`" PER1"` —— 用 `str_trim()`、`str_to_upper()`（人类基因 symbol 全大写；小鼠首字母大写）；
+2.  **Excel 日期化**：`1-Sep`（SEPT1）、`2-Mar`（MARCH2）—— Excel 自动把基因名当日期；
+3.  **过时的 symbol**：`SEPT7` → `SEPTIN7`、`MARCH1` → `MARCHF1`（HGNC 2020 年为了避免 Excel 问题改名）、`C10orf10` → `DEPP1`；
+4.  **注释版本差异**：airway 用的是 Ensembl 75（2014 年）注释，**新名字反而在旧注释里找不到**；
+5.  **根本不存在的基因**。
 
 `HGNChelper::checkGeneSymbols()` 用 HGNC 的别名与历史名表一次性修复 1–3：
 
 ```{r}
-fixed <- HGNChelper::checkGeneSymbols(str_trim(messy$symbol_raw), species = "human")
-fixed
+fixed <- HGNChelper::checkGeneSymbols(str_trim(messy$symbol_raw), species = "human")  # HGNC 校正 symbol
+fixed  # 查看校正建议
 ```
 
 读这张表时注意三个细节：
@@ -289,152 +281,144 @@ fixed
 - `C10orf10` 中的 `orf` 是小写的——上面"一律转大写"的清洗**反而破坏了它**（`C10ORF10`），HGNChelper 会把大小写修回来；
 - 新名字 `DEPP1` 在 2014 年的注释里不存在。
 
-注意第 4 类问题：修复后的**新**名字（`SEPTIN7`）在 2014 年的 airway 注释里叫 `SEPT7`。
-"对齐到哪个版本的注释"必须明确——最稳妥的办法是两边都转成 **Ensembl ID** 再连接
-（第 5 章 @sec-id-mapping 详细讨论）。
+注意第 4 类问题：修复后的**新**名字（`SEPTIN7`）在 2014 年的 airway 注释里叫 `SEPT7`。 "对齐到哪个版本的注释"必须明确——最稳妥的办法是两边都转成 **Ensembl ID** 再连接 （第 5 章 @sec-id-mapping 详细讨论）。
 
 ```{r}
-messy_fixed <- messy |>
-  mutate(symbol_clean = str_to_upper(str_trim(symbol_raw)),
+messy_fixed <- messy |>  # 两种清理方式
+  mutate(symbol_clean = str_to_upper(str_trim(symbol_raw)),  # 大写 + 去空格；以及 HGNC 建议名
          symbol_hgnc  = fixed$Suggested.Symbol)
-messy_fixed |>
-  left_join(genes |> select(gene_id, gene_name), join_by(symbol_clean == gene_name)) |>
-  left_join(genes |> select(gene_id2 = gene_id, gene_name), join_by(symbol_hgnc == gene_name)) |>
-  mutate(gene_id = coalesce(gene_id, gene_id2)) |>
-  select(symbol_raw, symbol_clean, symbol_hgnc, gene_id)
+messy_fixed |>  # 两轮连接取得 gene_id
+  left_join(genes |> select(gene_id, gene_name), join_by(symbol_clean == gene_name)) |>  # 先用清理后的 symbol 连接
+  left_join(genes |> select(gene_id2 = gene_id, gene_name), join_by(symbol_hgnc == gene_name)) |>  # 再用 HGNC 建议名连接
+  mutate(gene_id = coalesce(gene_id, gene_id2)) |>  # 取第一个非缺失的 ID
+  select(symbol_raw, symbol_clean, symbol_hgnc, gene_id)  # 整理输出列
 ```
 
 连接前的检查清单：
 
 ```{r}
-key_report <- function(x, y, by_x, by_y = by_x) {
-  kx <- x[[by_x]]; ky <- y[[by_y]]
-  tibble(
+key_report <- function(x, y, by_x, by_y = by_x) {  # 连接键诊断函数
+  kx <- x[[by_x]]; ky <- y[[by_y]]  # 取出两边的键
+  tibble(  # 汇总唯一性、缺失、重复与匹配情况
     x_rows = length(kx), x_unique = n_distinct(kx), x_na = sum(is.na(kx)),
     y_unique = n_distinct(ky), y_dup_keys = sum(duplicated(ky[!is.na(ky)])),
     x_matched = sum(kx %in% ky), x_unmatched = sum(!kx %in% ky)
   )
 }
-key_report(messy_fixed, genes, "symbol_clean", "gene_name")
+key_report(messy_fixed, genes, "symbol_clean", "gene_name")  # 诊断 symbol 连接
 ```
 
-`y_dup_keys` 非零意味着 left join **可能让行数膨胀**——airway 注释里有几千个重复的 symbol，
-这正是 `relationship = "many-to-one"` 能够捕获的错误。
+`y_dup_keys` 非零意味着 left join **可能让行数膨胀**——airway 注释里有几千个重复的 symbol， 这正是 `relationship = "many-to-one"` 能够捕获的错误。
 
 ## tidyr：长宽转换
 
 计数矩阵是"宽"格式（基因 × 样本）；ggplot2 和 dplyr 更喜欢"长"格式（每行一个观测）。
 
 ```{r}
-marker_genes <- c(DUSP1 = "ENSG00000120129", KLF15 = "ENSG00000163884",
+marker_genes <- c(DUSP1 = "ENSG00000120129", KLF15 = "ENSG00000163884",  # 5 个标记基因：symbol = Ensembl ID
                   PER1 = "ENSG00000179094", ZBTB16 = "ENSG00000109906",
                   ACTB = "ENSG00000075624")
 
-long <- counts_mat[marker_genes, ] |>
-  as_tibble(rownames = "gene_id") |>
-  pivot_longer(-gene_id, names_to = "run", values_to = "count") |>
-  left_join(samples, join_by(run)) |>
-  mutate(symbol = names(marker_genes)[match(gene_id, marker_genes)])
-long
+long <- counts_mat[marker_genes, ] |>  # 取出这些基因的计数并转为长表
+  as_tibble(rownames = "gene_id") |>  # 矩阵转 tibble
+  pivot_longer(-gene_id, names_to = "run", values_to = "count") |>  # 每个样本一行
+  left_join(samples, join_by(run)) |>  # 加上样本信息
+  mutate(symbol = names(marker_genes)[match(gene_id, marker_genes)])  # 按 ID 查回 symbol
+long  # 打印长表
 
-long |>
-  pivot_wider(id_cols = c(symbol, cell), names_from = dex, values_from = count) |>
-  mutate(log2FC = log2((trt + 1) / (untrt + 1))) |>
-  arrange(symbol)
+long |>  # 长表转宽表计算 log2FC
+  pivot_wider(id_cols = c(symbol, cell), names_from = dex, values_from = count) |>  # 每个基因×供者一行，trt/untrt 各一列
+  mutate(log2FC = log2((trt + 1) / (untrt + 1))) |>  # 配对 log2 倍数变化
+  arrange(symbol)  # 按基因排序
 ```
 
-即使没有任何统计模型，你也能看到 DUSP1、KLF15、PER1、ZBTB16 在所有 4 个供者中都被
-地塞米松上调——它们是经典的糖皮质激素受体靶基因。
+即使没有任何统计模型，你也能看到 DUSP1、KLF15、PER1、ZBTB16 在所有 4 个供者中都被 地塞米松上调——它们是经典的糖皮质激素受体靶基因。
 
-其他常用 tidyr 函数：`separate_wider_delim()`、`separate_wider_regex()`、`unnest_longer()`、
-`complete()`、`fill()`、`drop_na()`、`nest()`。
+其他常用 tidyr 函数：`separate_wider_delim()`、`separate_wider_regex()`、`unnest_longer()`、 `complete()`、`fill()`、`drop_na()`、`nest()`。
 
 ## stringr：字符串与正则
 
 生信中大量时间花在清洗 ID 上。
 
 ```{r}
-ids <- c("ENSG00000120129.12", "ENSG00000189221.10", "ENST00000323374.9", "ERCC-00002")
+ids <- c("ENSG00000120129.12", "ENSG00000189221.10", "ENST00000323374.9", "ERCC-00002")  # 带版本号的各类 ID
 str_remove(ids, "\\.\\d+$")              # 去版本号
-str_detect(ids, "^ENSG")
+str_detect(ids, "^ENSG")  # 是否为基因 ID
 str_extract(ids, "(?<=\\.)\\d+$")        # 正则后顾
-str_starts(ids, "ERCC")
+str_starts(ids, "ERCC")  # 是否为 ERCC spike-in
 ```
 
 解析 GTF 第 9 列——一个真实而常见的任务：
 
 ```{r}
-gtf_attr <- c(
+gtf_attr <- c(  # 两行 GTF 属性字段
   'gene_id "ENSG00000120129.12"; gene_type "protein_coding"; gene_name "DUSP1"; level 2;',
   'gene_id "ENSG00000163884.5"; gene_type "protein_coding"; gene_name "KLF15"; level 2;'
 )
 
-tibble(attr = gtf_attr) |>
-  mutate(
+tibble(attr = gtf_attr) |>  # 用捕获组提取指定键的值
+  mutate(  # 每个键一个 str_match
     gene_id   = str_match(attr, 'gene_id "([^"]+)"')[, 2],
     gene_type = str_match(attr, 'gene_type "([^"]+)"')[, 2],
     gene_name = str_match(attr, 'gene_name "([^"]+)"')[, 2]
   ) |>
-  select(-attr)
+  select(-attr)  # 去掉原始字段
 
 # 更通用：把所有 key "value" 对拆成长表
-tibble(row = seq_along(gtf_attr), attr = gtf_attr) |>
-  mutate(kv = str_match_all(attr, '(\\w+) "?([^";]+)"?;')) |>
-  mutate(kv = map(kv, \(m) tibble(key = m[, 2], value = m[, 3]))) |>
-  select(row, kv) |>
-  unnest(kv) |>
-  pivot_wider(names_from = key, values_from = value)
+tibble(row = seq_along(gtf_attr), attr = gtf_attr) |>  # 通用写法：先拆成键值长表
+  mutate(kv = str_match_all(attr, '(\\w+) "?([^";]+)"?;')) |>  # 提取全部 key "value" 对
+  mutate(kv = map(kv, \(m) tibble(key = m[, 2], value = m[, 3]))) |>  # 每行的匹配矩阵转 tibble
+  select(row, kv) |>  # 只保留行号与键值
+  unnest(kv) |>  # 展开嵌套列
+  pivot_wider(names_from = key, values_from = value)  # 转回宽表：每个键一列
 ```
 
 `separate_wider_regex()` 适合结构固定的字符串，例如 10x 条形码 + 样本后缀：
 
 ```{r}
-tibble(barcode = c("AAACCTGAGAAACCAT-1_ctrl", "TTTGTCATCTTGCATT-1_stim")) |>
-  separate_wider_regex(barcode, c(bc = "[ACGT]+", "-", gem = "\\d+", "_", condition = ".*"))
+tibble(barcode = c("AAACCTGAGAAACCAT-1_ctrl", "TTTGTCATCTTGCATT-1_stim")) |>  # 按正则把条形码拆成多列
+  separate_wider_regex(barcode, c(bc = "[ACGT]+", "-", gem = "\\d+", "_", condition = ".*"))  # 条形码、GEM 编号、条件
 ```
 
 ## readr：读写表格
 
 ```{r}
-tmp <- tempfile(fileext = ".tsv.gz")
+tmp <- tempfile(fileext = ".tsv.gz")  # 临时文件路径
 long |> write_tsv(tmp)                  # 根据扩展名自动 gzip
-read_tsv(tmp, col_types = cols(count = col_integer(), .default = col_character())) |>
-  head(3)
+read_tsv(tmp, col_types = cols(count = col_integer(), .default = col_character())) |>  # 读回时显式指定列类型
+  head(3)  # 看前 3 行
 ```
 
 - 显式 `col_types` 能避免"读入时把染色体 `X` 列猜成数字导致 NA"之类的问题。
-- 大文件：`vroom::vroom()`（readr 2.x 底层就是 vroom）、`data.table::fread()`，
-  以及列式格式 `arrow::read_parquet()`。
-- Excel：`readxl::read_excel()`。注意 Excel 会把 `SEPT2`、`MARCH1` 这样的基因名转为日期——
-  HGNC 已因此把它们改名为 `SEPTIN2`、`MARCHF1`。
+- 大文件：`vroom::vroom()`（readr 2.x 底层就是 vroom）、`data.table::fread()`， 以及列式格式 `arrow::read_parquet()`。
+- Excel：`readxl::read_excel()`。注意 Excel 会把 `SEPT2`、`MARCH1` 这样的基因名转为日期—— HGNC 已因此把它们改名为 `SEPTIN2`、`MARCHF1`。
 
 ## 多列整形进阶 {#sec-pivot-advanced}
 
 真实的结果表常常把"变量名"和"分组"编码在同一个列名里。例如多个对比的差异分析结果：
 
 ```{r}
-de_wide <- tibble(
+de_wide <- tibble(  # 宽格式的两组对比结果
   gene       = c("DUSP1", "KLF15", "IL6"),
   log2FC_dex = c(2.9, 4.5, -0.8), padj_dex = c(1e-20, 1e-40, 0.03),
   log2FC_alb = c(0.6, 0.1, -1.2), padj_alb = c(0.04, 0.9, 1e-5)
 )
-de_wide
+de_wide  # 打印
 ```
 
-`names_to = c(".value", "contrast")` 中的 `.value` 是一个特殊占位符：列名的这部分成为**新列名**，
-其余部分成为 `contrast` 列的值：
+`names_to = c(".value", "contrast")` 中的 `.value` 是一个特殊占位符：列名的这部分成为**新列名**， 其余部分成为 `contrast` 列的值：
 
 ```{r}
-de_long <- de_wide |>
-  pivot_longer(-gene, names_to = c(".value", "contrast"), names_sep = "_")
-de_long
+de_long <- de_wide |>  # 宽转长：列名拆成统计量与对比名
+  pivot_longer(-gene, names_to = c(".value", "contrast"), names_sep = "_")  # .value 表示该部分作为新列名
+de_long  # 打印
 ```
 
 列名结构更复杂时用 `names_pattern`（正则捕获组）：
 
 ```{r}
-tibble(gene = "DUSP1", `S1.trt.rep1` = 10, `S1.untrt.rep1` = 2, `S2.trt.rep1` = 12) |>
-  pivot_longer(-gene, names_to = c("donor", "treatment", "rep"),
+tibble(gene = "DUSP1", `S1.trt.rep1` = 10, `S1.untrt.rep1` = 2, `S2.trt.rep1` = 12) |>  # 列名编码了供者、处理、重复
+  pivot_longer(-gene, names_to = c("donor", "treatment", "rep"),  # 用正则拆列名，rep 转为整数
                names_pattern = "(S\\d+)\\.(\\w+)\\.rep(\\d+)",
                names_transform = list(rep = as.integer))
 ```
@@ -442,22 +426,20 @@ tibble(gene = "DUSP1", `S1.trt.rep1` = 10, `S1.untrt.rep1` = 2, `S2.trt.rep1` = 
 反方向：`pivot_wider()` 可以同时展开多个值列，`names_glue` 控制新列名：
 
 ```{r}
-de_long |>
-  pivot_wider(names_from = contrast, values_from = c(log2FC, padj),
+de_long |>  # 长转宽：自定义新列名
+  pivot_wider(names_from = contrast, values_from = c(log2FC, padj),  # names_glue 指定列名格式
               names_glue = "{contrast}.{.value}")
 ```
 
 ::: callout-warning
 ## `pivot_wider()` 遇到重复键会生成 list-column
 
-如果 `id_cols` + `names_from` 不能唯一确定一行（例如同一个 symbol 对应两个 Ensembl ID），
-结果会变成列表列并给出警告。用 `values_fn = sum` 明确合并方式，或先检查重复：
-`count(df, gene, contrast) |> filter(n > 1)`。
+如果 `id_cols` + `names_from` 不能唯一确定一行（例如同一个 symbol 对应两个 Ensembl ID）， 结果会变成列表列并给出警告。用 `values_fn = sum` 明确合并方式，或先检查重复： `count(df, gene, contrast) |> filter(n > 1)`。
 :::
 
 ```{r}
-dup <- tibble(gene = c("Y_RNA", "Y_RNA", "DUSP1"), sample = "S1", count = c(3, 5, 100))
-dup |> pivot_wider(names_from = sample, values_from = count, values_fn = sum)
+dup <- tibble(gene = c("Y_RNA", "Y_RNA", "DUSP1"), sample = "S1", count = c(3, 5, 100))  # 同一基因重复出现
+dup |> pivot_wider(names_from = sample, values_from = count, values_fn = sum)  # 重复键时用 values_fn 合并
 ```
 
 ## 窗口函数与行内运算 {#sec-window}
@@ -465,13 +447,13 @@ dup |> pivot_wider(names_from = sample, values_from = count, values_fn = sum)
 **窗口函数**为每行返回一个值，但计算时会参考同组的其他行：
 
 ```{r}
-samples_gc <- tibble(
+samples_gc <- tibble(  # 两个基因的时间序列
   gene  = rep(c("DUSP1", "KLF15"), each = 4),
   time  = rep(c(0, 2, 6, 18), 2),
   expr  = c(5, 40, 80, 60, 1, 8, 30, 45)
 )
-samples_gc |>
-  mutate(
+samples_gc |>  # 分组窗口函数
+  mutate(  # 与上一时间点比较、相对 0 h、累计最大、组内排名
     change   = expr - lag(expr),                       # 与上一时间点相比
     fold     = expr / dplyr::first(expr),                     # 相对 0 h
     cum_max  = cummax(expr),
@@ -485,28 +467,28 @@ samples_gc |>
 `consecutive_id()` 给连续相同的值编号——用来识别基因组上连续的区段（如拷贝数片段）：
 
 ```{r}
-cn <- tibble(bin = 1:10, state = c("neutral", "neutral", "gain", "gain", "gain",
+cn <- tibble(bin = 1:10, state = c("neutral", "neutral", "gain", "gain", "gain",  # 按 bin 的拷贝数状态
                                     "neutral", "loss", "loss", "neutral", "neutral"))
-cn |>
-  mutate(segment = consecutive_id(state)) |>
-  summarise(state = dplyr::first(state), start = min(bin), end = max(bin), .by = segment)
+cn |>  # 把连续相同状态合并为片段
+  mutate(segment = consecutive_id(state)) |>  # 连续相同值编同一 ID
+  summarise(state = dplyr::first(state), start = min(bin), end = max(bin), .by = segment)  # 每段的状态与起止
 ```
 
 **按行**计算：多数时候用向量化函数（`rowSums`、`pmax`）即可；确需逐行时用 `rowwise()` + `c_across()`：
 
 ```{r}
-cpm_small <- tibble(gene = c("DUSP1", "KLF15", "ACTB"),
+cpm_small <- tibble(gene = c("DUSP1", "KLF15", "ACTB"),  # 小型 CPM 宽表
                     s1 = c(5, 1, 900), s2 = c(40, 8, 950), s3 = c(80, 30, 870))
-cpm_small |>
-  mutate(
+cpm_small |>  # 行方向计算的向量化写法
+  mutate(  # pmax、rowMeans、rowSums
     max_cpm = pmax(s1, s2, s3),                                   # 向量化，最快
     mean    = rowMeans(pick(starts_with("s"))),                   # pick() 选列成数据框
     n_above_10 = rowSums(pick(starts_with("s")) > 10)
   )
-cpm_small |>
-  rowwise() |>
-  mutate(cv = sd(c_across(starts_with("s"))) / mean(c_across(starts_with("s")))) |>
-  ungroup()
+cpm_small |>  # rowwise 写法（慢，但灵活）
+  rowwise() |>  # 每行单独成组
+  mutate(cv = sd(c_across(starts_with("s"))) / mean(c_across(starts_with("s")))) |>  # 按行计算变异系数
+  ungroup()  # 取消行分组
 ```
 
 ## forcats：因子 {#sec-forcats}
@@ -514,25 +496,25 @@ cpm_small |>
 因子决定了**统计模型的参照组**和**图中类别的顺序**，forcats 让操作它们变得可读：
 
 ```{r}
-stage <- c("Stage IA", "Stage IB", "Stage IIA", "Stage IV", "Stage IIIA", "Stage IB",
+stage <- c("Stage IA", "Stage IB", "Stage IIA", "Stage IV", "Stage IIIA", "Stage IB",  # 含无效值与 NA 的分期
            "Stage IIB", NA, "Stage IA", "[Discrepancy]")
-f <- factor(stage)
+f <- factor(stage)  # 默认按字典序排水平
 levels(f)                                       # 字典序，"[Discrepancy]" 排第一
-f2 <- f |>
+f2 <- f |>  # 整理分期因子
   fct_na_level_to_value("[Discrepancy]") |>     # 无效值 → NA
-  fct_collapse(I = c("Stage IA", "Stage IB"), II = c("Stage IIA", "Stage IIB"),
+  fct_collapse(I = c("Stage IA", "Stage IB"), II = c("Stage IIA", "Stage IIB"),  # 合并亚期
                III = "Stage IIIA", IV = "Stage IV") |>
   fct_relevel("I", "II", "III", "IV")           # 显式顺序
-f2
-fct_count(f2)
+f2  # 整理后的因子
+fct_count(f2)  # 各水平计数（含 NA）
 fct_na_value_to_level(f2, level = "Unknown") |> fct_count()   # 需要时把 NA 变成显式类别
 ```
 
 其他常用函数：
 
 ```{r}
-biotype <- genes$gene_biotype
-fct_count(biotype, sort = TRUE) |> head(5)
+biotype <- genes$gene_biotype  # 基因 biotype 向量
+fct_count(biotype, sort = TRUE) |> head(5)  # 最常见的 5 类
 fct_lump_n(biotype, n = 4) |> fct_count(sort = TRUE)          # 只保留最常见的 4 类，其余归为 Other
 fct_infreq(biotype) |> levels() |> head(3)                     # 按频数排序（条形图常用）
 fct_reorder(c("a", "b", "c"), c(3, 1, 2)) |> levels()          # 按另一个变量排序
@@ -540,128 +522,122 @@ fct_reorder(c("a", "b", "c"), c(3, 1, 2)) |> levels()          # 按另一个变
 
 ## 真实元数据：GEO 中的 airway 实验 {#sec-geo}
 
-airway 包只收录了原实验 16 个样本中的 8 个。用 GEOquery 下载原始的 GEO Series Matrix，
-看看"野生"的样本元数据长什么样：
+airway 包只收录了原实验 16 个样本中的 8 个。用 GEOquery 下载原始的 GEO Series Matrix， 看看"野生"的样本元数据长什么样：
 
 ```{r}
 #| label: geo-airway
-geo_pheno <- cached("GSE52778_pheno.rds", {
+geo_pheno <- cached("GSE52778_pheno.rds", {  # 从 GEO 下载样本信息并缓存
   gse <- GEOquery::getGEO("GSE52778", GSEMatrix = TRUE, destdir = DATA_DIR)
   Biobase::pData(gse[[1]])
 })
-dim(geo_pheno)
-geo_pheno |> as_tibble(rownames = "gsm") |>
-  select(gsm, title, starts_with("characteristics")) |> head(4)
+dim(geo_pheno)  # 样本数 × 字段数
+geo_pheno |> as_tibble(rownames = "gsm") |>  # 看 characteristics 字段
+  select(gsm, title, starts_with("characteristics")) |> head(4)  # 前 4 行
 ```
 
-GEO 的 `characteristics_ch1.*` 列是"`键: 值`"形式的字符串，而且**同一个键在不同样本中可能落在不同的列**
-（提交者填写的顺序不同时）。可靠的做法是先转成长表，再按键展开：
+GEO 的 `characteristics_ch1.*` 列是"`键: 值`"形式的字符串，而且**同一个键在不同样本中可能落在不同的列** （提交者填写的顺序不同时）。可靠的做法是先转成长表，再按键展开：
 
 ```{r}
-geo_meta <- geo_pheno |>
-  as_tibble(rownames = "gsm") |>
-  select(gsm, title, starts_with("characteristics")) |>
-  pivot_longer(starts_with("characteristics"), values_to = "kv", values_drop_na = TRUE) |>
-  separate_wider_delim(kv, delim = ": ", names = c("key", "value"), too_many = "merge") |>
-  select(-name) |>
-  pivot_wider(names_from = key, values_from = value) |>
+geo_meta <- geo_pheno |>  # 整理 GEO 的 characteristics 字段
+  as_tibble(rownames = "gsm") |>  # 行名存为 gsm 列
+  select(gsm, title, starts_with("characteristics")) |>  # 只要标题与 characteristics
+  pivot_longer(starts_with("characteristics"), values_to = "kv", values_drop_na = TRUE) |>  # 转长表，去掉空值
+  separate_wider_delim(kv, delim = ": ", names = c("key", "value"), too_many = "merge") |>  # 按 ": " 拆成键与值
+  select(-name) |>  # 去掉原列名
+  pivot_wider(names_from = key, values_from = value) |>  # 转回宽表：每个键一列
   janitor::clean_names()             # "cell line" → cell_line
-geo_meta
+geo_meta  # 打印整理结果
 ```
 
 继续清洗：`ercc_mix` 列的 `"-"` 是缺失记号；把处理条件整理为有序因子，并把两个"因子"拆开：
 
 ```{r}
-geo_meta <- geo_meta |>
-  mutate(
+geo_meta <- geo_meta |>  # 派生分析用变量
+  mutate(  # 清理与重编码
     ercc_mix  = na_if(ercc_mix, "-"),
     treatment = fct_relevel(treatment, "Untreated", "Dexamethasone", "Albuterol"),
     dex       = if_else(str_detect(treatment, "Dex"), "trt", "untrt"),
     albuterol = if_else(str_detect(treatment, "Albuterol"), "trt", "untrt")
   )
-geo_meta |> count(treatment, dex, albuterol)
-geo_meta |> count(ercc_mix, useNA = is.na(ercc_mix))
+geo_meta |> count(treatment, dex, albuterol)  # 核对各处理组合
+geo_meta |> count(ercc_mix, useNA = is.na(ercc_mix))  # ERCC 加入情况
 ```
 
-这是一个 **2 × 2 析因设计**（地塞米松 × 沙丁胺醇），在 4 个细胞系上完整重复。
-airway 包只保留了"未处理"与"地塞米松"两组——用 `semi_join` / `anti_join` 核对：
+这是一个 **2 × 2 析因设计**（地塞米松 × 沙丁胺醇），在 4 个细胞系上完整重复。 airway 包只保留了"未处理"与"地塞米松"两组——用 `semi_join` / `anti_join` 核对：
 
 ```{r}
-airway_runs <- samples |> select(run, cell, dex)
-geo_meta |>
-  mutate(in_airway_pkg = title %in% paste0(airway_runs$cell, c("_untreated", "_Dex"))) |>
-  count(treatment, in_airway_pkg)
+airway_runs <- samples |> select(run, cell, dex)  # airway 包中的样本
+geo_meta |>  # 核对哪些 GEO 样本收录在 airway 包里
+  mutate(in_airway_pkg = title %in% paste0(airway_runs$cell, c("_untreated", "_Dex"))) |>  # 按标题匹配
+  count(treatment, in_airway_pkg)  # 按处理计数
 ```
 
 ::: callout-tip
 ## GEO 元数据清洗清单
 
-1. 优先使用 GEOquery 已解析的 `xxx:ch1` 列，没有时再从 `characteristics_ch1.*` 解析；
-2. 用 `janitor::clean_names()` 统一列名；
-3. 搜索缺失记号（`-`、`NA`、`none`、`n/a`、空串）并统一为 `NA`；
-4. 显式设定因子水平（参照组！）；
-5. 与表达矩阵的列名**按 ID 对齐**并 `stopifnot(identical(...))`。
+1.  优先使用 GEOquery 已解析的 `xxx:ch1` 列，没有时再从 `characteristics_ch1.*` 解析；
+2.  用 `janitor::clean_names()` 统一列名；
+3.  搜索缺失记号（`-`、`NA`、`none`、`n/a`、空串）并统一为 `NA`；
+4.  显式设定因子水平（参照组！）；
+5.  与表达矩阵的列名**按 ID 对齐**并 `stopifnot(identical(...))`。
 :::
 
 ## 缺失值的 tidy 工作流 {#sec-tidy-missing}
 
-第 1 章（@sec-missing）用 base R 讲了缺失值的语义与定位。本节用 tidyverse + naniar
-完成一张真实临床表的**完整清洗**：识别 → 统一 → 量化 → 可视化 → 决策。
+第 1 章（@sec-missing）用 base R 讲了缺失值的语义与定位。本节用 tidyverse + naniar 完成一张真实临床表的**完整清洗**：识别 → 统一 → 量化 → 可视化 → 决策。
 
 ### 显式缺失与隐式缺失
 
-长表中**整行不存在**是"隐式缺失"，最容易被忽略。例如单细胞伪 bulk 汇总后，
-某个样本里根本没有某种细胞类型，表中就**没有那一行**——计算均值时它不会被当作 0 计入：
+长表中**整行不存在**是"隐式缺失"，最容易被忽略。例如单细胞伪 bulk 汇总后， 某个样本里根本没有某种细胞类型，表中就**没有那一行**——计算均值时它不会被当作 0 计入：
 
 ```{r}
-celltype_counts <- tibble(
+celltype_counts <- tibble(  # 细胞类型计数，NK 只在 S1 中出现
   sample   = c("S1", "S1", "S1", "S2", "S2", "S3"),
   celltype = c("B", "T", "NK", "B", "T", "T"),
   n        = c(120, 800, 60, 90, 750, 900)
 )
 celltype_counts |> summarise(mean_n = mean(n), .by = celltype)    # NK 的均值看起来是 60
-full <- celltype_counts |> complete(sample, celltype, fill = list(n = 0))
-full
+full <- celltype_counts |> complete(sample, celltype, fill = list(n = 0))  # 补全所有 样本×细胞类型 组合，缺的填 0
+full  # 打印
 full |> summarise(mean_n = mean(n), .by = celltype)              # NK 的真实均值是 20
 ```
 
-`complete()` 把隐式缺失变成显式行；`fill` 指定填什么。这里填 0 是合理的（真的没有细胞），
-但如果是"没有测量"，就应该保留 `NA`。
+`complete()` 把隐式缺失变成显式行；`fill` 指定填什么。这里填 0 是合理的（真的没有细胞）， 但如果是"没有测量"，就应该保留 `NA`。
 
 ### 读取一张真实的脏表
 
 沿用第 1 章的 TCGA-LUAD 临床表：
 
 ```{r}
-clin_raw <- cached("tcga_luad_mc3_maf.rds",
+clin_raw <- cached("tcga_luad_mc3_maf.rds",  # 读取 TCGA LUAD 临床表
                    maftools::tcgaLoad(study = "LUAD", source = "MC3"))@clinical.data |>
-  as_tibble()
-dim(clin_raw)
+  as_tibble()  # 转 tibble
+dim(clin_raw)  # 维度
 ```
 
 **第 1 步：统一缺失记号**。`na_if()` 一次只能替换一个值，多个记号用 `%in%` 配合 `if_else`/`replace`：
 
 ```{r}
-na_tokens <- c("", "NA", "[Not Available]", "[Not Applicable]", "[Unknown]",
+na_tokens <- c("", "NA", "[Not Available]", "[Not Applicable]", "[Unknown]",  # TCGA 中表示缺失的占位符
                "[Not Evaluated]", "[Discrepancy]", "[Completed]")
-clin <- clin_raw |>
-  mutate(across(where(is.character), \(x) replace(x, x %in% na_tokens, NA))) |>
+clin <- clin_raw |>  # 占位符替换为 NA
+  mutate(across(where(is.character), \(x) replace(x, x %in% na_tokens, NA))) |>  # 对每个字符列替换
   select(where(\(x) !all(is.na(x))))                 # 删掉全空列
-dim(clin)
+dim(clin)  # 清理后的维度
 ```
 
 **第 2 步：重新推断列类型**。原表几乎全是字符，清掉缺失记号后数字列才能被正确识别：
 
 ```{r}
-clin <- clin |> type_convert(guess_integer = TRUE)
-clin |> summarise(across(everything(), \(x) class(x)[1])) |>
-  pivot_longer(everything(), values_to = "class") |> count(class)
+clin <- clin |> type_convert(guess_integer = TRUE)  # 重新推断列类型
+clin |> summarise(across(everything(), \(x) class(x)[1])) |>  # 统计各列类型
+  pivot_longer(everything(), values_to = "class") |> count(class)  # 转长表后计数
 ```
 
 **第 3 步：量化**。naniar 提供了一系列返回 tibble 的缺失摘要函数：
 
 ```{r}
-library(naniar)
+library(naniar)  # 缺失值汇总与可视化
 miss_var_summary(clin) |> head(10)                 # 每列
 miss_case_summary(clin) |> head(5)                 # 每行（患者）
 miss_var_table(clin) |> head(8)                    # "有 k 个缺失的列有几列"
@@ -670,8 +646,8 @@ miss_var_table(clin) |> head(8)                    # "有 k 个缺失的列有�
 选出分析真正需要的变量，看它们的缺失情况：
 
 ```{r}
-clin_key <- clin |>
-  transmute(
+clin_key <- clin |>  # 挑出并重命名关键临床变量
+  transmute(  # transmute：只保留新定义的列
     patient      = str_sub(Tumor_Sample_Barcode, 1, 12),
     age          = CDR_age_at_initial_pathologic_diagnosis,
     sex          = CDR_gender,
@@ -685,7 +661,7 @@ clin_key <- clin |>
     os_event     = CDR_OS,
     os_days      = CDR_OS.time
   )
-miss_var_summary(clin_key)
+miss_var_summary(clin_key)  # 每列缺失汇总
 ```
 
 **第 4 步：可视化**：
@@ -694,41 +670,40 @@ miss_var_summary(clin_key)
 #| fig-height: 4.5
 #| layout-ncol: 2
 #| fig-cap: ["每列缺失数", "缺失的位置（行 = 患者）"]
-gg_miss_var(clin_key, show_pct = TRUE)
-vis_miss(clin_key, sort_miss = TRUE) + theme(axis.text.x = element_text(angle = 60))
+gg_miss_var(clin_key, show_pct = TRUE)  # 每列缺失数条形图
+vis_miss(clin_key, sort_miss = TRUE) + theme(axis.text.x = element_text(angle = 60))  # 缺失位置热图
 ```
 
 `gg_miss_upset()` 显示哪些变量**组合**一起缺失（类似第 1 章的模式表）：
 
 ```{r}
 #| fig-height: 4
-gg_miss_upset(clin_key, nsets = 5)
+gg_miss_upset(clin_key, nsets = 5)  # 缺失组合的 UpSet 图
 ```
 
-**缺失与其他变量的关系**——"影子矩阵"（shadow matrix）给每列添加一个 `_NA` 指示列，
-可以直接拿来分组比较。例如：包年数缺失的患者，吸烟状态分布有何不同？
+**缺失与其他变量的关系**——"影子矩阵"（shadow matrix）给每列添加一个 `_NA` 指示列， 可以直接拿来分组比较。例如：包年数缺失的患者，吸烟状态分布有何不同？
 
 ```{r}
-clin_key |>
-  bind_shadow(only_miss = TRUE) |>
-  count(smoking_raw, pack_years_NA) |>
-  pivot_wider(names_from = pack_years_NA, values_from = n, values_fill = 0)
+clin_key |>  # 检查吸烟史与包年数缺失的关系
+  bind_shadow(only_miss = TRUE) |>  # 添加 _NA 影子列
+  count(smoking_raw, pack_years_NA) |>  # 按吸烟史 × 包年数是否缺失计数
+  pivot_wider(names_from = pack_years_NA, values_from = n, values_fill = 0)  # 转宽表
 ```
 
 `geom_miss_point()` 把缺失值画在坐标轴下方，而不是像 ggplot2 默认那样悄悄丢弃：
 
 ```{r}
 #| fig-height: 3.8
-ggplot(clin_key, aes(age, pack_years)) +
-  geom_miss_point(alpha = 0.6) +
-  labs(title = "年龄 vs 包年数（红色 = 其中一个变量缺失）")
+ggplot(clin_key, aes(age, pack_years)) +  # 散点图上显示缺失值
+  geom_miss_point(alpha = 0.6) +  # 把缺失值画在坐标轴下方
+  labs(title = "年龄 vs 包年数（红色 = 其中一个变量缺失）")  # 标题
 ```
 
 **第 5 步：按变量逐个决策**：
 
 ```{r}
-clin_clean <- clin_key |>
-  mutate(
+clin_clean <- clin_key |>  # 清理关键变量
+  mutate(  # 分期、吸烟、包年数、生存时间
     # 分期：合并亚期，显式水平
     stage = str_extract(stage_raw, "IV|III|II|I") |> factor(levels = c("I", "II", "III", "IV")),
     # 吸烟：五类 → 三类，水平以从不吸烟为参照
@@ -743,35 +718,32 @@ clin_clean <- clin_key |>
     time_days = coalesce(death_days, contact_days),
     event     = as.integer(vital == "Dead")
   )
-clin_clean |> select(patient, stage, smoking, pack_years, vital, death_days, contact_days, time_days, event) |>
-  head(6)
+clin_clean |> select(patient, stage, smoking, pack_years, vital, death_days, contact_days, time_days, event) |>  # 查看清理结果
+  head(6)  # 前 6 行
 ```
 
-`coalesce()` 是这里的关键：逐元素取第一个非缺失值，一行代码把两列合成生存时间。
-和 TCGA-CDR 官方整理的 `OS.time` 核对一下：
+`coalesce()` 是这里的关键：逐元素取第一个非缺失值，一行代码把两列合成生存时间。 和 TCGA-CDR 官方整理的 `OS.time` 核对一下：
 
 ```{r}
-clin_clean |>
-  summarise(
+clin_clean |>  # 自算生存时间与 CDR 提供的比较
+  summarise(  # 一致、不一致、缺失的个数
     n           = n(),
     same_as_cdr = sum(time_days == os_days, na.rm = TRUE),
     differs     = sum(time_days != os_days, na.rm = TRUE),
     either_na   = sum(is.na(time_days) | is.na(os_days))
   )
-clin_clean |> filter(is.na(time_days) | is.na(os_days)) |>
-  select(patient, vital, death_days, contact_days, time_days, os_days)
+clin_clean |> filter(is.na(time_days) | is.na(os_days)) |>  # 看缺失的记录
+  select(patient, vital, death_days, contact_days, time_days, os_days)  # 相关列
 ```
 
-自己用 `coalesce()` 算出的生存时间与 TCGA-CDR 官方整理的 `OS.time` **完全一致**；
-剩下的 9 例两者都缺失——其中 4 例就是第 1 章发现的"死亡但没有死亡时间"的患者。
-在生存分析中它们只能被排除，并在方法中报告。
+自己用 `coalesce()` 算出的生存时间与 TCGA-CDR 官方整理的 `OS.time` **完全一致**； 剩下的 9 例两者都缺失——其中 4 例就是第 1 章发现的"死亡但没有死亡时间"的患者。 在生存分析中它们只能被排除，并在方法中报告。
 
 **第 6 步：报告清洗后的缺失情况**，并决定分析策略：
 
 ```{r}
-clin_clean |>
-  select(age, sex, stage, smoking, pack_years, time_days, event) |>
-  miss_var_summary()
+clin_clean |>  # 清理后再看缺失
+  select(age, sex, stage, smoking, pack_years, time_days, event) |>  # 建模要用的变量
+  miss_var_summary()  # 缺失汇总
 ```
 
 - `stage`、`smoking` 缺失比例低 → 完整病例分析（complete-case）即可，在方法中报告排除人数；
@@ -781,7 +753,7 @@ clin_clean |>
 ### 常用缺失处理函数速查
 
 | 任务 | 函数 |
-|---|---|
+|------------------------------------|------------------------------------|
 | 某个值 → `NA` | `na_if(x, "-")` |
 | 多个值 → `NA` | `replace(x, x %in% tokens, NA)`；读入时 `read_csv(na = tokens)` |
 | `NA` → 某个值 | `replace_na(x, 0)`、`tidyr::replace_na(df, list(col = 0))` |
@@ -796,9 +768,9 @@ clin_clean |>
 `fill()` 的典型场景：从 Excel 导出、带合并单元格的样本表：
 
 ```{r}
-tibble(patient = c("P1", NA, NA, "P2", NA), timepoint = c("pre", "C1", "C3", "pre", "C2"),
+tibble(patient = c("P1", NA, NA, "P2", NA), timepoint = c("pre", "C1", "C3", "pre", "C2"),  # 只在首行填写病人 ID 的表
        value = c(1.2, 3.4, NA, 2.2, 4.1)) |>
-  fill(patient, .direction = "down")
+  fill(patient, .direction = "down")  # 向下填充
 ```
 
 ## purrr：函数式迭代
@@ -806,16 +778,16 @@ tibble(patient = c("P1", NA, NA, "P2", NA), timepoint = c("pre", "C1", "C3", "pr
 purrr 1.0 的核心：`map()` 家族 + `list_rbind()` / `list_cbind()`。
 
 ```{r}
-by_donor <- split(samples$run, samples$cell)
-by_donor
+by_donor <- split(samples$run, samples$cell)  # 按供者拆分 run
+by_donor  # 打印
 
-map_int(by_donor, length)
-map_chr(by_donor, \(r) paste(r, collapse = "+"))
+map_int(by_donor, length)  # 每个供者的样本数
+map_chr(by_donor, \(r) paste(r, collapse = "+"))  # 拼成字符串
 
 # 每个供者计算 trt/untrt 的文库大小比值
-map(by_donor, \(runs) colSums(counts_mat[, runs])) |>
-  map(\(lib) tibble(run = names(lib), lib_size = lib)) |>
-  list_rbind(names_to = "cell")
+map(by_donor, \(runs) colSums(counts_mat[, runs])) |>  # 每个供者内各样本的文库大小
+  map(\(lib) tibble(run = names(lib), lib_size = lib)) |>  # 每个结果转 tibble
+  list_rbind(names_to = "cell")  # 合并，list 名字存为 cell 列
 ```
 
 ### 嵌套数据框 + 列表列：逐基因建模
@@ -823,37 +795,36 @@ map(by_donor, \(runs) colSums(counts_mat[, runs])) |>
 经典的 "split–apply–combine"：为若干基因各拟合一个模型，然后整理结果。
 
 ```{r}
-fits <- long |>
-  mutate(log_cpm = log2(count + 0.5)) |>
-  nest(.by = symbol) |>
-  mutate(
+fits <- long |>  # 每个基因拟合一个线性模型
+  mutate(log_cpm = log2(count + 0.5)) |>  # 取对数
+  nest(.by = symbol) |>  # 按基因嵌套
+  mutate(  # 拟合模型并整理系数
     fit  = map(data, \(d) lm(log_cpm ~ cell + dex, data = d)),
     tidy = map(fit, broom::tidy)
   ) |>
-  select(symbol, tidy) |>
-  unnest(tidy) |>
-  filter(term == "dextrt")
-fits
+  select(symbol, tidy) |>  # 只保留系数表
+  unnest(tidy) |>  # 展开
+  filter(term == "dextrt")  # 只看处理效应
+fits  # 打印
 ```
 
-这是"每个基因一个线性模型"的朴素版本；limma（第 8 章）在此基础上加入了
-**经验贝叶斯方差收缩**，DESeq2/edgeR 则把高斯换成了**负二项分布**。
+这是"每个基因一个线性模型"的朴素版本；limma（第 8 章）在此基础上加入了 **经验贝叶斯方差收缩**，DESeq2/edgeR 则把高斯换成了**负二项分布**。
 
 ### 安全迭代与并行
 
 ```{r}
-risky <- list(1, "a", 10)
-map(risky, safely(log)) |> map("error") |> map_lgl(is.null)
-map_dbl(risky, possibly(log, otherwise = NA_real_))
+risky <- list(1, "a", 10)  # 含字符元素的列表
+map(risky, safely(log)) |> map("error") |> map_lgl(is.null)  # safely：返回结果与错误，不中断
+map_dbl(risky, possibly(log, otherwise = NA_real_))  # possibly：出错时返回默认值
 ```
 
 purrr 1.1 起，`map()` 可以借助 `mirai` 并行执行：
 
 ```{r}
 #| eval: false
-mirai::daemons(4)
-map(1:8, in_parallel(\(i) { Sys.sleep(1); i^2 }))
-mirai::daemons(0)
+mirai::daemons(4)  # 启动 4 个后台进程
+map(1:8, in_parallel(\(i) { Sys.sleep(1); i^2 }))  # 并行 map
+mirai::daemons(0)  # 关闭后台进程
 ```
 
 ## 综合练习：文库层面的 QC 表
@@ -861,13 +832,13 @@ mirai::daemons(0)
 把以上技能组合起来，生成一个每样本的 QC 汇总：
 
 ```{r}
-mito_ids <- genes |> filter(seq_name == "MT") |> pull(gene_id)
-pc_ids   <- genes |> filter(gene_biotype == "protein_coding") |> pull(gene_id)
+mito_ids <- genes |> filter(seq_name == "MT") |> pull(gene_id)  # 线粒体基因 ID
+pc_ids   <- genes |> filter(gene_biotype == "protein_coding") |> pull(gene_id)  # 蛋白编码基因 ID
 
-qc <- counts_mat |>
-  as_tibble(rownames = "gene_id") |>
-  pivot_longer(-gene_id, names_to = "run", values_to = "count") |>
-  summarise(
+qc <- counts_mat |>  # 每个样本的 QC 指标
+  as_tibble(rownames = "gene_id") |>  # 矩阵转 tibble
+  pivot_longer(-gene_id, names_to = "run", values_to = "count") |>  # 转长表
+  summarise(  # 按样本汇总各项指标
     total_M         = sum(count) / 1e6,
     genes_detected  = sum(count > 0),
     pct_mito        = 100 * sum(count[gene_id %in% mito_ids]) / sum(count),
@@ -875,24 +846,24 @@ qc <- counts_mat |>
     top10_share     = 100 * sum(sort(count, decreasing = TRUE)[1:10]) / sum(count),
     .by = run
   ) |>
-  left_join(samples |> select(run, cell, dex), join_by(run)) |>
-  relocate(cell, dex, .after = run)
+  left_join(samples |> select(run, cell, dex), join_by(run)) |>  # 加上样本信息
+  relocate(cell, dex, .after = run)  # 把 cell、dex 移到 run 之后
 
-qc |> mutate(across(where(is.double), \(x) round(x, 2)))
+qc |> mutate(across(where(is.double), \(x) round(x, 2)))  # 数值列保留两位小数
 ```
 
 ::: callout-note
 ## 读这张表
+
 - 所有样本文库大小在 15–30 M reads 之间，属于正常差异，后续由归一化处理。
 - 线粒体 reads 占比低且一致（这是 poly-A 文库的贝塞尔细胞系，正常）。
-- `top10_share`：最高表达的 10 个基因占全部 reads 的比例，若某样本异常高，往往提示
-  rRNA 污染或降解。
+- `top10_share`：最高表达的 10 个基因占全部 reads 的比例，若某样本异常高，往往提示 rRNA 污染或降解。
 :::
 
 ## 小结
 
 | 任务 | 现代写法 |
-|---|---|
+|------------------------------------|------------------------------------|
 | 分组汇总 | `summarise(..., .by = g)` |
 | 每组多行 | `reframe()` |
 | 排除行（保留 NA） | `filter_out()` |
@@ -908,19 +879,22 @@ qc |> mutate(across(where(is.double), \(x) round(x, 2)))
 
 ## 练习
 
-1. 统计 airway 中每条染色体上蛋白编码基因的数量，并找出**基因密度**（每 Mb 基因数，
-   用该染色体上最大的 `gene_seq_end` 近似长度）最高的 3 条染色体。
-2. 对每个样本，计算表达量（count）最高的 3 个基因的 symbol（提示：`slice_max(by =)`）。
-3. 用 `nest()` + `map()` 对全部 4 个供者分别计算 DUSP1 的 trt/untrt 倍数变化，然后用
-   `purrr::reduce()` 求它们的几何均值。
+1.  统计 airway 中每条染色体上蛋白编码基因的数量，并找出**基因密度**（每 Mb 基因数， 用该染色体上最大的 `gene_seq_end` 近似长度）最高的 3 条染色体。
 
-4. 在 `clin_clean` 中，比较死亡与存活患者的年龄、分期分布；有多少患者因为 `stage` 缺失会被完整病例分析排除？
-5. 从 `geo_meta` 构建一个包含全部 16 个样本的设计表，用 `count()` 验证每个细胞系 × 处理组合恰好一个样本。
-6. 写一个函数 `harmonize_symbols(x)`：去空白、转大写、调用 `HGNChelper::checkGeneSymbols()`，返回一个包含原始值、建议值、是否被修改的 tibble。
+2.  对每个样本，计算表达量（count）最高的 3 个基因的 symbol（提示：`slice_max(by =)`）。
+
+3.  用 `nest()` + `map()` 对全部 4 个供者分别计算 DUSP1 的 trt/untrt 倍数变化，然后用 `purrr::reduce()` 求它们的几何均值。
+
+4.  在 `clin_clean` 中，比较死亡与存活患者的年龄、分期分布；有多少患者因为 `stage` 缺失会被完整病例分析排除？
+
+5.  从 `geo_meta` 构建一个包含全部 16 个样本的设计表，用 `count()` 验证每个细胞系 × 处理组合恰好一个样本。
+
+6.  写一个函数 `harmonize_symbols(x)`：去空白、转大写、调用 `HGNChelper::checkGeneSymbols()`，返回一个包含原始值、建议值、是否被修改的 tibble。
 
 ::: {.callout-tip collapse="true"}
 ## 参考答案
-```r
+
+``` r
 # 1
 genes |>
   filter(gene_biotype == "protein_coding", seq_name %in% c(1:22, "X", "Y")) |>
