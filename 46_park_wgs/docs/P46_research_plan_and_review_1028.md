@@ -722,3 +722,13 @@ v2 排除接头 clip 后：**none 1,556 / both 20 / treated_only 7 / control_onl
 
 **④ 其他执行中修正**：身份矩阵 v1 用 `bcftools mpileup -T`（整条染色体流式读）⇒ 每进程 ~4% CPU，改 `-R` 按索引跳位点（v1 目录保留为
 `..._aborted_mpileup_T_streaming`）；germline 首次启动因 awk 科学计数法被区间总长断言拦下（目录保留为 `..._failedstart_intervals_sci_notation`）。
+
+**⑤ 身份/污染矩阵（v2 完成 2026-11-23 23:27）**：26,674 个常见 SNP 位点（gnomAD AF 0.3–0.7，每 100 kb 1 个），
+每样本 DP≥10 可用 24,475–26,200 个。10×10 两两基因型一致率 **0.9973–0.9981**（非对角线），共享位点 ≥ 24,000 ⇒ 10 个样本同一
+个体来源、无异源样本。外源 DNA 污染指标（hom-alt 位点 REF 读段占比）**0.12%–0.26%**，与测序错误率同量级 ⇒ 无可检出的
+人源交叉污染（含 Sample_6；其靶点异常读段为 amplicon 样来源，非基因组 DNA 混样）。⚠ 同亲本克隆之间的标签互换无法用此法检出（设计局限，报告写明）。
+产物：`analysis/stage0_identity_qc_20261123_v2/tables/`（identity_matrix / identity_n_sites / contamination / filter_impact）+ `multiqc/`。
+
+**⑥ Stage 3 加速**：awk 单线程为瓶颈（~2 h/样本）；23:44 另起 runner B（tmux `p46_stage3_vector_b`，样本子表
+`analysis/stage3_vector_20261123/sample_subset_S4-S7_second_runner.csv`）并行处理 Sample_4–7，主 runner 依 `.done` 跳过。
+runner B 末尾的 "FATAL done=N/4" 是预期的计数不符（同目录含主 runner 产物），汇总只由主 runner 执行。
