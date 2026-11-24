@@ -691,7 +691,7 @@ Stage 4 的组间比较必须把它们的等位比例写进去，否则会低估
 **Stage 状态（截至 22:15）**
 
 | Stage | 状态 | 产物 / tmux |
-| :--- | :---: | :--- |
+| :--- | :---: | :---: |
 | 0 收尾：MultiQC + 10×10 身份/污染矩阵 | 运行中（v2） | `analysis/stage0_identity_qc_20261123_v2/`，tmux `p46_stage0_identity`，`scripts/13_stage0_identity_multiqc.sh` |
 | 1 靶点 | 完成（21:39，另一会话） | `analysis/stage1_ontarget_20261123/` |
 | 2b 逐位点脱靶证据 | **v2 完成**（v1 有缺陷，见下） | `analysis/stage2b_offtarget_evidence_20261123_v2/` |
