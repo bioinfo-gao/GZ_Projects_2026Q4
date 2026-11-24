@@ -685,3 +685,40 @@ Stage 4 的组间比较必须把它们的等位比例写进去，否则会低估
 - Stage 4：private-variant 比较必须检查该 amplicon 是否在其他样本中以低浓度存在（已查：其余样本
   窗口读段数 761–997，与对照同量级 ⇒ 无可检出的交叉污染）；
 - 该位点的深度类判据对 Sample_6 全部失效，倒位/串联重复等替代结局在该样本中无法用深度排除。
+
+### 10.11 全流程续跑记录（2026-11-23 21:45 起；用户 21:48 再次授权"自动完成全流程"，并要求每小时自检至完成）
+
+**Stage 状态（截至 22:15）**
+
+| Stage | 状态 | 产物 / tmux |
+| :--- | :---: | :--- |
+| 0 收尾：MultiQC + 10×10 身份/污染矩阵 | 运行中（v2） | `analysis/stage0_identity_qc_20261123_v2/`，tmux `p46_stage0_identity`，`scripts/13_stage0_identity_multiqc.sh` |
+| 1 靶点 | 完成（21:39，另一会话） | `analysis/stage1_ontarget_20261123/` |
+| 2b 逐位点脱靶证据 | **v2 完成**（v1 有缺陷，见下） | `analysis/stage2b_offtarget_evidence_20261123_v2/` |
+| 2c 成对切点脱靶 | 完成 | `analysis/stage2c_paired_cut_20261123/paired_cut_offtargets_n10.tsv` |
+| 3 载体筛查 | 排队（等 identity） | tmux `p46_stage3_vector`，`scripts/16_stage3_vector_screen.sh` |
+| 4a germline 联合 call | 运行中（48 块 × 10 样本，22 路） | tmux `p46_stage4a_germline`，`analysis/stage4a_germline_n10_20261123/` |
+| 4b Manta 联合 SV | 排队（等 Stage 3） | tmux `p46_stage4b_manta` |
+| 4c 面板 CNV | 完成 | `analysis/stage4c_cnv_20261123/` |
+
+**① Stage 2b v1 缺陷与 v2 修正（接头 read-through 的 soft-clip）** —— 详见
+`superseded_for_comparison/stage2b_offtarget/v1_20261123_adapter_clips_counted/README.md`。
+v1 判 1,502/1,584 个候选"有证据"，证据 49,554 条 clip vs 920 条 indel，阳性数随 insert 长度反向变化；
+实测 clip 为 Illumina 接头（右 `AGATCGGAAGAGC`、左其反向互补，TLEN 123–130 < 150）。
+v2 排除接头 clip 后：**none 1,556 / both 20 / treated_only 7 / control_only 1；最小 Fisher p = 0.18**（7 vs 3 可得最小 p = 1/120）；
+靶点定标 30/30（3 条 spacer × 10 样本）全对。⚠ 同一机制适用于所有基于 soft-clip 的判据 ⇒ Stage 3 的 awk 已同步加接头排除
+（冒烟：Ctr_1 候选读段 238,197 → 6,813，排除 231,384 条接头 clip）。P31（insert 正常、6×）未暴露此问题，继承判据前必须重新审。
+待做：7 个 treated_only 位点逐个看读段（是否同一 indel、是否 Sample_6 污染相关）。
+
+**② Stage 2c**：6 个成对位点（靶点 + 5 个 PPP1R2 假基因家族）。靶点：7 个处理样本接头读段 > 0、3 个对照 = 0（定标通过）；
+其余 5 处 10 样本接头读段均为 0，且每样本每切点干净跨越读段 ≥ 8（中位 14–26）⇒ "0"是有覆盖的阴性。
+
+**③ Stage 4c：chr12p 拷贝数在两组间不同（设计层面的重要发现）**
+臂级拷贝估计（2 × 常染色体归一化深度中位数）：**chr12p 7 个处理样本 3.81–3.94、3 个对照 1.99–2.04**；
+其余臂（排除近端着丝粒 p 臂的重复区噪声）无组间差异。⇒ 编辑克隆与对照克隆在核型上不同源（推断：来自亲本群体中携带/不携带
+12p 增益的不同亚群）。**影响**：Stage 4d 私有变异负荷的组间比较混入谱系差异，结论只能写"与编辑共分离"；
+报告必须单列此发现。**独立互证待做**：12p 杂合 SNP 的 B 等位比例（4 拷贝 ⇒ 偏离 0.5）。
+另：Sample_6 CNV 噪声最高（bin MAD 0.095，其余 0.033–0.066），与其 dup 34.7% 一致；对照 29–47 个碎段几乎全是 12p 一事被 CBS 切碎。
+
+**④ 其他执行中修正**：身份矩阵 v1 用 `bcftools mpileup -T`（整条染色体流式读）⇒ 每进程 ~4% CPU，改 `-R` 按索引跳位点（v1 目录保留为
+`..._aborted_mpileup_T_streaming`）；germline 首次启动因 awk 科学计数法被区间总长断言拦下（目录保留为 `..._failedstart_intervals_sci_notation`）。
