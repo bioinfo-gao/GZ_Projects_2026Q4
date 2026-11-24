@@ -732,3 +732,39 @@ v2 排除接头 clip 后：**none 1,556 / both 20 / treated_only 7 / control_onl
 **⑥ Stage 3 加速**：awk 单线程为瓶颈（~2 h/样本）；23:44 另起 runner B（tmux `p46_stage3_vector_b`，样本子表
 `analysis/stage3_vector_20261123/sample_subset_S4-S7_second_runner.csv`）并行处理 Sample_4–7，主 runner 依 `.done` 跳过。
 runner B 末尾的 "FATAL done=N/4" 是预期的计数不符（同目录含主 runner 产物），汇总只由主 runner 执行。
+
+**⑦ 2026-11-24 01:45**：再起 runner C（tmux `p46_stage3_vector_c`，子表 `sample_subset_S2-S3_runnerC.csv`）并行处理 Sample_2/3，使 Stage 3 预计由 ~09:15 提前到 ~06:00；同样依 `.done` 互斥，末尾 "FATAL done=N/2" 为预期。
+
+**⑧ 2026-11-24 03:45 —— 多 runner 的重复扫描风险（已处置，见 `analysis/stage3_vector_20261123/CLAIM_NOTE.md`）**
+主 runner 的 `one()` 只以 `flags/<S>.done` 互斥，而该标记只在**完成后**产生 ⇒ B/C 正在处理但未完成的样本，
+主 runner 轮到时会重复扫描并与之同写 `seq/<S>.candidates.fa`（awk `>` 覆写）⇒ 产物互相截断、且**不报错**。
+实测 03:44 六个样本在扫：Ctr_3+Sample_1（主）、Sample_2+Sample_3（C）、Sample_4+Sample_6（B）；
+按时序主 runner 约 05:20 会撞上 C 的 Sample_2。处置：为 B/C 持有的 4 个样本预 touch `.done` 占位（另存
+`.claimed_by_other_runner` 以区分），Sample_7 留给主 runner。
+⇒ **汇总前判据改为产物完整性**（每样本 vec_depth / gclip_hits / adapter_audit 非空 + candidates.fa 已 gz），
+不再用 `.done` 计数。教训：以"完成标记"做并发互斥，在**开始**与**完成**之间存在无保护窗口。
+
+**⑨ Stage 3 已完成 3 个样本的初步比较（Ctr_1 / Ctr_2 / Sample_5，待 10 样本汇总后定论）**
+两个载体上的高深度区段**在对照与处理样本中同时出现、位置一致**：pLPC 3.0–5.5 kb（PuroR/CMV/mCherry）
+与 pMSCV 10.0–11.0 kb（AmpR 及质粒骨架引物区）。骨架不应随逆转录病毒整合 ⇒ 同源/本底的可能性高于真整合；
+pMSCV 的 Cas9 CDS（1.5–5.5 kb）在三样本均 ≤0.8×，与客户所述"本轮 Cas9 走 RNP、未转入 Cas9 质粒"一致。
+Ctr_2 的数值整体最高（dup 12.1%、候选读段最多），提示该指标受重复率影响 ⇒ 组间比较前须按候选读段总数归一。
+整合接头走独立路径（基因组端 clip 回贴载体）：Ctr_1 37 / Ctr_2 29 / Sample_5 42 条命中，待汇总后看断点是否在多读段间固定。
+
+**⑩ 2026-11-24 04:45 —— 提前汇总的闸门（`scripts/20_stage3_authoritative_summarize.sh`，tmux `p46_stage3_gate`）**
+第 ⑧ 条的占位标记带来第二个后果：主 runner 在**自己的两个样本**跑完时就会看到 `.done = 10` 并执行汇总，
+而此时 runner B/C 的样本产物还没写完 ⇒ 汇总读到不完整产物，**零报错但数值错误**。
+处置：另起闸门脚本，以【产物完整性】等齐 10 样本（每样本 vec_depth / gclip_hits / adapter_audit 非空
++ `candidates.fa.gz` 存在，gzip 是 `one()` 的最后一步），把任何提前产生的汇总移进
+`superseded_for_comparison/stage3_vector/premature_summary_<时间戳>/`（附 README），再跑权威汇总。
+闸门同时监控三个 runner：全部退出而产物仍缺 ⇒ FATAL 而非静默空转。
+另：Sample_7 已由 runner B 于 03:59 接手并补了占位标记（主 runner 约 06:10 本会撞上它）。
+
+**⑪ 2026-11-24 07:04 —— 提前汇总实际发生，且以崩溃告终（比预想更好的结局）**
+主 runner 在 Sample_1 跑完后执行汇总，`16b_stage3_summarize.py` 读到尚不存在的
+`tables/Sample_6.vec_depth.txt` ⇒ `FileNotFoundError`、`STAGE3_EXIT=1`，**崩在任何输出文件写出之前**
+⇒ `tables/` 内没有产生任何 `*_n10.tsv` / `stage3_summary.json`，无需归档（闸门的归档分支未触发）。
+教训：汇总脚本"先读齐全部输入、再写输出"的顺序本身就是一道保护 —— 若它边读边写，就会留下半张表且退出码为 0。
+runner C 于 06:54 完成 Sample_3 后以 `FATAL done=9/2` 退出（预期，见第 ⑦ 条）。
+Manta 由 `STAGE3_EXIT` 出现而触发启动（07:04），python2 垫片生效，正在跑 `getChromDepth`（10 样本 × 各 contig）。
+⇒ Stage 3 的权威汇总仍由闸门 `p46_stage3_gate` 在 Sample_6/7 齐全后执行。
