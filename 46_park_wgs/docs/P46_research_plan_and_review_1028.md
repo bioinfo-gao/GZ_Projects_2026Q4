@@ -768,3 +768,61 @@ Ctr_2 的数值整体最高（dup 12.1%、候选读段最多），提示该指�
 runner C 于 06:54 完成 Sample_3 后以 `FATAL done=9/2` 退出（预期，见第 ⑦ 条）。
 Manta 由 `STAGE3_EXIT` 出现而触发启动（07:04），python2 垫片生效，正在跑 `getChromDepth`（10 样本 × 各 contig）。
 ⇒ Stage 3 的权威汇总仍由闸门 `p46_stage3_gate` 在 Sample_6/7 齐全后执行。
+
+**⑫ 2026-11-24 10:50 —— chr12p 增益已获独立互证（BAF 法，与深度法一致）**
+脚本 `scripts/21_chr12p_baf_crosscheck.py`，产物 `analysis/stage4c_cnv_20261123/baf_check/`。
+复用身份矩阵那一轮的 10 样本联合 pileup（gnomAD AF 0.3–0.7 常见位点，自带 AD），取杂合位点、DP≥20，
+算次等位比例（BAF）。**深度法与 BAF 法失效模式完全不同**（深度受文库/GC/重复区影响，BAF 只比同一位点内两个等位的读段数）。
+
+| 臂 | 7 个处理样本 | 3 个对照样本 | 判读 |
+| :--- | :---: | :---: | :---: |
+| **chr12p** | 中位 BAF **0.232–0.260**；BAF<0.40 的位点占 **95.4–99.3%** | 中位 BAF 0.417–0.423；占 31.2–39.1% | 处理组 = **3:1 等位比 ⇒ 4 拷贝**；对照组正常 2 拷贝 |
+| chr12q（同染色体内部对照） | 中位 0.429–0.438；占 26.3–31.9% | 0.429–0.433；占 29.9–33.1% | 两组无差别 |
+| chr7（另一条染色体对照） | 中位 0.429–0.438；占 27.5–32.3% | 0.433–0.435；占 27.7–30.5% | 两组无差别 |
+
+⇒ **两法一致，chr12p 增益是真实的**，且 7/7 处理样本全有、3/3 对照全无（完全共分离）。本底 frac<0.40 ≈ 0.28–0.33
+（DP 20–30 下的抽样噪声），故 12p 的 0.95–0.99 是量级差异而非边缘效应。
+**对结论的约束（必须写进报告）**：编辑克隆与对照克隆在核型上不同源 ⇒ 7 vs 3 的任何组间差异都混有谱系差异，
+私有变异负荷的结论只能表述为"与编辑共分离"，不能表述为"由编辑造成"。客户 11-09 已书面同意该结论层级（§10.2）。
+⚠ 开跑时踩到 `conda run python3 -I - <<EOF` 读不到 stdin 的坑（`software_pitfalls/conda_run.md`）：零输出、零报错、exit=0；改写成脚本文件后正常。
+
+**⑬ 2026-11-24 11:43 Stage 3 权威汇总完成，但【阳性对照失败】⇒ v1 结论作废，已定位根因并重跑**
+权威汇总 exit=0，10 样本产物齐全。但 `positive_control_all10` 全为 **False**：P31 实测的两个共有整合接头
+（chr11:61,804,435/455 FADS1/FADS2；chr4:100,591,812/830 EMCN）在 10 个样本中**一个都没检出**，
+`junction_sites_total` 仅 2（各只 1 个样本、各 1 处：Sample_3 chr6 HCG20、Ctr_1 chr7 HDAC9）。
+**阳性对照失败 ⇒ 不得按"未检出载体整合"汇报。**
+根因（`scripts/22_stage3_posctrl_diagnose.sh` 实测，见 `superseded_for_comparison/stage3_vector/v1_20261124_rthru_overfilter/README.md`）：
+第 ⑥ 条为排接头而加的 `rthru`（0<|TLEN|<len(SEQ)）过宽 —— 本批 insert 149–187 bp ≈ 读长 ⇒ 真接头读段同样满足。
+两对照位点上：无过滤回贴命中 63–222、仅排"clip 含接头"53–163、v1 口径 **0**。
+修正：`scripts/23_stage3_rescan_v2_modeB.sh`（口径 B + contig 分桶并行），产物 `analysis/stage3_vector_v2_20261124/`。
+v1 的 junction 与覆盖度/拷贝数**均不采用**（clip 类候选读段同样被少计）。
+⚠ 教训（已写进归档 README）：**间接判据（片段长度）不能替代直接判据（序列里有没有接头）**；
+继承自前项目的判据必须在**本批数据**上用阳性对照重验 —— P31 insert 正常，这条过滤在那里不会出错。
+另：v1 汇总里 Sample_6 的 whole-vector 估计拷贝数 6.07 / 11.20（其余样本 0.02–0.85），与其 amplicon 样污染（第 ⑩ 条前的 §10.10）一致。
+
+**⑭ 2026-11-24 15:00 —— Manta 在本数据集上不可行（实测 ~80 天），按计划 §8.4 换 DELLY**
+实测依据（非推测）：
+- Manta 1.6 的候选生成 `--bin-count` **硬编码为 1**（`lib/python/mantaWorkflow.py:517`，上游是 `if True: binId = 0`）
+  ⇒ 全部图边由**单个任务**处理，只能靠 `-j` 的线程数并行，**无法横向扩展**。
+- 本批 insert 149–187 bp ≈ 读长 ⇒ 接头 read-through 制造海量异常配对证据 ⇒ SV locus 图
+  **4,355,321 个 locus**（`DumpSVLoci --graph-file` 实测）。
+- 91 min 处理 locus **0 → 3,440**（已验证索引按序推进：头 3 行 locus 0–2、尾 3 行 3,408–3,412，
+  前 2,000 行 max 1,931 < 其后 max 3,440）；均 **38 locus/min**、**15.27 核秒/边**
+  ⇒ 余下 4,351,881 个 locus 约 **79.5 天**；线程翻倍仍需数周。
+- 计划 §8.4 原文为 "SV 用 manta/delly" ⇒ 换 DELLY 是**计划内选项**，不改科学口径、不改证据单位。
+- Manta 工作目录 `analysis/stage4b_manta_n10_20261124/` **原样保留**（chromDepth / svLocusGraph.bin / 已出的
+  candidateSV.0000.vcf 片段），不删除；该目录不进交付。15:00 终止其 tmux 与 GenerateSVCandidates 进程。
+- 替代实现：`scripts/24_stage4b_delly_joint.sh`（DELLY v2.3.0，短读子命令 **`sr`** 而非 `call`，
+  见 `software_pitfalls/delly.md`；三相：逐样本发现 → `delly merge` 统一位点 → 按位点重基因分型 → `bcftools merge`；
+  每相都有"产物存在 + 数目==样本数"断言，因为**退出码 0 不等于产物存在**）。15:02 启动，tmux `p46_stage4b_delly`。
+- **报告必须写明的方法学边界**：本轮 SV 由 DELLY 给出；Manta 因该文库的短插入片段特性无法在可用时间内完成，
+  故不做两工具互证 ⇒ SV 一栏只有单一方法，断点级结论按"候选"而非"已确证"表述。
+
+**⑮ 2026-11-24 15:45 —— 瓶颈已从 CPU 转为磁盘 I/O，DELLY 暂停错峰（无产物损失）**
+实测：`iostat -dx sdc` 读队列深度 **24.97**、读延迟 **84.85 ms**、%util 48.6；`top` 显示 **iowait 39%** 而 CPU 空闲 43.8%
+⇒ `/srv`（HDD，`rotational=1`）被 HC(22 路) + DELLY(10 路) + Stage 3 v2 冒烟(4 路) 共 36 个并发读者压满。
+DELLY 的 10 个进程各只有 1–9% CPU、`wchan=futex_wait_queue`、每 4 s 仅读 3–17 MB ⇒ 等盘不是在算。
+处置：15:43 终止 DELLY（`discover/` 与 `flags/` **均为空 ⇒ 零产物损失**，脚本按 flag 续跑），停后 iowait 39% → **5.9%**。
+**教训**：线程预算（≤56 核）管不住**磁盘并发度**；同一块 HDD 上的随机读并发是独立的第二种资源，
+排程时须与 CPU 预算分开考虑 —— 本轮三个 stage 的 CPU 合计尚在预算内，却因 I/O 过订阅而集体变慢。
+重排后的顺序：Stage 3 v2 冒烟 → v2 全量（载体结论的阻塞项）→ HC 完成后再跑 DELLY（并发降至 4）。
