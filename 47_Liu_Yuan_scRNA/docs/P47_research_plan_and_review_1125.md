@@ -27,7 +27,7 @@ Plan Date（创建）: 2026-11-25
 
 两份 GENEWIZ `config.csv` 均记录 Cell Ranger 8.0.0、参考 `refdata-gex-GRCh38-2020-A`、探针面板 `Chromium_Human_Transcriptome_Probe_Set_v1.0.1_GRCh38-2020-A.csv`，并以 Probe Barcode 拆分样本。交付目录包含 8 个样本的 raw/filtered feature-barcode matrices、molecule-info 文件和 QC 表；未发现 `.bam` 或 `.cram`。虽然 config 写有 `create-bam,true`，本地镜像并不含 BAM。
 
-样本 ID、barcode、pool 与 `GEX: Cells` 来自 GENEWIZ config/QC。`group` 是按客户所述的 4 个 edited + 4 个 controls 暂定映射；控制类型未被公司 QC 表定义。样本表中的 `batch` 只记录公司 GEX pool 标签，不代表已确认的湿实验批次；target、biological replicate、clone 未提供，因此保留为 `unconfirmed`。
+样本 ID、barcode、pool 与 `GEX: Cells` 来自 GENEWIZ config/QC。`group` 是按客户所述的 4 个 edited + 4 个 controls 暂定映射；控制类型未被公司 QC 表定义。样本表以 `company_gex_pool` 记录公司 GEX pool 标签；`batch` 单独保留为 `unconfirmed`，因为湿实验批次未知。target、biological replicate、clone 未提供，也保留为 `unconfirmed`。
 
 | 样本 ID | 暂定组别 | GENEWIZ GEX pool | Probe Barcode | GEX Cells | Median UMI/cell | Median genes/cell | Confidently mapped reads in cells |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
