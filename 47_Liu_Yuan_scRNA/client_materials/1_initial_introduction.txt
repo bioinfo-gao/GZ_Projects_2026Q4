@@ -1,0 +1,63 @@
+
+Liu, Yuan <y.liu50@med.miami.edu>
+Oct 28, 2026, 11:35 AM
+to me, orders@anthenomics.com
+
+Dear Sir/Madam,
+
+We have eight single-cell RNA-seq datasets from 293t cells that we would like to have analyzed. The samples include four mitochondrial gene-edited samples, two base editor control samples, and two guide RNA control samples.
+
+Our primary goal is to determine whether the gene-editing effects can be detected in the single-cell RNA-seq data.
+
+Could you please provide a quotation for the data analysis service? I look forward to hearing from you.
+
+Best regards,
+
+Yuan Liu, PhD
+Bascom Palmer Eye Institute
+University of Miami Miller School of Medicine 
+
+========
+
+From: GENEWIZ <NGS@Azenta.com>
+Date: Thursday, October 1, 2026 at 3:35 PM
+To: Yu, Hong <HYu3@med.miami.edu>
+Cc: angela.mo@azenta.com <angela.mo@azenta.com>; remy.maddela@azenta.com <remy.maddela@azenta.com>; NGS@Azenta.com <NGS@Azenta.com>
+Subject: [External - Warning] Update: GENEWIZ Project 30-1371703644
+
+
+Hello Hong,
+
+I hope all is well. Your project 30-1371703644 has completed and is now being uploaded to your account on our sFTP server. The data should be available for downloading soon, once the transfer is completed. Below are your login credentials:
+
+Host: sftp://sftp.genewiz.com
+User: hyu3_med_miami
+Password: E5Ehi8JCpDKaiwRHR5OW
+Port: 22
+
+Notes:
+    1. As a measure of good faith, we are extending the data hosted on our sFTP servers from 15 to 30 days. The data will be automatically removed after this time. We strongly recommend that you download all of your results and back them up on your laboratory computer.
+
+    2. For Illumina sequencing, unless otherwise stated on quote deliverables, FASTQ files are demultiplexed from .BCL files. The sequenced .bcl files are available for a period of up to 20 calendar days from the date of data delivery. After this period, the files will be automatically deleted from our servers and re-demultiplexing will no longer be possible.
+
+    3. Due to size limitations, the project data and bioinformatics reports (if applicable) are not posted in "My Results" of your online account.
+
+    4. Please click here for a link to our sFTP download guide.
+
+Please let us know if you have any questions, we're happy to help.
+
+Does your project need follow up Sanger confirmation of sequencing targets? Azenta Life Sciences’ in-house pipeline can use your existing samples to confirm your NGS data. Find out more here .
+Thank you for choosing Azenta Life Sciences and have a great day.
+SurveyComingSoon!
+
+GENEWIZ from Azenta Life Sciences
+Azenta US, Inc.
+111 Corporate Blvd.
+South Plainfield, NJ 07080
++1-908-222-0711, ext. 1
++1-908-333-4511 (fax)
+www.GENEWIZ.com
+NGS@Azenta.com
+
+========
+From the oral communication, Genewiz provided basic analyisis for downloading. Please download it for comparison with our analysis.
