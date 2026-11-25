@@ -337,3 +337,19 @@ GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均
 7. **Sample_1 / Sample_2 为亚克隆**（Δ202 占比 29% / 32%）⇒ 等位比例须随结论一同给出；
 8. **同亲本克隆间的标签互换无法用身份矩阵检出**；
 9. 短读长在某些结构上的局限**只陈述事实**，不接"建议改做长读长"。
+
+---
+
+## 5. 执行侧补记
+
+- **2026-11-25 10:36（user decision「到 SSD 上跑」）**：DELLY 改为 SSD 暂存执行
+  （`scripts/26_stage4b_delly_ssd_staged.sh`）。原因：BAM 所在 `/srv` 为机械盘，实测 DELLY
+  并发 6 路聚合仅 24 MB/s、并发 2 路 40 MB/s，进程 CPU 常年 8% ⇒ 纯等盘。
+  做法：每个 worker「复制 1 个 BAM 到 `/mnt/ex_8T_SSD/.../tmp_delly_ssd_stage` → 在 SSD 上跑 → 删除该副本」，
+  NPAR=3 ⇒ 峰值占 SSD 约 225 GB。删除范围严格限定为本脚本刚复制出的同源副本，`/srv` 原件不动。
+  **2026-11-25 10:46 再改为复制/计算流水线**（`scripts/27_stage4b_delly_pipelined.sh`，user feedback「Delly 和复制完全可以并行」）：
+  上一版每个 worker 串行「复制→计算→删」，复制那 36 min 里 CPU 空闲 91%、计算时 HDD 空闲 ⇒ 两种资源互等。
+  现为 **1 路生产者持续复制 + 4 路消费者在 SSD 上计算**，生产者领先不超过 4 个样本（SSD 占用上限约 280 GB），
+  消费者以 `mkdir` 原子抢占、算完即删该副本。
+  实测：**单路顺序复制 340 MiB/s**，而 3 路并发复制聚合只有 76 MiB/s、DELLY 直读机械盘 24–40 MiB/s
+  ⇒ 机械盘上「并发」是负优化，复制必须单路。（340 这个数含页缓存成分，因该文件先前已部分读过。）
