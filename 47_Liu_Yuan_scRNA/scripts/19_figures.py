@@ -31,7 +31,7 @@ SAMPLE_ORDER = ["N1-ABE","N2-ABE","N1-CBE","N2-CBE","N1-Control","N2-Control","A
 C_POOL   = {"pool1_edited": PALETTE["blue_main"], "pool2_control": PALETTE["red_strong"]}
 C_PHASE  = {"G1": PALETTE["green_3"], "S": PALETTE["green_2"], "G2M": PALETTE["green_1"]}
 C_SAMPLE = dict(zip(SAMPLE_ORDER, (PALETTE_FAMILIES["cool"] + PALETTE_FAMILIES["warm"])[:8]))
-assert_no_palette_collision({"pool": C_POOL, "phase": C_PHASE})
+assert_no_palette_collision({"pool": C_POOL.values(), "phase": C_PHASE.values()})
 assert_visible_on_white(list(C_POOL.values()) + list(C_SAMPLE.values()), role="marker")
 saved = []
 

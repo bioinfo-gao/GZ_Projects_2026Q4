@@ -35,7 +35,12 @@ run(){  # run <名字> <日志名> <命令...>
   fi
 }
 
-run "14 归一化/HVG/整合/聚类" 14_cluster_1125.log  $PY -u "$P/scripts/14_norm_hvg_integrate_cluster.py" || exit 1
+# resume：step14 已有产物且日志 PASS 就跳过（1125 第二轮在 15/16 失败后只需续跑）
+if [ -s "$C/ckpt_14_clustered.h5ad" ] && grep -q STEP14_PASS "$L/14_cluster_1125.log" 2>/dev/null; then
+  note "SKIP       14（ckpt_14_clustered.h5ad 已存在且 STEP14_PASS）"
+else
+  run "14 归一化/HVG/整合/聚类" 14_cluster_1125.log  $PY -u "$P/scripts/14_norm_hvg_integrate_cluster.py" || exit 1
+fi
 run "15 ambient decontX"      15_ambient_1125.log  $RS    "$P/scripts/15_ambient_decontx.R"            || note "15 失败，继续（ambient 非后续硬依赖）"
 run "16 pseudobulk 导出"      16_pseudobulk_1125.log $PY -u "$P/scripts/16_pseudobulk_export.py"        || exit 1
 run "17 描述性效应量"         17_contrasts_1125.log  $PY -u "$P/scripts/17_descriptive_contrasts.py"    || exit 1

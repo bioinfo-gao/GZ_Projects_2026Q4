@@ -24,6 +24,8 @@ adata = sc.read_h5ad(src)
 print(f"loaded {adata.shape}", flush=True)
 C = adata.layers["counts"]
 assert sp.issparse(C) and np.all(C.data == np.round(C.data)), "counts 不是整数稀疏矩阵"
+# float32 求和超过 2^24 即失精度（样本总量 ~1e9，1125 首跑互证差 1–60 count）⇒ 全程 float64
+C = C.astype(np.float64)
 
 def agg(keys_df, label):
     """按 keys_df 的行分组求和 raw counts。返回 (counts_df[group x gene], coldata)。"""

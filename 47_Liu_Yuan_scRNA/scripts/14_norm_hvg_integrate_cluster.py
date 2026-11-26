@@ -72,9 +72,15 @@ adata.obsm["X_pca_unintegrated"] = adata.obsm["X_pca"].copy()
 print("PCA done (50 comps, HVG subspace)", flush=True)
 
 # ---------- Harmony（批次 = pool）----------
-sc.external.pp.harmony_integrate(adata, key="pool", basis="X_pca",
-                                 adjusted_basis="X_pca_harmony", random_state=SEED)
-print("Harmony done", flush=True)
+# 直接调 harmonypy：2.0.0 的 Z_corr 已是 cells×PCs，scanpy 1.11.5 包装器再 .T 一次会形状报错（1125 实测）
+import harmonypy
+_ho = harmonypy.run_harmony(adata.obsm["X_pca"], adata.obs, ["pool"], random_state=SEED)
+_Z = np.asarray(_ho.Z_corr)
+if _Z.shape == (adata.obsm["X_pca"].shape[1], adata.n_obs):   # 旧版 harmonypy 方向
+    _Z = _Z.T
+assert _Z.shape == adata.obsm["X_pca"].shape, f"Harmony 输出形状 {_Z.shape} != PCA {adata.obsm['X_pca'].shape}"
+adata.obsm["X_pca_harmony"] = _Z
+print(f"Harmony done  shape={_Z.shape}", flush=True)
 
 # ---------- 量化对照：整合前后，批次混合 vs 生物保留 ----------
 def mixing(emb, labels, k=30, n_sub=20000, seed=SEED):
@@ -104,7 +110,9 @@ for name, key in [("unintegrated","X_pca_unintegrated"), ("harmony","X_pca_harmo
 pd.DataFrame(rows).to_csv(f"{OUT}/14_integration_metrics.csv", index=False)
 
 # ---------- 聚类 + UMAP（仅展示）----------
-sc.pp.neighbors(adata, n_neighbors=15, use_rep="X_pca_harmony", random_state=SEED)
+# 精确 kNN：默认 pynndescent 多线程近似近邻同 seed 也不可复现(1126 实测 nnz/簇数漂移)
+sc.pp.neighbors(adata, n_neighbors=15, use_rep="X_pca_harmony", random_state=SEED,
+                transformer="sklearn")
 sc.tl.leiden(adata, resolution=0.5, key_added="leiden", flavor="igraph",
              n_iterations=2, directed=False, random_state=SEED)
 sc.tl.umap(adata, random_state=SEED)

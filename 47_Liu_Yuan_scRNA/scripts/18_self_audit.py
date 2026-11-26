@@ -8,8 +8,8 @@
   (1) 确定性：带随机性的步骤同参数跑两遍，产物必须逐元素一致（/feedback：单轮 exit=0 证明不了确定性）
   (2) 身份对齐：所有按名字 join 的表，行集合必须完全一致（按位置赋值 = 静默错位）
   (3) 分母非零：任何"0 / 没检出"在当结论前必须证明分母不是被自己的筛选掏空的
-  (4) 自证伪重复：在同一份数据上把一个对照样本【随机对半】跑细胞级检验，
-      把"照样检出 N 个显著基因"的数字摆出来 —— 支撑本轮不出 p 值的决定
+  (4) 校准(同样本随机对半应≈0) + 伪重复(同名义条件两样本细胞级检验，数字照记)
+      —— 支撑本轮不出跨条件 p 值的决定
 """
 import os, sys, json
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS","NUMEXPR_NUM_THREADS"):
@@ -29,9 +29,16 @@ def A(name, ok, detail=""):
     return ok
 
 # ---------- (1) 确定性 ----------
+# 端到端：从 ckpt 的 Harmony 嵌入按 step14 同参数【重建 kNN 图】再跑 leiden，图与标签都必须逐元素一致。
+# （v1 只在已存图上重跑 leiden，查不出 pynndescent 建图的不确定性）
+C_ck = adata.obsp["connectivities"].copy(); lab_ck = adata.obs.leiden.astype(str).values
+sc.pp.neighbors(adata, n_neighbors=15, use_rep="X_pca_harmony", random_state=SEED, transformer="sklearn")
+dC = abs(adata.obsp["connectivities"] - C_ck)
+A("determinism: kNN 图从嵌入重建逐元素一致", dC.nnz == 0 or dC.max() < 1e-6,
+  f"nnz {C_ck.nnz} vs {adata.obsp['connectivities'].nnz}")
 sc.tl.leiden(adata, resolution=0.5, key_added="leiden_run2", flavor="igraph",
              n_iterations=2, directed=False, random_state=SEED)
-same = (adata.obs.leiden.astype(str).values == adata.obs.leiden_run2.astype(str).values)
+same = (lab_ck == adata.obs.leiden_run2.astype(str).values)
 A("determinism: leiden 同参数两遍标签完全一致", bool(same.all()),
   f"{same.sum()}/{len(same)} 一致")
 sc.tl.score_genes_cell_cycle  # 已在 step14 跑过；这里复查打分可重现
@@ -75,30 +82,38 @@ mt_in = [g for g in adata.var_names if g.startswith("MT-")]
 A("分母非零: MT 基因 11 个且 pct_counts_mt 非 0", len(mt_in) == 11 and
   float(adata.obs.pct_counts_mt.mean()) > 0, f"{len(mt_in)} genes, mean={adata.obs.pct_counts_mt.mean():.3f}%")
 
-# ---------- (4) 自证伪重复 ----------
+# ---------- (4) 校准 + 自证伪重复 ----------
+# (4a) 校准：同一样本随机对半 —— 没有真实差异，细胞级 Wilcoxon 应 ≈0 显著基因（检验本身没坏）
+# (4b) 伪重复：同一名义条件的两个【不同样本】做细胞级检验 —— 名义上"无差异"，
+#      若检出大量显著基因 = 样本间变异被细胞数放大成 p 值，支撑本轮不出跨条件 p 值的决定（数字照记，不设阈值）
 rng = np.random.default_rng(SEED)
+assert adata.uns.get("X_is","").startswith("log1p"), "X 不是 lognorm，Wilcoxon 会跑在错的标度上"
 demo = []
-for smp in ["N1-Control", "N1-ABE"]:
-    sub = adata[adata.obs.sample_id == smp].copy()
-    assert adata.uns.get("X_is","").startswith("log1p"), "X 不是 lognorm，Wilcoxon 会跑在错的标度上"
-    half = rng.permutation(sub.n_obs) < sub.n_obs // 2
-    sub.obs["fake_group"] = np.where(half, "fakeA", "fakeB")
-    sc.tl.rank_genes_groups(sub, "fake_group", groups=["fakeA"], reference="fakeB",
-                            method="wilcoxon", pts=False)
-    d = sc.get.rank_genes_groups_df(sub, group="fakeA")
+def wil(sub, key, ga, gb, smp, comp):
+    sc.tl.rank_genes_groups(sub, key, groups=[ga], reference=gb, method="wilcoxon", pts=False)
+    d = sc.get.rank_genes_groups_df(sub, group=ga)
     for thr in (0.05, 0.01):
-        demo.append(dict(sample_id=smp, n_cells=sub.n_obs, test="cell-level Wilcoxon",
-                         comparison="random half vs random half (NO real difference)",
-                         fdr_threshold=thr, n_significant=int((d.pvals_adj < thr).sum()),
+        n = int((d.pvals_adj < thr).sum())
+        demo.append(dict(samples=smp, n_cells=sub.n_obs, test="cell-level Wilcoxon", comparison=comp,
+                         fdr_threshold=thr, n_significant=n,
                          n_significant_and_abs_lfc_gt_0_25=int(((d.pvals_adj < thr) &
                                                                 (d.logfoldchanges.abs() > 0.25)).sum())))
-        print(f"  [伪重复自证] {smp} 随机对半 cell-level Wilcoxon FDR<{thr}: "
-              f"{int((d.pvals_adj < thr).sum())} 个'显著'基因", flush=True)
+        print(f"  [{comp}] {smp} FDR<{thr}: {n} 个'显著'基因", flush=True)
+for smp in ["N1-Control", "N1-ABE"]:
+    sub = adata[adata.obs.sample_id == smp].copy()
+    half = rng.permutation(sub.n_obs) < sub.n_obs // 2
+    sub.obs["fake_group"] = np.where(half, "fakeA", "fakeB")
+    wil(sub, "fake_group", "fakeA", "fakeB", smp, "calibration: random half vs random half")
+    del sub
+for a_, b_ in [("N1-Control", "N2-Control"), ("N1-ABE", "N2-ABE")]:
+    sub = adata[adata.obs.sample_id.isin([a_, b_])].copy()
+    sub.obs["smp"] = sub.obs.sample_id.astype(str)
+    wil(sub, "smp", a_, b_, f"{a_} vs {b_}", "pseudoreplication: two samples, same nominal condition")
     del sub
 dd = pd.DataFrame(demo); dd.to_csv(f"{OUT}/18_pseudoreplication_demo.csv", index=False)
-A("自证伪重复: 随机对半仍检出大量'显著'基因（证明细胞级检验不可用于跨条件）",
-  bool((dd.n_significant > 100).any()), f"max={int(dd.n_significant.max())}")
-
+cal = dd[dd.comparison.str.startswith("calibration")]
+A("校准: 同样本随机对半细胞级检验 FDR<0.05 显著基因 ≤ 5（检验未失控）",
+  bool((cal[cal.fdr_threshold == 0.05].n_significant <= 5).all()), f"max={int(cal.n_significant.max())}")
 ra = pd.DataFrame(res)
 ra.to_csv(f"{OUT}/18_self_audit.csv", index=False)
 n_fail = int((ra.result == "FAIL").sum())

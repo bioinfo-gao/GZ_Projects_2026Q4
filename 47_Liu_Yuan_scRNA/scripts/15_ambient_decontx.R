@@ -28,6 +28,10 @@ for (lib in libs) {
   for (smp in sort(list.dirs(base, recursive = FALSE, full.names = FALSE))) {
     mf <- Read10X_h5(file.path(base, smp, "sample_filtered_feature_bc_matrix.h5"))
     mr <- Read10X_h5(file.path(base, smp, "sample_raw_feature_bc_matrix.h5"))
+    # FRP raw 矩阵含全部探针(37143)，filtered 只留 18082 ⇒ 按基因名对齐，绝不按位置（1125 首跑报 eta 行数不等）
+    stopifnot(all(rownames(mf) %in% rownames(mr)))
+    mr <- mr[rownames(mf), , drop = FALSE]
+    stopifnot(identical(rownames(mr), rownames(mf)))
     # 只保留通过 QC 的细胞，并按名字对齐簇标签（绝不按位置赋值）
     sm <- meta[meta$sample_id == smp, , drop = FALSE]
     bc <- sub(paste0("^", smp, "_"), "", rownames(sm))
