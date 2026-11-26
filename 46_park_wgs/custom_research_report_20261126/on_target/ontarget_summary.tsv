@@ -1,11 +1,11 @@
 sample	prior_from_client	reads_in_window	break_at_CUT1	break_at_CUT2	junction_reads	cross_clean_CUT1	cross_clean_CUT2	cross_indel_CUT1	cross_indel_CUT2	deleted_allele_frac_CUT1	deleted_allele_frac_CUT2	genome_mean_depth_mosdepth	local_baseline_depth_samtools	del_interval_mean_depth	del_interval_depth_norm	del_interval_depth_min	del_interval_depth_max	flank_left_norm	flank_right_norm	inversion_like_clips	clip_matching_neither_orientation	indels_within_10bp_of_cuts	f_del_from_depth	allele2_state	clonality	n_supplementary	n_secondary	call
-Ctr_1	WT	1204	0	0	0	25	22	0	0	0.0	0.0	27.61	50.0	51.23	1.025	40	60	1.036	1.083	0	0	0	0.0	n/a (no 202-bp deletion allele)	n/a	16	0	no deletion
-Ctr_2	WT	1077	0	0	0	20	12	0	0	0.0	0.0	23.44	43.0	46.98	1.093	30	59	1.036	1.136	0	0	0	0.0	n/a (no 202-bp deletion allele)	n/a	25	0	no deletion
-Ctr_3	WT	1087	0	0	0	25	22	0	0	0.0	0.0	25.63	45.0	54.09	1.202	45	64	1.044	1.081	0	0	0	0.0	n/a (no 202-bp deletion allele)	n/a	11	0	no deletion
-Sample_1	mono	1225	6	8	6	15	13	0	0	0.286	0.316	25.57	48.0	33.94	0.707	23	45	1.051	1.067	0	1	0	0.293	WT (clean spanning reads at both cut sites)	sub-clonal (deletion in ~29% of cells; 50% expected for a pure clone)	28	0	single-allele 202-bp deletion (other allele WT)
-Sample_2	mono	1096	4	8	4	8	13	0	0	0.333	0.235	22.74	44.0	29.8	0.677	25	42	1.034	1.139	0	1	0	0.323	WT (clean spanning reads at both cut sites)	sub-clonal (deletion in ~32% of cells; 50% expected for a pure clone)	36	0	single-allele 202-bp deletion (other allele WT)
-Sample_3	mono	1290	21	18	20	17	13	0	0	0.541	0.606	32.79	54.0	28.76	0.533	18	50	1.045	1.093	0	5	0	0.467	WT (clean spanning reads at both cut sites)	clonal; deletion on one of two copies	53	0	single-allele 202-bp deletion (other allele WT)
-Sample_4	mono	1160	8	11	8	4	8	0	0	0.667	0.5	24.64	48.0	19.29	0.402	9	41	1.04	1.076	0	2	0	0.598	WT (clean spanning reads at both cut sites)	clonal; deletion on one of two copies	32	0	single-allele 202-bp deletion (other allele WT)
-Sample_5	bi	982	13	13	13	0	13	12	0	1.0	0.5	24.66	43.0	24.33	0.566	0	51	1.018	1.108	0	2	21	0.434	small indel at cut 1	clonal; deletion on one of two copies	32	0	both alleles edited: one 202-bp deletion + one small indel at cut 1
-Sample_6	bi	19620	9053	8261	8379	17	23	0	0	0.998	0.997	20.66	40.0	130.57	3.264	53	13235	1.01	1.127	0	2429	1	0.0	not determinable: target-locus contamination (see report Section 7.1)	not determinable: target-locus contamination (see report Section 7.1)	18872	0	not determinable: target-locus contamination (see report Section 7.1)
-Sample_7	bi	1229	25	25	22	0	0	0	0	1.0	1.0	28.18	51.0	0.23	0.004	0	45	1.077	1.082	0	10	0	0.996	also carries the 202-bp deletion, or is lost	consistent with both copies edited	53	0	both alleles carry the 202-bp deletion
+Ctr_1	WT	1204	0	0	0	25	22	0	0	0.0	0.0	27.61	50.0	51.23	1.025	40	60	1.036	1.083	0	0	0	0.0	n/a（无 Δ202 等位）	n/a	16	0	WT（无 Δ202 证据）
+Ctr_2	WT	1077	0	0	0	20	12	0	0	0.0	0.0	23.44	43.0	46.98	1.093	30	59	1.036	1.136	0	0	0	0.0	n/a（无 Δ202 等位）	n/a	25	0	WT（无 Δ202 证据）
+Ctr_3	WT	1087	0	0	0	25	22	0	0	0.0	0.0	25.63	45.0	54.09	1.202	45	64	1.044	1.081	0	0	0	0.0	n/a（无 Δ202 等位）	n/a	11	0	WT（无 Δ202 证据）
+Sample_1	mono	1225	6	8	6	15	13	0	0	0.286	0.316	25.57	48.0	33.94	0.707	23	45	1.051	1.067	0	1	0	0.293	WT（两切点均有干净跨越读段）	亚克隆（Δ202 占比 29% << 50%，克隆不纯）	28	0	单等位 Δ202（另一等位 WT）
+Sample_2	mono	1096	4	8	4	8	13	0	0	0.333	0.235	22.74	44.0	29.8	0.677	25	42	1.034	1.139	0	1	0	0.323	WT（两切点均有干净跨越读段）	亚克隆（Δ202 占比 32% << 50%，克隆不纯）	36	0	单等位 Δ202（另一等位 WT）
+Sample_3	mono	1290	21	18	20	17	13	0	0	0.541	0.606	32.79	54.0	28.76	0.533	18	50	1.045	1.093	0	5	0	0.467	WT（两切点均有干净跨越读段）	与杂合一致	53	0	单等位 Δ202（另一等位 WT）
+Sample_4	mono	1160	8	11	8	4	8	0	0	0.667	0.5	24.64	48.0	19.29	0.402	9	41	1.04	1.076	0	2	0	0.598	WT（两切点均有干净跨越读段）	与杂合一致	32	0	单等位 Δ202（另一等位 WT）
+Sample_5	bi	982	13	13	13	0	13	12	0	1.0	0.5	24.66	43.0	24.33	0.566	0	51	1.018	1.108	0	2	21	0.434	切点小 indel @ CUT1	与杂合一致	32	0	双等位编辑：一条 Δ202 + 一条切点 indel(CUT1)
+Sample_6	bi	19620	9053	8261	8379	17	23	0	0	0.998	0.997	20.66	40.0	130.57	3.264	53	13235	1.01	1.127	0	2429	1	0.0	WT（两切点均有干净跨越读段）	亚克隆（Δ202 占比 0% << 50%，克隆不纯）	18872	0	深度在缺失区【反而升高】(d_norm=3.26)，不可按缺失解读，需专门查
+Sample_7	bi	1229	25	25	22	0	0	0	0	1.0	1.0	28.18	51.0	0.23	0.004	0	45	1.077	1.082	0	10	0	0.996	亦为 Δ202 或亦丢失	双等位/纯合样	53	0	双等位 Δ202

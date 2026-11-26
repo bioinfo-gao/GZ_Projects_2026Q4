@@ -369,3 +369,15 @@ GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均
   都必须先验证它不随深度平凡变化 —— 这正是阳性对照把它拦下来的原因。
   产物：`analysis/stage5_verify_20261126/tables/junction_breakpoint_fixedness.tsv`（含作废的 fixedness 列，
   保留以备对照）+ `junction_fixedness_summary.json`。
+
+- **2026-11-26 08:45 —— 交付包已生成并通过自审（内部审阅阶段，未发送）**
+  `custom_research_report_20261126/`，159 个文件 / 1.9 GB，8 个子目录（figures / qc / identity /
+  on_target / off_target / vector / copy_number / variants）+ 顶层报告 `Dual_Cut_Project_WGS_1126.md`。
+  构建脚本 `scripts/33_build_delivery.sh`（日期为显式参数、copy 不 move、8 条硬断言）；
+  自审脚本 `scripts/34_check_report.py`，**110/110 通过**，五类：
+  A 数字与源文件重算一致（含 10 样本×3 个深度数字、靶点、脱靶、私有变异、载体）、
+  B §9 清单 ↔ 目录双向比对 + §8.2 引用的每个文件存在、C 章节连续且 `Section N.M` 全部可解析、
+  D 红线（禁用词 / CJK / 签名 / 三处日期 / Species+Tissue）、
+  E 本轮四条必写限制（Sample_6 不可判读、Sample_1/2 亚克隆、chr12p 共分离措辞、SV 单一方法）。
+  ⚠ 自审首轮 4 条 FAIL 全是**检查器匹配过死**（对照三行在报告里合并为 `0 / 0 / 0`；大数按客户
+  可读性带千分位），**报告本身无缺陷** ⇒ 修检查器而非改报告，并加 `num_in()` 统一数字匹配口径。

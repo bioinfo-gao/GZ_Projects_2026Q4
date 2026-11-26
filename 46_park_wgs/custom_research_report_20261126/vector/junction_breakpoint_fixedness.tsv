@@ -1,0 +1,429 @@
+sample	group	chrom	breakpoint	side	reads	vector	vec_span_bp	fixedness	n_samples_sharing	is_positive_control	gene
+Ctr_1	control	chr1	60617209	R	2	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Ctr_1	control	chr2	66275883	R	3	pLPC_mCherry_BP1_2	83	ambiguous	4	0	
+Ctr_1	control	chr2	238290383	L	4	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Ctr_1	control	chr2	238290403	R	3	pLPC_mCherry_BP1_2	34	fixed	6	0	ENSG00000283635
+Ctr_1	control	chr3	89406513	R	5	pLPC_mCherry_BP1_2	83	ambiguous	10	0	EPHA3
+Ctr_1	control	chr4	100591812	L	10	pLPC_mCherry_BP1_2	91	ambiguous	10	1	EMCN
+Ctr_1	control	chr4	100591830	R	15	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Ctr_1	control	chr7	18510149	R	7	pLPC_mCherry_BP1_2	0	fixed	2	0	HDAC9
+Ctr_1	control	chr7	64067978	L	2	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Ctr_1	control	chrX	19037540	L	4	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Ctr_1	control	chrX	76973055	R	2	pLPC_mCherry_BP1_2	36	fixed	1	0	MIR325HG
+Ctr_1	control	chr8	3524963	L	2	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Ctr_1	control	chr11	61804435	L	18	pLPC_mCherry_BP1_2	91	ambiguous	10	1	FADS1,FADS2
+Ctr_1	control	chr11	61804455	R	14	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Ctr_1	control	chr11	111538690	L	6	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_1	control	chr11	111538709	R	7	pLPC_mCherry_BP1_2	80	ambiguous	10	0	
+Ctr_1	control	chr12	77049618	L	2	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Ctr_1	control	chr12	77049636	R	3	pLPC_mCherry_BP1_2	95	ambiguous	10	0	E2F7
+Ctr_1	control	chr13	56889658	R	3	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Ctr_1	control	chr16	25065918	L	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Ctr_1	control	chr16	25065936	R	2	pLPC_mCherry_BP1_2	49	fixed	7	0	
+Ctr_1	control	chr16	50405578	L	11	pLPC_mCherry_BP1_2	90	ambiguous	10	0	
+Ctr_1	control	chr16	50405597	R	11	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_1	control	chr18	33276133	R	2	pLPC_mCherry_BP1_2	0	fixed	2	0	CCDC178
+Ctr_1	control	chr18	78734254	R	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Ctr_2	control	chr1	20644735	L	3	pLPC_mCherry_BP1_2	0	fixed	4	0	PINK1,PINK1-AS
+Ctr_2	control	chr1	20644754	R	3	pLPC_mCherry_BP1_2	69	ambiguous	4	0	PINK1,PINK1-AS
+Ctr_2	control	chr1	60617209	R	8	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Ctr_2	control	chr1	64847624	R	2	pLPC_mCherry_BP1_2	19	fixed	3	0	JAK1
+Ctr_2	control	chr1	111928627	R	4	pLPC_mCherry_BP1_2	66	ambiguous	3	0	KCND3
+Ctr_2	control	chr2	66275883	R	2	pLPC_mCherry_BP1_2	21	fixed	4	0	
+Ctr_2	control	chr2	70979696	L	2	pMSCV_Cas9_EGFP	23	fixed	1	0	ANKRD53,ENSG00000258881,TEX261
+Ctr_2	control	chr2	222101851	L	3	pMSCV_Cas9_EGFP	32	fixed	3	0	
+Ctr_2	control	chr2	222101869	R	10	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Ctr_2	control	chr2	238290383	L	2	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Ctr_2	control	chr3	27626824	R	3	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Ctr_2	control	chr3	89406513	R	6	pLPC_mCherry_BP1_2	64	ambiguous	10	0	EPHA3
+Ctr_2	control	chr3	89406493	L	2	pLPC_mCherry_BP1_2	0	fixed	5	0	EPHA3
+Ctr_2	control	chr4	100591812	L	20	pLPC_mCherry_BP1_2	84	ambiguous	10	1	EMCN
+Ctr_2	control	chr4	100591830	R	22	pLPC_mCherry_BP1_2	84	ambiguous	10	1	EMCN
+Ctr_2	control	chr4	186473598	L	9	pMSCV_Cas9_EGFP	0	fixed	4	0	ENSG00000272297,F11-AS1
+Ctr_2	control	chr7	4748097	L	2	pLPC_mCherry_BP1_2	0	fixed	2	0	FOXK1
+Ctr_2	control	chr7	64067978	L	5	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Ctr_2	control	chr7	64067996	R	3	pLPC_mCherry_BP1_2	48	fixed	7	0	ENSG00000285544,ZNF727
+Ctr_2	control	chr7	81790583	L	2	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Ctr_2	control	chr7	128169615	L	6	pMSCV_Cas9_EGFP	0	fixed	3	0	ENSG00000292309
+Ctr_2	control	chr7	135950611	L	3	pMSCV_Cas9_EGFP	0	fixed	3	0	MTPN
+Ctr_2	control	chrX	19037540	L	3	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Ctr_2	control	chrX	129701092	L	14	pMSCV_Cas9_EGFP	101	ambiguous	5	0	
+Ctr_2	control	chrX	129701110	R	6	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Ctr_2	control	chr8	3524963	L	45	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Ctr_2	control	chr8	3524982	R	22	pMSCV_Cas9_EGFP	31	fixed	5	0	CSMD1
+Ctr_2	control	chr8	37966399	L	2	pMSCV_Cas9_EGFP	32	fixed	4	0	ADRB3
+Ctr_2	control	chr11	14558958	L	2	pMSCV_Cas9_EGFP	13	fixed	1	0	PSMA1
+Ctr_2	control	chr11	47135208	L	3	pLPC_mCherry_BP1_2	0	fixed	5	0	CSTPP1
+Ctr_2	control	chr11	61804435	L	35	pLPC_mCherry_BP1_2	101	ambiguous	10	1	FADS1,FADS2
+Ctr_2	control	chr11	61804455	R	39	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Ctr_2	control	chr11	61967716	L	4	pMSCV_Cas9_EGFP	0	fixed	5	0	
+Ctr_2	control	chr11	95899700	R	11	pMSCV_Cas9_EGFP	70	ambiguous	4	0	MTMR2
+Ctr_2	control	chr11	111538690	L	11	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_2	control	chr11	111538709	R	13	pLPC_mCherry_BP1_2	82	ambiguous	10	0	
+Ctr_2	control	chr12	18889961	R	3	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Ctr_2	control	chr12	77049618	L	11	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Ctr_2	control	chr12	77049636	R	16	pLPC_mCherry_BP1_2	83	ambiguous	10	0	E2F7
+Ctr_2	control	chr12	110468142	R	5	pLPC_mCherry_BP1_2	0	fixed	1	0	GPN3
+Ctr_2	control	chr13	56889658	R	12	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Ctr_2	control	chr13	56889640	L	3	pLPC_mCherry_BP1_2	15	fixed	6	0	
+Ctr_2	control	chr14	99603977	L	3	pMSCV_Cas9_EGFP	0	fixed	3	0	CCDC85C
+Ctr_2	control	chr14	99603997	R	2	pMSCV_Cas9_EGFP	33	fixed	3	0	CCDC85C
+Ctr_2	control	chr16	25065918	L	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Ctr_2	control	chr16	25065936	R	3	pLPC_mCherry_BP1_2	31	fixed	7	0	
+Ctr_2	control	chr16	50405578	L	12	pLPC_mCherry_BP1_2	99	ambiguous	10	0	
+Ctr_2	control	chr16	50405597	R	11	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_2	control	chr17	78660262	L	2	pMSCV_Cas9_EGFP	21	fixed	2	0	
+Ctr_2	control	chr18	78734254	R	6	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Ctr_2	control	chr18	78734236	L	2	pLPC_mCherry_BP1_2	29	fixed	3	0	
+Ctr_2	control	chr19	33521598	R	2	pMSCV_Cas9_EGFP	0	fixed	5	0	PEPD
+Ctr_3	control	chr1	60617209	R	2	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Ctr_3	control	chr2	238290383	L	3	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Ctr_3	control	chr2	238290403	R	4	pLPC_mCherry_BP1_2	59	ambiguous	6	0	ENSG00000283635
+Ctr_3	control	chr3	89406513	R	3	pLPC_mCherry_BP1_2	53	ambiguous	10	0	EPHA3
+Ctr_3	control	chr3	127798356	L	8	pLPC_mCherry_BP1_2	0	fixed	2	0	MGLL
+Ctr_3	control	chr3	127798377	R	10	pLPC_mCherry_BP1_2	80	ambiguous	3	0	MGLL
+Ctr_3	control	chr4	100591812	L	6	pLPC_mCherry_BP1_2	84	ambiguous	10	1	EMCN
+Ctr_3	control	chr4	100591830	R	7	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Ctr_3	control	chr7	18510149	R	3	pLPC_mCherry_BP1_2	0	fixed	2	0	HDAC9
+Ctr_3	control	chr7	64067978	L	4	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Ctr_3	control	chr7	64067996	R	3	pLPC_mCherry_BP1_2	6	fixed	7	0	ENSG00000285544,ZNF727
+Ctr_3	control	chrX	19037540	L	2	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Ctr_3	control	chr8	26598103	L	2	pLPC_mCherry_BP1_2	32	fixed	3	0	DPYSL2
+Ctr_3	control	chr11	61804435	L	11	pLPC_mCherry_BP1_2	94	ambiguous	10	1	FADS1,FADS2
+Ctr_3	control	chr11	61804455	R	10	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Ctr_3	control	chr11	111538690	L	8	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_3	control	chr11	111538709	R	12	pLPC_mCherry_BP1_2	76	ambiguous	10	0	
+Ctr_3	control	chr12	77049618	L	2	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Ctr_3	control	chr12	77049636	R	2	pLPC_mCherry_BP1_2	72	ambiguous	10	0	E2F7
+Ctr_3	control	chr13	56889658	R	6	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Ctr_3	control	chr13	56889640	L	3	pLPC_mCherry_BP1_2	76	ambiguous	6	0	
+Ctr_3	control	chr16	25065918	L	6	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Ctr_3	control	chr16	25065936	R	9	pLPC_mCherry_BP1_2	80	ambiguous	7	0	
+Ctr_3	control	chr16	50405578	L	2	pLPC_mCherry_BP1_2	74	ambiguous	10	0	
+Ctr_3	control	chr16	50405597	R	3	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Ctr_3	control	chr18	33276133	R	5	pLPC_mCherry_BP1_2	0	fixed	2	0	CCDC178
+Ctr_3	control	chr18	78734254	R	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_1	treated	chr1	60617209	R	9	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_1	treated	chr1	242611889	L	2	pMSCV_Cas9_EGFP	20	fixed	1	0	
+Sample_1	treated	chr1	242611908	R	2	pMSCV_Cas9_EGFP	36	fixed	1	0	
+Sample_1	treated	chr2	238290383	L	4	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_1	treated	chr2	238290403	R	2	pLPC_mCherry_BP1_2	94	ambiguous	6	0	ENSG00000283635
+Sample_1	treated	chr3	27626824	R	8	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_1	treated	chr3	89406513	R	12	pLPC_mCherry_BP1_2	92	ambiguous	10	0	EPHA3
+Sample_1	treated	chr3	89406493	L	4	pLPC_mCherry_BP1_2	0	fixed	5	0	EPHA3
+Sample_1	treated	chr4	41653427	L	2	pMSCV_Cas9_EGFP	0	fixed	2	0	LIMCH1
+Sample_1	treated	chr4	41653445	R	2	pMSCV_Cas9_EGFP	13	fixed	2	0	LIMCH1
+Sample_1	treated	chr4	100591812	L	12	pLPC_mCherry_BP1_2	95	ambiguous	10	1	EMCN
+Sample_1	treated	chr4	100591830	R	13	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Sample_1	treated	chr4	186473598	L	14	pMSCV_Cas9_EGFP	0	fixed	4	0	ENSG00000272297,F11-AS1
+Sample_1	treated	chr4	187577471	R	3	pMSCV_Cas9_EGFP	0	fixed	2	0	LINC02492
+Sample_1	treated	chr7	64067978	L	5	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_1	treated	chrX	19037540	L	3	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Sample_1	treated	chrX	129701110	R	3	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Sample_1	treated	chr8	3524963	L	3	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Sample_1	treated	chr8	3524982	R	2	pMSCV_Cas9_EGFP	0	fixed	5	0	CSMD1
+Sample_1	treated	chr8	15944566	R	2	pMSCV_Cas9_EGFP	0	fixed	2	0	ENSG00000287476
+Sample_1	treated	chr8	26598103	L	2	pLPC_mCherry_BP1_2	4	fixed	3	0	DPYSL2
+Sample_1	treated	chr8	37966399	L	4	pMSCV_Cas9_EGFP	55	ambiguous	4	0	ADRB3
+Sample_1	treated	chr11	57913405	L	4	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Sample_1	treated	chr11	61804435	L	16	pLPC_mCherry_BP1_2	91	ambiguous	10	1	FADS1,FADS2
+Sample_1	treated	chr11	61804455	R	14	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_1	treated	chr11	61967716	L	18	pMSCV_Cas9_EGFP	41	fixed	5	0	
+Sample_1	treated	chr11	111538690	L	15	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_1	treated	chr11	111538709	R	14	pLPC_mCherry_BP1_2	85	ambiguous	10	0	
+Sample_1	treated	chr12	77049618	L	6	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_1	treated	chr12	77049636	R	9	pLPC_mCherry_BP1_2	75	ambiguous	10	0	E2F7
+Sample_1	treated	chr13	56889640	L	3	pLPC_mCherry_BP1_2	2	fixed	6	0	
+Sample_1	treated	chr13	56889658	R	4	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_1	treated	chr16	25065918	L	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_1	treated	chr16	25065936	R	3	pLPC_mCherry_BP1_2	73	ambiguous	7	0	
+Sample_1	treated	chr16	50405578	L	6	pLPC_mCherry_BP1_2	77	ambiguous	10	0	
+Sample_1	treated	chr16	50405597	R	5	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_1	treated	chr17	30094180	L	4	pMSCV_Cas9_EGFP	0	fixed	1	0	EFCAB5,ENSG00000265394
+Sample_1	treated	chr21	43694614	L	3	pMSCV_Cas9_EGFP	0	fixed	3	0	RRP1B
+Sample_2	treated	chr1	60617209	R	7	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_2	treated	chr2	222101869	R	5	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_2	treated	chr2	226752986	R	2	pMSCV_Cas9_EGFP	0	fixed	1	0	IRS1
+Sample_2	treated	chr2	238290383	L	4	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_2	treated	chr3	27626824	R	8	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_2	treated	chr3	50915199	L	4	pMSCV_Cas9_EGFP	0	fixed	1	0	DOCK3
+Sample_2	treated	chr3	50915217	R	4	pMSCV_Cas9_EGFP	26	fixed	1	0	DOCK3
+Sample_2	treated	chr3	58608709	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	FAM107A,FAM3D-AS1
+Sample_2	treated	chr3	89406493	L	3	pLPC_mCherry_BP1_2	0	fixed	5	0	EPHA3
+Sample_2	treated	chr3	89406513	R	14	pLPC_mCherry_BP1_2	92	ambiguous	10	0	EPHA3
+Sample_2	treated	chr3	127798377	R	2	pLPC_mCherry_BP1_2	10	fixed	3	0	MGLL
+Sample_2	treated	chr3	146248186	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	PLSCR4
+Sample_2	treated	chr3	187905448	L	2	pMSCV_Cas9_EGFP	27	fixed	3	0	
+Sample_2	treated	chr4	16289820	L	2	pMSCV_Cas9_EGFP	82	ambiguous	1	0	TAPT1-AS1
+Sample_2	treated	chr4	41653427	L	4	pMSCV_Cas9_EGFP	0	fixed	2	0	LIMCH1
+Sample_2	treated	chr4	41653445	R	5	pMSCV_Cas9_EGFP	49	fixed	2	0	LIMCH1
+Sample_2	treated	chr4	100591830	R	32	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Sample_2	treated	chr4	100591812	L	27	pLPC_mCherry_BP1_2	92	ambiguous	10	1	EMCN
+Sample_2	treated	chr4	186473598	L	31	pMSCV_Cas9_EGFP	0	fixed	4	0	ENSG00000272297,F11-AS1
+Sample_2	treated	chr6	160242022	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	SLC22A2
+Sample_2	treated	chr6	160242040	R	2	pMSCV_Cas9_EGFP	8	fixed	1	0	SLC22A2
+Sample_2	treated	chr7	88688	L	7	pLPC_mCherry_BP1_2	0	fixed	1	0	ENSG00000232325
+Sample_2	treated	chr7	64067978	L	9	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_2	treated	chr7	64067996	R	2	pLPC_mCherry_BP1_2	10	fixed	7	0	ENSG00000285544,ZNF727
+Sample_2	treated	chr7	81790583	L	2	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_2	treated	chrX	19037540	L	4	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Sample_2	treated	chrX	129701092	L	7	pMSCV_Cas9_EGFP	63	ambiguous	5	0	
+Sample_2	treated	chrX	129701110	R	5	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Sample_2	treated	chr8	3524963	L	17	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Sample_2	treated	chr8	3524982	R	5	pMSCV_Cas9_EGFP	28	fixed	5	0	CSMD1
+Sample_2	treated	chr8	15944548	L	2	pMSCV_Cas9_EGFP	35	fixed	1	0	ENSG00000287476
+Sample_2	treated	chr8	15944566	R	2	pMSCV_Cas9_EGFP	0	fixed	2	0	ENSG00000287476
+Sample_2	treated	chr8	37966399	L	2	pMSCV_Cas9_EGFP	43	fixed	4	0	ADRB3
+Sample_2	treated	chr8	66313309	L	2	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_2	treated	chr9	87859426	L	3	pMSCV_Cas9_EGFP	23	fixed	1	0	NPAP1P9
+Sample_2	treated	chr9	87859444	R	3	pMSCV_Cas9_EGFP	0	fixed	1	0	NPAP1P9
+Sample_2	treated	chr9	99800689	L	2	pMSCV_Cas9_EGFP	34	fixed	2	0	ENSG00000237461,STX17-DT
+Sample_2	treated	chr11	47135208	L	2	pLPC_mCherry_BP1_2	0	fixed	5	0	CSTPP1
+Sample_2	treated	chr11	57913405	L	6	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Sample_2	treated	chr11	57913423	R	2	pMSCV_Cas9_EGFP	0	fixed	1	0	
+Sample_2	treated	chr11	61804435	L	37	pLPC_mCherry_BP1_2	101	ambiguous	10	1	FADS1,FADS2
+Sample_2	treated	chr11	61804455	R	31	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_2	treated	chr11	61967716	L	22	pMSCV_Cas9_EGFP	11	fixed	5	0	
+Sample_2	treated	chr11	70361297	R	2	pLPC_mCherry_BP1_2	42	fixed	3	0	ENSG00000254604,PPFIA1
+Sample_2	treated	chr11	95899700	R	4	pMSCV_Cas9_EGFP	29	fixed	4	0	MTMR2
+Sample_2	treated	chr11	111538709	R	20	pLPC_mCherry_BP1_2	98	ambiguous	10	0	
+Sample_2	treated	chr11	111538690	L	24	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_2	treated	chr11	134636841	L	3	pMSCV_Cas9_EGFP	0	fixed	1	0	
+Sample_2	treated	chr11	134636859	R	2	pMSCV_Cas9_EGFP	40	fixed	1	0	
+Sample_2	treated	chr12	18889961	R	2	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Sample_2	treated	chr12	34124359	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	
+Sample_2	treated	chr12	77049636	R	17	pLPC_mCherry_BP1_2	97	ambiguous	10	0	E2F7
+Sample_2	treated	chr12	77049618	L	12	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_2	treated	chr12	108617440	L	2	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_2	treated	chr13	20002957	R	2	pMSCV_Cas9_EGFP	61	ambiguous	1	0	ZMYM2
+Sample_2	treated	chr13	56889658	R	4	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_2	treated	chr15	50059423	L	3	pMSCV_Cas9_EGFP	30	fixed	1	0	ATP8B4
+Sample_2	treated	chr15	50059441	R	3	pMSCV_Cas9_EGFP	0	fixed	1	0	ATP8B4
+Sample_2	treated	chr16	25065936	R	5	pLPC_mCherry_BP1_2	81	ambiguous	7	0	
+Sample_2	treated	chr16	25065918	L	4	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_2	treated	chr16	50405578	L	4	pLPC_mCherry_BP1_2	53	ambiguous	10	0	
+Sample_2	treated	chr16	50405597	R	7	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_2	treated	chr17	11003332	R	3	pMSCV_Cas9_EGFP	4	fixed	1	0	
+Sample_2	treated	chr17	49263272	R	2	pMSCV_Cas9_EGFP	0	fixed	1	0	FLJ40194
+Sample_2	treated	chr18	78734254	R	2	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_2	treated	chr20	57314970	L	3	pMSCV_Cas9_EGFP	60	ambiguous	3	0	
+Sample_2	treated	chr19	9572257	R	2	pMSCV_Cas9_EGFP	0	fixed	1	0	ZNF121
+Sample_2	treated	chr19	33521580	L	2	pMSCV_Cas9_EGFP	5	fixed	3	0	PEPD
+Sample_2	treated	chr19	33521598	R	3	pMSCV_Cas9_EGFP	0	fixed	5	0	PEPD
+Sample_2	treated	chr22	20842077	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	PI4KA
+Sample_2	treated	chr21	43694614	L	6	pMSCV_Cas9_EGFP	0	fixed	3	0	RRP1B
+Sample_3	treated	chr1	20644735	L	3	pLPC_mCherry_BP1_2	0	fixed	4	0	PINK1,PINK1-AS
+Sample_3	treated	chr1	20644754	R	2	pLPC_mCherry_BP1_2	67	ambiguous	4	0	PINK1,PINK1-AS
+Sample_3	treated	chr1	60617209	R	2	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_3	treated	chr1	64847624	R	2	pLPC_mCherry_BP1_2	23	fixed	3	0	JAK1
+Sample_3	treated	chr1	72976316	L	2	pMSCV_Cas9_EGFP	0	fixed	2	0	
+Sample_3	treated	chr1	111928627	R	6	pLPC_mCherry_BP1_2	23	fixed	3	0	KCND3
+Sample_3	treated	chr2	131040362	L	2	pLPC_mCherry_BP1_2	0	fixed	2	0	ARHGEF4,SMIM39
+Sample_3	treated	chr2	222101869	R	22	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_3	treated	chr2	222101851	L	11	pMSCV_Cas9_EGFP	94	ambiguous	3	0	
+Sample_3	treated	chr2	238290383	L	11	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_3	treated	chr2	238290403	R	7	pLPC_mCherry_BP1_2	92	ambiguous	6	0	ENSG00000283635
+Sample_3	treated	chr3	89406513	R	4	pLPC_mCherry_BP1_2	62	ambiguous	10	0	EPHA3
+Sample_3	treated	chr3	187905448	L	5	pMSCV_Cas9_EGFP	18	fixed	3	0	
+Sample_3	treated	chr4	100591812	L	36	pLPC_mCherry_BP1_2	97	ambiguous	10	1	EMCN
+Sample_3	treated	chr4	100591830	R	37	pLPC_mCherry_BP1_2	143	ambiguous	10	1	EMCN
+Sample_3	treated	chr5	121005614	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	
+Sample_3	treated	chr5	150129776	L	3	pLPC_mCherry_BP1_2	0	fixed	2	0	PDGFRB
+Sample_3	treated	chr6	30747522	R	8	pLPC_mCherry_BP1_2	0	fixed	2	0	HCG20
+Sample_3	treated	chr7	64067978	L	16	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_3	treated	chr7	64067996	R	10	pLPC_mCherry_BP1_2	75	ambiguous	7	0	ENSG00000285544,ZNF727
+Sample_3	treated	chr7	81790583	L	10	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_3	treated	chr7	128169615	L	13	pMSCV_Cas9_EGFP	0	fixed	3	0	ENSG00000292309
+Sample_3	treated	chr7	135950611	L	23	pMSCV_Cas9_EGFP	0	fixed	3	0	MTPN
+Sample_3	treated	chrX	34275642	L	2	pMSCV_Cas9_EGFP	91	ambiguous	1	0	ENSG00000233571,ENSG00000233928
+Sample_3	treated	chrX	129701092	L	18	pMSCV_Cas9_EGFP	97	ambiguous	5	0	
+Sample_3	treated	chrX	129701110	R	12	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Sample_3	treated	chr8	3524963	L	67	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Sample_3	treated	chr8	3524982	R	49	pMSCV_Cas9_EGFP	33	fixed	5	0	CSMD1
+Sample_3	treated	chr8	26598103	L	2	pLPC_mCherry_BP1_2	46	fixed	3	0	DPYSL2
+Sample_3	treated	chr11	47135208	L	8	pLPC_mCherry_BP1_2	0	fixed	5	0	CSTPP1
+Sample_3	treated	chr11	47135226	R	3	pLPC_mCherry_BP1_2	41	fixed	2	0	CSTPP1
+Sample_3	treated	chr11	61804455	R	51	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_3	treated	chr11	61804435	L	60	pLPC_mCherry_BP1_2	101	ambiguous	10	1	FADS1,FADS2
+Sample_3	treated	chr11	61967716	L	3	pMSCV_Cas9_EGFP	0	fixed	5	0	
+Sample_3	treated	chr11	70361297	R	3	pLPC_mCherry_BP1_2	62	ambiguous	3	0	ENSG00000254604,PPFIA1
+Sample_3	treated	chr11	91827157	L	2	pLPC_mCherry_BP1_2	58	ambiguous	2	0	LINC02756
+Sample_3	treated	chr11	95899700	R	13	pMSCV_Cas9_EGFP	98	ambiguous	4	0	MTMR2
+Sample_3	treated	chr11	95899701	R	2	pMSCV_Cas9_EGFP	33	fixed	2	0	MTMR2
+Sample_3	treated	chr11	111538709	R	51	pLPC_mCherry_BP1_2	99	ambiguous	10	0	
+Sample_3	treated	chr11	111538690	L	49	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_3	treated	chr12	77049618	L	15	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_3	treated	chr12	77049636	R	21	pLPC_mCherry_BP1_2	92	ambiguous	10	0	E2F7
+Sample_3	treated	chr12	102810444	R	3	pMSCV_Cas9_EGFP	0	fixed	1	0	LINC00485
+Sample_3	treated	chr13	37744329	R	3	pMSCV_Cas9_EGFP	2090	scattered	2	0	TRPC4
+Sample_3	treated	chr13	56889658	R	21	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_3	treated	chr13	56889640	L	9	pLPC_mCherry_BP1_2	42	fixed	6	0	
+Sample_3	treated	chr14	99603977	L	3	pMSCV_Cas9_EGFP	0	fixed	3	0	CCDC85C
+Sample_3	treated	chr14	99603997	R	3	pMSCV_Cas9_EGFP	44	fixed	3	0	CCDC85C
+Sample_3	treated	chr15	92072994	R	3	pLPC_mCherry_BP1_2	62	ambiguous	2	0	SLCO3A1
+Sample_3	treated	chr16	50405578	L	17	pLPC_mCherry_BP1_2	90	ambiguous	10	0	
+Sample_3	treated	chr16	50405597	R	17	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_3	treated	chr18	78734236	L	7	pLPC_mCherry_BP1_2	78	ambiguous	3	0	
+Sample_3	treated	chr18	78734254	R	10	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_3	treated	chr20	13669113	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	
+Sample_3	treated	chr20	57314970	L	5	pMSCV_Cas9_EGFP	44	fixed	3	0	
+Sample_3	treated	chr19	33521580	L	9	pMSCV_Cas9_EGFP	96	ambiguous	3	0	PEPD
+Sample_3	treated	chr19	33521598	R	14	pMSCV_Cas9_EGFP	0	fixed	5	0	PEPD
+Sample_4	treated	chr1	60617209	R	4	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_4	treated	chr2	238290383	L	2	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_4	treated	chr3	89406513	R	7	pLPC_mCherry_BP1_2	31	fixed	10	0	EPHA3
+Sample_4	treated	chr3	89406493	L	2	pLPC_mCherry_BP1_2	0	fixed	5	0	EPHA3
+Sample_4	treated	chr4	100591812	L	6	pLPC_mCherry_BP1_2	67	ambiguous	10	1	EMCN
+Sample_4	treated	chr4	100591830	R	11	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Sample_4	treated	chr6	30747522	R	2	pLPC_mCherry_BP1_2	0	fixed	2	0	HCG20
+Sample_4	treated	chr7	64067978	L	6	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_4	treated	chr7	64067996	R	4	pLPC_mCherry_BP1_2	37	fixed	7	0	ENSG00000285544,ZNF727
+Sample_4	treated	chrX	19037540	L	4	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Sample_4	treated	chrX	129701092	L	4	pMSCV_Cas9_EGFP	43	fixed	5	0	
+Sample_4	treated	chrX	129701110	R	3	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Sample_4	treated	chr11	47135208	L	2	pLPC_mCherry_BP1_2	0	fixed	5	0	CSTPP1
+Sample_4	treated	chr11	61804435	L	16	pLPC_mCherry_BP1_2	79	ambiguous	10	1	FADS1,FADS2
+Sample_4	treated	chr11	61804455	R	12	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_4	treated	chr11	111538690	L	10	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_4	treated	chr11	111538709	R	12	pLPC_mCherry_BP1_2	89	ambiguous	10	0	
+Sample_4	treated	chr12	77049618	L	8	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_4	treated	chr12	77049636	R	8	pLPC_mCherry_BP1_2	73	ambiguous	10	0	E2F7
+Sample_4	treated	chr16	25065936	R	3	pLPC_mCherry_BP1_2	46	fixed	7	0	
+Sample_4	treated	chr16	50405578	L	10	pLPC_mCherry_BP1_2	94	ambiguous	10	0	
+Sample_4	treated	chr16	50405597	R	8	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_4	treated	chr19	33521598	R	3	pMSCV_Cas9_EGFP	0	fixed	5	0	PEPD
+Sample_5	treated	chr1	60617209	R	4	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_5	treated	chr2	238290383	L	3	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_5	treated	chr2	238290403	R	3	pLPC_mCherry_BP1_2	70	ambiguous	6	0	ENSG00000283635
+Sample_5	treated	chr3	89406513	R	4	pLPC_mCherry_BP1_2	74	ambiguous	10	0	EPHA3
+Sample_5	treated	chr3	149400811	L	8	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_5	treated	chr4	100591812	L	6	pLPC_mCherry_BP1_2	58	ambiguous	10	1	EMCN
+Sample_5	treated	chr4	100591830	R	5	pLPC_mCherry_BP1_2	0	fixed	10	1	EMCN
+Sample_5	treated	chr7	64067978	L	2	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_5	treated	chrX	19037540	L	2	pMSCV_Cas9_EGFP	0	fixed	7	0	ADGRG2,ENSG00000286724
+Sample_5	treated	chr9	99800689	L	2	pMSCV_Cas9_EGFP	6	fixed	2	0	ENSG00000237461,STX17-DT
+Sample_5	treated	chr9	99800708	R	2	pLPC_mCherry_BP1_2	0	fixed	1	0	ENSG00000237461,STX17-DT
+Sample_5	treated	chr11	61804435	L	17	pLPC_mCherry_BP1_2	89	ambiguous	10	1	FADS1,FADS2
+Sample_5	treated	chr11	61804455	R	12	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_5	treated	chr11	111538690	L	9	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_5	treated	chr11	111538709	R	7	pLPC_mCherry_BP1_2	71	ambiguous	10	0	
+Sample_5	treated	chr12	18889961	R	2	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Sample_5	treated	chr12	77049618	L	6	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_5	treated	chr12	77049636	R	8	pLPC_mCherry_BP1_2	50	fixed	10	0	E2F7
+Sample_5	treated	chr13	56889658	R	5	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_5	treated	chr16	50405578	L	5	pLPC_mCherry_BP1_2	83	ambiguous	10	0	
+Sample_5	treated	chr16	50405597	R	6	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_6	treated	chr1	20644754	R	25	pLPC_mCherry_BP1_2	21	fixed	4	0	PINK1,PINK1-AS
+Sample_6	treated	chr1	20644735	L	26	pLPC_mCherry_BP1_2	0	fixed	4	0	PINK1,PINK1-AS
+Sample_6	treated	chr1	60617209	R	5	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_6	treated	chr1	64847624	R	4	pLPC_mCherry_BP1_2	13	fixed	3	0	JAK1
+Sample_6	treated	chr1	72976316	L	3	pMSCV_Cas9_EGFP	0	fixed	2	0	
+Sample_6	treated	chr1	111928609	L	3	pLPC_mCherry_BP1_2	0	fixed	1	0	KCND3
+Sample_6	treated	chr1	111928627	R	15	pLPC_mCherry_BP1_2	30	fixed	3	0	KCND3
+Sample_6	treated	chr1	153929580	R	2	pLPC_mCherry_BP1_2	0	fixed	1	0	DENND4B,ENSG00000284738
+Sample_6	treated	chr2	3558183	R	2	pMSCV_Cas9_EGFP	16	fixed	1	0	ENSG00000286905,RNASEH1
+Sample_6	treated	chr2	66275883	R	9	pLPC_mCherry_BP1_2	81	ambiguous	4	0	
+Sample_6	treated	chr2	66275865	L	3	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_6	treated	chr2	131040362	L	13	pLPC_mCherry_BP1_2	0	fixed	2	0	ARHGEF4,SMIM39
+Sample_6	treated	chr2	131040381	R	8	pLPC_mCherry_BP1_2	89	ambiguous	1	0	ARHGEF4,SMIM39
+Sample_6	treated	chr2	217612045	R	6	pLPC_mCherry_BP1_2	92	ambiguous	1	0	DIRC3
+Sample_6	treated	chr2	222101869	R	57	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_6	treated	chr2	222101851	L	12	pMSCV_Cas9_EGFP	55	ambiguous	3	0	
+Sample_6	treated	chr2	226752966	L	2	pMSCV_Cas9_EGFP	8	fixed	1	0	IRS1
+Sample_6	treated	chr2	238290383	L	46	pLPC_mCherry_BP1_2	0	fixed	9	0	ENSG00000283635
+Sample_6	treated	chr2	238290403	R	13	pLPC_mCherry_BP1_2	143	ambiguous	6	0	ENSG00000283635
+Sample_6	treated	chr3	27626824	R	6	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_6	treated	chr3	89406513	R	9	pLPC_mCherry_BP1_2	84	ambiguous	10	0	EPHA3
+Sample_6	treated	chr3	89406493	L	6	pLPC_mCherry_BP1_2	0	fixed	5	0	EPHA3
+Sample_6	treated	chr3	127798356	L	9	pLPC_mCherry_BP1_2	0	fixed	2	0	MGLL
+Sample_6	treated	chr3	127798377	R	16	pLPC_mCherry_BP1_2	87	ambiguous	3	0	MGLL
+Sample_6	treated	chr3	187905448	L	19	pMSCV_Cas9_EGFP	49	fixed	3	0	
+Sample_6	treated	chr4	7097092	L	2	pMSCV_Cas9_EGFP	59	ambiguous	1	0	LINC02447
+Sample_6	treated	chr4	7097110	R	2	pMSCV_Cas9_EGFP	0	fixed	1	0	LINC02447
+Sample_6	treated	chr4	90188931	R	3	pMSCV_Cas9_EGFP	27	fixed	1	0	CCSER1
+Sample_6	treated	chr4	100591830	R	502	pLPC_mCherry_BP1_2	74	ambiguous	10	1	EMCN
+Sample_6	treated	chr4	100591812	L	478	pLPC_mCherry_BP1_2	161	scattered	10	1	EMCN
+Sample_6	treated	chr4	186473598	L	28	pMSCV_Cas9_EGFP	5	fixed	4	0	ENSG00000272297,F11-AS1
+Sample_6	treated	chr4	187577452	L	3	pMSCV_Cas9_EGFP	69	ambiguous	1	0	LINC02492
+Sample_6	treated	chr4	187577471	R	2	pMSCV_Cas9_EGFP	0	fixed	2	0	LINC02492
+Sample_6	treated	chr5	150129776	L	12	pLPC_mCherry_BP1_2	0	fixed	2	0	PDGFRB
+Sample_6	treated	chr6	34766834	R	3	pLPC_mCherry_BP1_2	21	fixed	1	0	SNRPC
+Sample_6	treated	chr7	4748097	L	7	pLPC_mCherry_BP1_2	0	fixed	2	0	FOXK1
+Sample_6	treated	chr7	64067978	L	80	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_6	treated	chr7	64067996	R	16	pLPC_mCherry_BP1_2	79	ambiguous	7	0	ENSG00000285544,ZNF727
+Sample_6	treated	chr7	71536880	L	2	pMSCV_Cas9_EGFP	0	fixed	1	0	GALNT17
+Sample_6	treated	chr7	71536898	R	2	pMSCV_Cas9_EGFP	12	fixed	1	0	GALNT17
+Sample_6	treated	chr7	81790583	L	8	pMSCV_Cas9_EGFP	0	fixed	4	0	
+Sample_6	treated	chr7	128169615	L	27	pMSCV_Cas9_EGFP	0	fixed	3	0	ENSG00000292309
+Sample_6	treated	chr7	135950611	L	43	pMSCV_Cas9_EGFP	0	fixed	3	0	MTPN
+Sample_6	treated	chrX	8732046	L	2	pLPC_mCherry_BP1_2	39	fixed	1	0	ANOS1
+Sample_6	treated	chrX	120560441	R	2	pLPC_mCherry_BP1_2	0	fixed	1	0	CUL4B
+Sample_6	treated	chrX	129701092	L	369	pMSCV_Cas9_EGFP	142	ambiguous	5	0	
+Sample_6	treated	chrX	129701110	R	246	pMSCV_Cas9_EGFP	0	fixed	6	0	
+Sample_6	treated	chr8	3524963	L	282	pMSCV_Cas9_EGFP	0	fixed	6	0	CSMD1
+Sample_6	treated	chr8	3524982	R	113	pMSCV_Cas9_EGFP	33	fixed	5	0	CSMD1
+Sample_6	treated	chr8	37966399	L	5	pMSCV_Cas9_EGFP	8	fixed	4	0	ADRB3
+Sample_6	treated	chr8	68583733	R	3	pMSCV_Cas9_EGFP	0	fixed	1	0	C8orf34
+Sample_6	treated	chr9	22101905	R	11	pLPC_mCherry_BP1_2	0	fixed	1	0	CDKN2B-AS1
+Sample_6	treated	chr11	47135208	L	28	pLPC_mCherry_BP1_2	0	fixed	5	0	CSTPP1
+Sample_6	treated	chr11	47135226	R	8	pLPC_mCherry_BP1_2	71	ambiguous	2	0	CSTPP1
+Sample_6	treated	chr11	57913405	L	5	pMSCV_Cas9_EGFP	0	fixed	3	0	
+Sample_6	treated	chr11	61804455	R	239	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_6	treated	chr11	61804435	L	300	pLPC_mCherry_BP1_2	101	ambiguous	10	1	FADS1,FADS2
+Sample_6	treated	chr11	61967716	L	22	pMSCV_Cas9_EGFP	0	fixed	5	0	
+Sample_6	treated	chr11	70361297	R	24	pLPC_mCherry_BP1_2	79	ambiguous	3	0	ENSG00000254604,PPFIA1
+Sample_6	treated	chr11	91827176	R	4	pLPC_mCherry_BP1_2	0	fixed	1	0	LINC02756
+Sample_6	treated	chr11	91827157	L	4	pLPC_mCherry_BP1_2	47	fixed	2	0	LINC02756
+Sample_6	treated	chr11	95899700	R	45	pMSCV_Cas9_EGFP	97	ambiguous	4	0	MTMR2
+Sample_6	treated	chr11	95899701	R	2	pMSCV_Cas9_EGFP	37	fixed	2	0	MTMR2
+Sample_6	treated	chr11	111538709	R	204	pLPC_mCherry_BP1_2	100	ambiguous	10	0	
+Sample_6	treated	chr11	111538690	L	185	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_6	treated	chr10	131218921	R	2	pLPC_mCherry_BP1_2	0	fixed	1	0	TCERG1L
+Sample_6	treated	chr12	77049636	R	424	pLPC_mCherry_BP1_2	101	ambiguous	10	0	E2F7
+Sample_6	treated	chr12	77049618	L	312	pLPC_mCherry_BP1_2	95	ambiguous	10	0	E2F7
+Sample_6	treated	chr12	131884154	R	6	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_6	treated	chr13	37744329	R	2	pMSCV_Cas9_EGFP	0	fixed	2	0	TRPC4
+Sample_6	treated	chr13	39407385	R	3	pMSCV_Cas9_EGFP	21	fixed	1	0	LHFPL6
+Sample_6	treated	chr13	56889658	R	79	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_6	treated	chr13	56889640	L	13	pLPC_mCherry_BP1_2	83	ambiguous	6	0	
+Sample_6	treated	chr13	57708755	R	3	pMSCV_Cas9_EGFP	34	fixed	1	0	PCDH17
+Sample_6	treated	chr14	99603977	L	29	pMSCV_Cas9_EGFP	0	fixed	3	0	CCDC85C
+Sample_6	treated	chr14	99603997	R	25	pMSCV_Cas9_EGFP	61	ambiguous	3	0	CCDC85C
+Sample_6	treated	chr15	92072994	R	23	pLPC_mCherry_BP1_2	92	ambiguous	2	0	SLCO3A1
+Sample_6	treated	chr16	2490033	L	3	pMSCV_Cas9_EGFP	7	fixed	1	0	TBC1D24
+Sample_6	treated	chr16	50405578	L	80	pLPC_mCherry_BP1_2	88	ambiguous	10	0	
+Sample_6	treated	chr16	50405597	R	58	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_6	treated	chr17	20902668	R	3	pMSCV_Cas9_EGFP	21	fixed	1	0	CCDC144NL-AS1,RNASEH1P1
+Sample_6	treated	chr17	63872076	R	2	pMSCV_Cas9_EGFP	6	fixed	1	0	CSH2
+Sample_6	treated	chr17	77729870	L	4	pMSCV_Cas9_EGFP	40	fixed	1	0	
+Sample_6	treated	chr17	78660262	L	5	pMSCV_Cas9_EGFP	75	ambiguous	2	0	
+Sample_6	treated	chr18	78734254	R	30	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_6	treated	chr18	78734236	L	15	pLPC_mCherry_BP1_2	92	ambiguous	3	0	
+Sample_6	treated	chr20	57314970	L	18	pMSCV_Cas9_EGFP	94	ambiguous	3	0	
+Sample_6	treated	chr20	63643814	R	2	pLPC_mCherry_BP1_2	9	fixed	1	0	STMN3
+Sample_6	treated	chr19	33521598	R	232	pMSCV_Cas9_EGFP	0	fixed	5	0	PEPD
+Sample_6	treated	chr19	33521580	L	108	pMSCV_Cas9_EGFP	134	ambiguous	3	0	PEPD
+Sample_6	treated	chr19	41928463	L	4	pLPC_mCherry_BP1_2	0	fixed	1	0	ARHGEF1
+Sample_6	treated	chr22	39566709	R	2	pLPC_mCherry_BP1_2	0	fixed	1	0	
+Sample_6	treated	chr21	43694614	L	2	pMSCV_Cas9_EGFP	0	fixed	3	0	RRP1B
+Sample_7	treated	chr1	20644735	L	2	pLPC_mCherry_BP1_2	0	fixed	4	0	PINK1,PINK1-AS
+Sample_7	treated	chr1	20644754	R	2	pLPC_mCherry_BP1_2	74	ambiguous	4	0	PINK1,PINK1-AS
+Sample_7	treated	chr1	60617209	R	7	pLPC_mCherry_BP1_2	0	fixed	10	0	LINC01748
+Sample_7	treated	chr2	66275883	R	2	pLPC_mCherry_BP1_2	84	ambiguous	4	0	
+Sample_7	treated	chr3	89406513	R	5	pLPC_mCherry_BP1_2	89	ambiguous	10	0	EPHA3
+Sample_7	treated	chr4	100591830	R	9	pLPC_mCherry_BP1_2	2	fixed	10	1	EMCN
+Sample_7	treated	chr4	100591812	L	8	pLPC_mCherry_BP1_2	67	ambiguous	10	1	EMCN
+Sample_7	treated	chr7	64067978	L	3	pLPC_mCherry_BP1_2	0	fixed	10	0	ENSG00000285544,ZNF727
+Sample_7	treated	chr7	64067996	R	2	pLPC_mCherry_BP1_2	42	fixed	7	0	ENSG00000285544,ZNF727
+Sample_7	treated	chr11	61804455	R	21	pLPC_mCherry_BP1_2	0	fixed	10	1	FADS1,FADS2
+Sample_7	treated	chr11	61804435	L	20	pLPC_mCherry_BP1_2	98	ambiguous	10	1	FADS1,FADS2
+Sample_7	treated	chr11	111538709	R	6	pLPC_mCherry_BP1_2	96	ambiguous	10	0	
+Sample_7	treated	chr11	111538690	L	7	pLPC_mCherry_BP1_2	0	fixed	10	0	
+Sample_7	treated	chr12	77049618	L	7	pLPC_mCherry_BP1_2	0	fixed	10	0	E2F7
+Sample_7	treated	chr12	77049636	R	7	pLPC_mCherry_BP1_2	78	ambiguous	10	0	E2F7
+Sample_7	treated	chr13	56889658	R	6	pLPC_mCherry_BP1_2	0	fixed	9	0	
+Sample_7	treated	chr13	56889640	L	2	pLPC_mCherry_BP1_2	20	fixed	6	0	
+Sample_7	treated	chr16	25065936	R	5	pLPC_mCherry_BP1_2	69	ambiguous	7	0	
+Sample_7	treated	chr16	25065918	L	3	pLPC_mCherry_BP1_2	0	fixed	6	0	
+Sample_7	treated	chr16	50405578	L	8	pLPC_mCherry_BP1_2	60	ambiguous	10	0	
+Sample_7	treated	chr16	50405597	R	7	pLPC_mCherry_BP1_2	0	fixed	10	0	

@@ -1,0 +1,81 @@
+sample	step	n_records	why
+Ctr_1	0_window_records	2511	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Ctr_1	1_duplicate_flag	106	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Ctr_1	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Ctr_1	3_supplementary	16	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Ctr_1	4_kept_nondup	2405	去重后参与断端/接头判定的记录
+Ctr_1	5_kept_primary	2389	仅 primary，用于'连续跨过'与深度类判定
+Ctr_1	6_spanning_CUT1	35	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Ctr_1	6_spanning_CUT2	34	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Ctr_2	0_window_records	2381	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Ctr_2	1_duplicate_flag	220	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Ctr_2	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Ctr_2	3_supplementary	25	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Ctr_2	4_kept_nondup	2161	去重后参与断端/接头判定的记录
+Ctr_2	5_kept_primary	2136	仅 primary，用于'连续跨过'与深度类判定
+Ctr_2	6_spanning_CUT1	30	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Ctr_2	6_spanning_CUT2	19	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Ctr_3	0_window_records	2254	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Ctr_3	1_duplicate_flag	86	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Ctr_3	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Ctr_3	3_supplementary	11	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Ctr_3	4_kept_nondup	2168	去重后参与断端/接头判定的记录
+Ctr_3	5_kept_primary	2157	仅 primary，用于'连续跨过'与深度类判定
+Ctr_3	6_spanning_CUT1	37	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Ctr_3	6_spanning_CUT2	32	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_1	0_window_records	2563	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_1	1_duplicate_flag	103	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_1	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_1	3_supplementary	28	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_1	4_kept_nondup	2460	去重后参与断端/接头判定的记录
+Sample_1	5_kept_primary	2432	仅 primary，用于'连续跨过'与深度类判定
+Sample_1	6_spanning_CUT1	22	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_1	6_spanning_CUT2	18	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_2	0_window_records	2509	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_2	1_duplicate_flag	300	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_2	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_2	3_supplementary	36	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_2	4_kept_nondup	2209	去重后参与断端/接头判定的记录
+Sample_2	5_kept_primary	2173	仅 primary，用于'连续跨过'与深度类判定
+Sample_2	6_spanning_CUT1	14	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_2	6_spanning_CUT2	19	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_3	0_window_records	2767	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_3	1_duplicate_flag	157	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_3	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_3	3_supplementary	53	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_3	4_kept_nondup	2610	去重后参与断端/接头判定的记录
+Sample_3	5_kept_primary	2557	仅 primary，用于'连续跨过'与深度类判定
+Sample_3	6_spanning_CUT1	24	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_3	6_spanning_CUT2	16	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_4	0_window_records	2434	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_4	1_duplicate_flag	94	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_4	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_4	3_supplementary	32	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_4	4_kept_nondup	2340	去重后参与断端/接头判定的记录
+Sample_4	5_kept_primary	2308	仅 primary，用于'连续跨过'与深度类判定
+Sample_4	6_spanning_CUT1	6	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_4	6_spanning_CUT2	10	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_5	0_window_records	2055	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_5	1_duplicate_flag	79	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_5	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_5	3_supplementary	32	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_5	4_kept_nondup	1976	去重后参与断端/接头判定的记录
+Sample_5	5_kept_primary	1944	仅 primary，用于'连续跨过'与深度类判定
+Sample_5	6_spanning_CUT1	19	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_5	6_spanning_CUT2	21	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_6	0_window_records	131368	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_6	1_duplicate_flag	90184	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_6	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_6	3_supplementary	18872	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_6	4_kept_nondup	41184	去重后参与断端/接头判定的记录
+Sample_6	5_kept_primary	22312	仅 primary，用于'连续跨过'与深度类判定
+Sample_6	6_spanning_CUT1	23	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_6	6_spanning_CUT2	36	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_7	0_window_records	2562	窗口 chr3:195539947-195546149 内全部 SAM 记录
+Sample_7	1_duplicate_flag	74	FLAG 0x400；PCR/光学重复，不是独立分子 ⇒ 计数时排除
+Sample_7	2_secondary	0	FLAG 0x100；bwa-mem2 未给 -a 故应为 0，非 0 则需查比对参数
+Sample_7	3_supplementary	53	FLAG 0x800；不是独立分子，但是 split/chimeric 结构的直接证据 ⇒ 单独建表不丢弃
+Sample_7	4_kept_nondup	2488	去重后参与断端/接头判定的记录
+Sample_7	5_kept_primary	2435	仅 primary，用于'连续跨过'与深度类判定
+Sample_7	6_spanning_CUT1	0	起点<=cut-15 且终点>=cut+15 且 maxclip<20
+Sample_7	6_spanning_CUT2	0	起点<=cut-15 且终点>=cut+15 且 maxclip<20

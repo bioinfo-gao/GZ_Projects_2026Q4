@@ -1,0 +1,8 @@
+step	n
+records_total	7308235
+excl_not_pass	1628598
+excl_multiallelic	357243
+excl_not_single_carrier	5150964
+excl_lowqual_carrier_elsewhere	121023
+excl_insufficient_homref_coverage	22763
+kept_private	27644
