@@ -1,0 +1,11 @@
+sample	group	read_pairs	raw_depth_x	usable_depth_x	mean_insert_size_bp	duplicate_rate_pct
+Ctr_1	control	576728998	53.8	27.6	157.7	5.1
+Ctr_2	control	544862727	50.8	23.4	152.6	12.1
+Ctr_3	control	497440989	46.4	25.6	169.4	4.4
+Sample_1	edited	567126162	52.9	25.6	148.6	5.2
+Sample_2	edited	560871311	52.3	22.7	148.6	15.2
+Sample_3	edited	596138972	55.6	32.8	186.6	7.2
+Sample_4	edited	535487760	50.0	24.6	151.1	5.1
+Sample_5	edited	499253985	46.6	24.7	162.1	4.5
+Sample_6	edited	675460326	63.0	20.7	144.6	35.4
+Sample_7	edited	569098815	53.1	28.2	162.5	4.5

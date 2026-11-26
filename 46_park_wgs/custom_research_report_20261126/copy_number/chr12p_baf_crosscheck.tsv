@@ -1,0 +1,31 @@
+sample	group	arm	n_het	median_baf	frac_below_0_40	median_of_low_mode
+Ctr_1	control	chr12p	125	0.423	0.312	0.375
+Ctr_1	control	chr12q	369	0.429	0.309	0.375
+Ctr_1	control	chr7 (reference arm)	610	0.435	0.305	0.371
+Ctr_2	control	chr12p	87	0.417	0.391	0.349
+Ctr_2	control	chr12q	271	0.433	0.299	0.375
+Ctr_2	control	chr7 (reference arm)	466	0.435	0.277	0.381
+Ctr_3	control	chr12p	117	0.423	0.359	0.357
+Ctr_3	control	chr12q	363	0.429	0.331	0.368
+Ctr_3	control	chr7 (reference arm)	579	0.433	0.29	0.375
+Sample_1	treated	chr12p	137	0.239	0.993	0.238
+Sample_1	treated	chr12q	323	0.438	0.263	0.379
+Sample_1	treated	chr7 (reference arm)	549	0.435	0.275	0.375
+Sample_2	treated	chr12p	135	0.259	0.963	0.255
+Sample_2	treated	chr12q	263	0.429	0.319	0.364
+Sample_2	treated	chr7 (reference arm)	427	0.429	0.323	0.375
+Sample_3	treated	chr12p	135	0.232	0.985	0.232
+Sample_3	treated	chr12q	417	0.433	0.3	0.372
+Sample_3	treated	chr7 (reference arm)	688	0.438	0.275	0.38
+Sample_4	treated	chr12p	135	0.25	0.985	0.248
+Sample_4	treated	chr12q	335	0.429	0.293	0.375
+Sample_4	treated	chr7 (reference arm)	531	0.433	0.311	0.367
+Sample_5	treated	chr12p	138	0.246	0.986	0.245
+Sample_5	treated	chr12q	321	0.438	0.299	0.379
+Sample_5	treated	chr7 (reference arm)	544	0.43	0.311	0.377
+Sample_6	treated	chr12p	131	0.26	0.954	0.259
+Sample_6	treated	chr12q	197	0.433	0.289	0.381
+Sample_6	treated	chr7 (reference arm)	322	0.429	0.323	0.375
+Sample_7	treated	chr12p	137	0.233	0.993	0.233
+Sample_7	treated	chr12q	379	0.429	0.301	0.379
+Sample_7	treated	chr7 (reference arm)	625	0.432	0.29	0.375

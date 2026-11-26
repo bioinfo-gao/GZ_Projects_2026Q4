@@ -1,0 +1,11 @@
+sample	group	total	snv	indel	snv_chr12p	indel_chr12p	snv_other	indel_other
+Ctr_1	control	1564	666	898	12	14	654	884
+Ctr_2	control	3816	1463	2353	24	41	1439	2312
+Ctr_3	control	1266	622	644	10	18	612	626
+Sample_1	treated	2322	1136	1186	12	15	1124	1171
+Sample_2	treated	4037	1425	2612	12	8	1413	2604
+Sample_3	treated	1795	836	959	3	1	833	958
+Sample_4	treated	2552	1221	1331	9	8	1212	1323
+Sample_5	treated	2389	1573	816	15	6	1558	810
+Sample_6	treated	5532	2129	3403	6	16	2123	3387
+Sample_7	treated	2371	1664	707	13	3	1651	704

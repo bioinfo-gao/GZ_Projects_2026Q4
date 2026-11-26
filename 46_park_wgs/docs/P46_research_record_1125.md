@@ -28,8 +28,8 @@
 | :--- | :---: |
 | 细胞系 | hTERT RPE-1（ATCC），全部为**单克隆**扩增系，传代均 < 20 |
 | 已整合外源序列 | 53BP1-FFR-mCherry（构建体 `mCherry-BP1-2 pLPC-Puro`），**逆转录病毒**递送，荧光分选后 3 cells/well 扩增 |
-| 编辑体系 | **dual caged gRNA**：caging 基团阻断切割，**光照解笼**，借此选择性地只在单个或两个等位基因上诱导活性 |
-| Cas9 递送 | **RNP（Cas9 蛋白 + gRNA，nucleofection）**，本轮**未转入任何 Cas9 质粒**（客户 2026-11-09 邮件确认） |
+| 编辑体系 | **caged dual-cut CRISPR**：两条 gRNA（间距 202 bp）均带 caging 基团，未解笼时阻断切割；**光照解笼**，借此选择性地只在单个或两个等位基因上诱导活性。（客户原文写作 `dual caged gRNA`；`dual` 按本项目既有读法 = **两条 gRNA 双切**，见 `Biology/sLK_of_CRISPR_Editing/P31_P46_caged_dual_cut_wgs_rationale_1125.md` §4；客户未逐字确认"两条均带 caging"，此为依据切点与 P31 同体系的读法） |
+| 递送物与递送方式 | **RNP**：Cas9 蛋白与上述两条 caged gRNA **在体外预组装**，经 **nucleofection 单次**导入（gRNA 只递送这一次，表中「编辑体系」与本行说的是同一批分子的设计与递送形式，不是两次递送）。本轮**未转入任何 Cas9 质粒**（客户 2026-11-09 邮件确认） |
 | 靶点 | **PPP1R2**，GRCh38 chr3；两个切点 **195,542,947 / 195,543,149**（间距 202 bp） |
 | gRNA1 | `GACTTCCTCTATGGTGGCGT` + PAM `CGG` |
 | gRNA2 | `GTTTCCGAGGCAGCAGTTG` + PAM `CGG`（客户写作 19 nt；基因组补全的 20 nt 为 `CGTTTCCGAGGCAGCAGTTG`。19/20 nt 之问客户两轮均未正面答复 ⇒ **两个版本都纳入脱靶枚举**） |
@@ -353,3 +353,19 @@ GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均
   消费者以 `mkdir` 原子抢占、算完即删该副本。
   实测：**单路顺序复制 340 MiB/s**，而 3 路并发复制聚合只有 76 MiB/s、DELLY 直读机械盘 24–40 MiB/s
   ⇒ 机械盘上「并发」是负优化，复制必须单路。（340 这个数含页缓存成分，因该文件先前已部分读过。）
+
+- **2026-11-26 05:45 —— 复核 ② 的第一版判据【定标失败，已作废】，改用读段支持数**
+  原判据：真整合接头应在多条读段间"固定"，故以载体坐标跨度 `vec_pos_max − vec_pos_min`
+  ≤50 bp 判 fixed、>150 bp 判 scattered。
+  **定标结果与预期相反** ⇒ 判据无效：阳性对照（P31 两个共有接头，40 条记录）只有 17/40 为 fixed、
+  跨度中位数 74 bp；而最可疑的「仅 1 个样本」层（68 条）却有 61/68 为 fixed、跨度中位数 0 bp。
+  **根因：跨度被读段深度混淆** —— 实测 reads=2 时跨度中位数 0、fixed 占比 90%；reads≥10 时
+  跨度中位数 26、fixed 占比 55%。两条读段（常来自同一片段）必然"坐标一致"，那不是固定性证据。
+  **改用的判据**：读段支持数。阳性对照读段中位数 **16**（最小 5），而「仅 1 个样本」层中位数 **2**
+  （最大 11）⇒ 两层清晰分离。按"仅 1 样本且读段 ≥5"筛出 **7 个**需逐条判读的接头
+  （Ctr_2 chr12 GPN3；Sample_2 chr7；Sample_5 chr3；Sample_6 chr2×2、chr9 CDKN2B-AS1、chr12），
+  其中 **4 个属 Sample_6**，与其 amplicon 样污染一致。
+  ⚠ 教训：**"多条读段一致"在低深度下是平凡成立的**，任何以"一致性/离散度"为形式的判据
+  都必须先验证它不随深度平凡变化 —— 这正是阳性对照把它拦下来的原因。
+  产物：`analysis/stage5_verify_20261126/tables/junction_breakpoint_fixedness.tsv`（含作废的 fixedness 列，
+  保留以备对照）+ `junction_fixedness_summary.json`。
