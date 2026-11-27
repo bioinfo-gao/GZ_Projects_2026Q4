@@ -227,6 +227,10 @@ integration_sharing_n10 / stage3_summary.json / filter_impact_audit）
 "某私有事件是否落在脱靶候选/整合位点上（有机制解释）"。
 
 **4a germline SNV/indel 联合 call（完成）**
+**目的（为什么同一亲本仍要联合 call）**：10 个克隆同源 ⇒ 每样本约 490–500 万个 non-ref 位点绝大多数是共享的亲本背景，本身不回答任何问题；
+要找的是克隆私有变异（4d，回答客户问题 3）。判定"私有"需要**每个位点上 10 个样本都有基因型与深度**，
+才能把"其余样本是 0/0"与"其余样本没覆盖到"分开 —— 逐样本单独 call 只输出变异位点，做不到这一点。
+4a 本身不进报告结论，是 4d 的输入（chr12p BAF 互证用的是 Stage 0 pileup，不依赖 4a）。
 GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均分 48 块 × 10 样本 = 480 shard；
 官方 hard filter（不做 BQSR/VQSR：本机无 known-sites 与训练集，报告 Methods 写明）；
 注释 gnomAD AF + ClinVar（**不改染色体名**，MT→chrM 的改名会静默丢记录）。
