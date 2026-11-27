@@ -178,7 +178,7 @@ carrying the deletion.
 | Sample_2 | 4 | 0.33 / 0.24 | Deletion present in ~32% of cells |
 | Sample_3 | 20 | 0.54 / 0.61 | One of two copies |
 | Sample_4 | 8 | 0.67 / 0.50 | One of two copies |
-| Sample_5 | 13 | 1.00 / 0.50 | One copy deleted; the other carries a small indel at cut 1 (12 reads) |
+| Sample_5 | 13 | 1.00 / 0.50 | One copy deleted; the other carries an 8 bp deletion at cut 1, chr3:195,542,947–195,542,954 (12 reads) |
 | Sample_6 | 8,379 | 1.00 / 1.00 | Not interpretable — see below |
 | Sample_7 | 22 | 1.00 / 1.00 | Both copies deleted |
 
@@ -289,7 +289,7 @@ Sample_6 at 34.7%), so part of the spread between clones reflects library prepar
 | Sample_2 | Single-allele deletion, ~32% of cells | Two independent estimates agree (0.32 and 0.24–0.33) |
 | Sample_3 | Single-allele deletion, clean | Fractions 0.54/0.61, 20 junction reads |
 | Sample_4 | Single-allele deletion, clean | Fractions 0.67/0.50, 8 junction reads |
-| Sample_5 | One copy deleted + one copy with a small indel at cut 1 | Cut 1: 0 intact reads, 12 reads carrying an indel; cut 2: 13 intact reads |
+| Sample_5 | One copy deleted + one copy with an 8 bp deletion at cut 1 | Cut 1: 0 intact reads, 12 reads carrying an indel; cut 2: 13 intact reads |
 | Sample_6 | Genotype not determinable from this DNA preparation | 19,620 reads in the window; depth rises inside the deleted interval |
 | Sample_7 | Both copies deleted | Fractions 1.00/1.00, 22 junction reads, 0 intact reads at either cut site |
 | All ten | No off-target cutting detected | 1,584 candidates, smallest p = 0.18, no recurrent indel among the 7 edited-only sites |
@@ -334,6 +334,11 @@ Sample_6 at 34.7%), so part of the spread between clones reflects library prepar
    confirms only that all samples come from the same individual.
 9. **Base quality score recalibration was not applied** (no training resources on this platform), so
    variant quality values are as produced by the sequencer.
+10. **Coding consequences are predictions from the gene annotation, not measurements.** That the 202 bp
+   deletion removes the start codon and the first 26 codons, and that Sample_5's 8 bp deletion shifts the
+   reading frame from residue 25 (predicting a 45-residue product against 205 in the normal protein),
+   follows from the GENCODE v45 annotation of PPP1R2 (transcript ENST00000618156.5). No protein or RNA was
+   measured in this project, so whether either allele still yields a product is not settled by these data.
 
 ### 8.4 Suggested next steps
 
@@ -341,7 +346,7 @@ Sample_6 at 34.7%), so part of the spread between clones reflects library prepar
 | :--- | :---: |
 | Is Sample_6 edited on both copies? | Re-extract DNA from a fresh culture of Sample_6 and repeat PCR plus Sanger sequencing across the target, keeping the PCR product physically separate from the DNA preparation |
 | Are Sample_1 and Sample_2 usable? | Re-clone each from a single cell, then genotype the daughter clones |
-| What is the second allele in Sample_5? | Sanger-sequence across cut 1 to read the exact indel |
+| Does either Sample_5 allele still make a protein? | The second allele is already identified (8 bp deletion at cut 1, Section 7.1); a protein blot would show whether either allele yields a product |
 | Does the chr12p difference matter for your phenotype? | Karyotype or digital PCR on the parental culture and on both sets of clones |
 | Would a deeper off-target search change the answer? | A higher sequencing depth on the current clones would raise sensitivity for low-frequency events at the same candidate sites |
 
