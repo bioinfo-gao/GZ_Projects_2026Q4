@@ -385,3 +385,19 @@ GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均
   E 本轮四条必写限制（Sample_6 不可判读、Sample_1/2 亚克隆、chr12p 共分离措辞、SV 单一方法）。
   ⚠ 自审首轮 4 条 FAIL 全是**检查器匹配过死**（对照三行在报告里合并为 `0 / 0 / 0`；大数按客户
   可读性带千分位），**报告本身无缺陷** ⇒ 修检查器而非改报告，并加 `num_in()` 统一数字匹配口径。
+
+---
+
+## 2026-11-27 拟交付版 `custom_research_report_20261127/`（内部审阅中，未发送）
+
+1126 版目录冻结不动；1127 版先只放**已修改**的文件，审阅与修改接近完成时再把未改动的文件整体补入。
+
+| 文件 | 状态 | 修改 |
+| :--- | :---: | :--- |
+| `figures/Fig3_sample_identity_and_contamination.pdf` | 已放入 | A：图注写明色标只覆盖 0.995–1.000、成对一致率 99.73–99.81% ⇒ 同一个体，格子深浅差 <0.1% 是噪声；B：标题改为 "Cross-individual DNA contamination (none detected)"，图注写明该法测不到位点特异的扩增产物污染（Sample_6，见 §7.1） |
+| `figures/Fig5_off_target_screen.pdf` | 已放入 | 1126 版 Control/Edited 图例在全图顶部，像两 panel 共用，实际只属于 Panel B ⇒ 改挂在 Panel B 绘图区右外侧；Panel A 四类由 x 轴标签说明、无图例。代码 `scripts/20261127/32_fig5_revised.py`；1126 原图不改 |
+
+- 代码：`scripts/20261127/32_fig3_revised.py`（原 `scripts/32_figures.py` 未改）；产物 `analysis/stage5_figures_20261127/`。
+  该目录内 3 个 `Fig3_draft*` 为排版失败的中间稿（注释压刻度标签；draft3 的根因是 `finalize_figure` 内部先 `tight_layout` 使注释位置作废），保留备查，不进交付。
+- 旧版 Fig 3 即 `custom_research_report_20261126/figures/` 内同名文件 ⇒ **同名两版，1127 目录内的为当前有效版**。
+- **收尾待办**：① 补入未改动的全部文件；② 报告改名 `Dual_Cut_Project_WGS_1127.md`，Report Date 与 §9 文件表同步改为 1127，§9 图表 Figure 3 行可同步措辞；③ 重跑自审与 check_report。
