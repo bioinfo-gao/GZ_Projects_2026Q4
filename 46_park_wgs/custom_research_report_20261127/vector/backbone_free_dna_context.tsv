@@ -1,0 +1,11 @@
+sample	group	dup_pct	AmpR_copies	mCherry_copies
+Ctr_1	control	5.1	0.736	0.784
+Ctr_2	control	12.1	5.89	1.724
+Ctr_3	control	4.4	0.653	0.729
+Sample_1	treated	5.2	1.673	0.942
+Sample_2	treated	15.2	3.792	1.799
+Sample_3	treated	7.2	11.639	2.682
+Sample_4	treated	5.1	0.98	0.871
+Sample_5	treated	4.5	0.569	0.619
+Sample_6	treated	35.4	36.776	45.968
+Sample_7	treated	4.5	0.642	0.906

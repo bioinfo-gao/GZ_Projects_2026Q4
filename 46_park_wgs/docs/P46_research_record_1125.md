@@ -396,8 +396,94 @@ GATK HaplotypeCaller `-ERC GVCF` → CombineGVCFs → GenotypeGVCFs，按 bp 均
 | :--- | :---: | :--- |
 | `figures/Fig3_sample_identity_and_contamination.pdf` | 已放入 | A：图注写明色标只覆盖 0.995–1.000、成对一致率 99.73–99.81% ⇒ 同一个体，格子深浅差 <0.1% 是噪声；B：标题改为 "Cross-individual DNA contamination (none detected)"，图注写明该法测不到位点特异的扩增产物污染（Sample_6，见 §7.1） |
 | `figures/Fig5_off_target_screen.pdf` | 已放入 | 1126 版 Control/Edited 图例在全图顶部，像两 panel 共用，实际只属于 Panel B ⇒ 改挂在 Panel B 绘图区右外侧；Panel A 四类由 x 轴标签说明、无图例。代码 `scripts/20261127/32_fig5_revised.py`；1126 原图不改 |
+| `figures/Fig6_vector_copy_number.pdf` | 已放入 | 全长均值改为三 panel 的归属明确测量（见本文件 v3 一节） |
+| `Dual_Cut_Project_WGS_1127.md` | 已放入 | Report Date→1127；§3 第4条、§6 方法、§7.4 表与正文、§8.2 证据表、§9 清单按 v3 结果改写 |
+| `vector/` 4 个新表 | 已放入 | backbone_copies_single_reference / backbone_junction_crosscheck / backbone_free_dna_context / pMSCV_only_copies |
 
 - 代码：`scripts/20261127/32_fig3_revised.py`（原 `scripts/32_figures.py` 未改）；产物 `analysis/stage5_figures_20261127/`。
   该目录内 3 个 `Fig3_draft*` 为排版失败的中间稿（注释压刻度标签；draft3 的根因是 `finalize_figure` 内部先 `tight_layout` 使注释位置作废），保留备查，不进交付。
 - 旧版 Fig 3 即 `custom_research_report_20261126/figures/` 内同名文件 ⇒ **同名两版，1127 目录内的为当前有效版**。
 - **收尾待办**：① 补入未改动的全部文件；② 报告改名 `Dual_Cut_Project_WGS_1127.md`，Report Date 与 §9 文件表同步改为 1127，§9 图表 Figure 3 行可同步措辞；③ 重跑自审与 check_report。
+
+---
+
+## 2026-11-27 Stage 3 v3：共享骨架导致的 MAPQ-0 全丢弃（§7.4 阴性对照返工）
+
+### 发现经过
+
+用户问 Fig 6 Panel B「本实验没用过这个载体，为什么还这么高」。拆元件后发现 Panel B 的全长均值由
+**与报告载体共享的骨架** + **EGFP CDS** 驱动，Cas9（4,101 bp，此载体独有载荷）全部 10 样本 0.003–0.235 拷贝。
+顺带查出 §7.4 的阴性对照失效。
+
+### 失效机制（实测，非推测）
+
+| 事实 | 实测值 |
+| :--- | :---: |
+| pMSCV 8407–10390 与 pLPC 1–1973（含 ori+AmpR）一致度 | 99.1%（blastn，1,984 bp） |
+| 落在 pLPC AmpR 982–1842 的读段数 | Ctr_1 55 / Sample_3 837 / Sample_6 1,763 / Sample_7 46 |
+| 其中 MAPQ≥20 的 | **全部为 0** |
+| 深度口径 | `samtools depth -a -Q 20`（`scripts/23_stage3_rescan_v2_modeB.sh:89`） |
+| pLPC 1–1973 覆盖率（10 样本） | **全部 0.0%** |
+
+⇒ 同一索引里存在 99.1% 同源拷贝 ⇒ 每条骨架读段 MAPQ=0 ⇒ 被 `-Q 20` 全部丢弃。
+**骨架在不在，这个测法都输出 0.00。** 报告 §7.4「AmpR 0.00 copies / Negative control passed /
+no backbone carried in」与 §6「the plasmid backbone had to be absent. All three held」**不成立**
+（不是"测出不存在"，是"没有检出力"）。违反「0 个/空结果当结论前必须先证明分母不是 NA」。
+
+### v3 decision table（开跑前定，不在运行中改口径）
+
+| 项 | 定义 |
+| :--- | :--- |
+| 研究问题 | 报告载体的质粒骨架（ori/AmpR）是否被带进克隆？若在，是整合还是游离污染 DNA？ |
+| 观察/证据单位 | 回贴到**单载体索引**的候选读段的逐碱基深度；独立互证单位＝两载体分歧位点上的等位计数 |
+| data universe | v2 已保存的候选读段 `stage3_vector_v2_20261124/seq/<S>.candidates.fa.gz`（未重新从 BAM 提取，口径与 v2 完全一致，可比） |
+| 保留规则 | 主测：pLPC **单载体**索引 + `-Q 20`（无同源竞争者 ⇒ MAPQ 不再被同源拷贝压成 0）。互证：双载体 BAM，**不设 MAPQ 下限**，只在分歧位点计等位 |
+| 判定指标 | 每元件 copies/diploid（2×mean_depth/genome_depth，与 v2 同口径）；分歧位点 pLPC-allele vs pMSCV-allele 读段数 |
+| 允许的结论 | 可判「骨架序列是否存在、约多少拷贝、来自哪个质粒」；**整合 vs 游离污染**须另有接头证据，仅凭拷贝数不得下结论 |
+| 过滤审计 | 输出每步前后读段数与丢弃原因表 |
+| 不做的事 | 不重新从 BAM 提取候选读段、不改 v2 产物、不删任何旧目录 |
+
+产物：`analysis/stage3_backbone_v3_20261127/`（pLPC 单载体）+ `analysis/stage3_pMSCVonly_v3_20261127/`（pMSCV 单载体，使 Fig 6 两 panel 方法对称）
+代码：`scripts/20261127/35_backbone_v3_map.sh`、`35b_pMSCVonly_map.sh`、`36_backbone_v3_summarize.py`、`37_pMSCVonly_summarize.py`
+
+### v3 结果（2026-11-27 00:30）
+
+**主测：同一深度口径，只把参考换成单载体 ⇒ 骨架从"恒 0"变成"处处都在"**
+
+| 样本 | v2 双载体 AmpR 深度（读段数 / MAPQ≥20） | v3 单载体 AmpR 深度 | 覆盖 | 拷贝/二倍体 |
+| :--- | :---: | :---: | :---: | :---: |
+| Ctr_1 | 0.00（55 / 0） | 17.16 | 100% | 0.736 |
+| Ctr_2 | 0.00（348 / 0） | 115.68 | 100% | 5.890 |
+| Ctr_3 | 0.00（40 / 0） | 13.59 | 100% | 0.653 |
+| Sample_1 | 0.00（109 / 0） | 36.93 | 100% | 1.673 |
+| Sample_2 | 0.00（223 / 0） | 72.99 | 100% | 3.792 |
+| Sample_3 | 0.00（837 / 0） | 287.59 | 100% | 11.639 |
+| Sample_4 | 0.00（64 / 0） | 20.67 | 100% | 0.980 |
+| Sample_5 | 0.00（36 / 0） | 11.62 | 100% | 0.569 |
+| Sample_6 | 0.00（1763 / 0） | 597.87 | 100% | 36.776 |
+| Sample_7 | 0.00（46 / 0） | 14.95 | 100% | 0.642 |
+
+**互证换了一种（原设计被自己否掉）**：分歧位点等位计数**废弃** —— pLPC 1-1973 与 pMSCV 8407-10390
+的 99.1% 差异里只有 **7 个替换**（其余是 11 处 gap），落在 ori/AmpR 内的仅 **1 个** ⇒ 检出力不足。
+首轮跑出来 10 个样本全是 0，**若当成"骨架不是 pLPC 来的"就会重犯同一类错误**（0 结果 = 分母为空）。
+改用**接头证据**（失效模式与深度法完全不同）：逆转录病毒载体只有 LTR 之间的盒式序列会整合。
+
+| 结果 | 值 |
+| :--- | :---: |
+| 骨架（pLPC 1–1973）内的 vector–genome 接头 | **10 个克隆全部 0 条** |
+| 盒式（1978–7918）内的接头 | 每克隆 18–51 条，合计 **268 条**（分母非空，接头法有检出力） |
+| 13 条共有接头的载体端坐标 | 全部落在 2427–5401（LTR/CMV/mCherry），**无一在骨架** |
+
+**⇒ 结论（比 1126 版更强且证据正确）**：骨架**未整合**；但骨架 DNA 确实存在于文库中
+（0.57–36.8 拷贝当量），是**残留游离质粒**，且与文库重复率同向（Sample_5 dup 4.5%/0.57 拷贝 ↔
+Sample_6 dup 35.4%/36.78 拷贝）。不影响 §7.1 的基因型判读。
+
+**一致性检查（v2 双载体 vs v3b 单载体）**：Cas9/EGFP 在 pLPC 中无同源序列 ⇒ 两口径应一致。
+实测 20 个比较全部一致（容差 10%+0.05 拷贝）⇒ **歧义只发生在共享骨架这一段**，其余结论不受影响。
+
+### Fig 6 改版
+
+1126 版 Panel B 画的是 11,191 bp **全长平均**，被 ① 共享骨架 ② EGFP CDS 拉高，而此载体独有的
+Cas9（4,101 bp = 全长 37%）仅 0.003–0.231 拷贝 ⇒ 全长均值把别处来的同源序列记在了这个载体头上。
+改为三 panel，每个只画归属明确的序列，且都用单载体索引：A mCherry CDS / B Cas9 CDS /
+C 共享骨架 ori+AmpR（图注写明 0 条骨架接头 ⇒ 未整合）。代码 `scripts/20261127/32_fig6_revised.py`。

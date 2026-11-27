@@ -1,0 +1,11 @@
+sample	group	junctions_in_backbone	junctions_in_cassette	total_pLPC_junctions
+Ctr_1	control	0	23	23
+Ctr_2	control	0	30	30
+Ctr_3	control	0	26	26
+Sample_1	treated	0	21	21
+Sample_2	treated	0	26	26
+Sample_3	treated	0	33	33
+Sample_4	treated	0	19	19
+Sample_5	treated	0	18	18
+Sample_6	treated	0	51	51
+Sample_7	treated	0	21	21
