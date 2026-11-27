@@ -23,11 +23,13 @@ Abbreviations used throughout: **WGS** = whole-genome sequencing; **gRNA** = gui
 
 ## 2. Core Conclusions
 
-This section gives the practical answer for each clone in plain language, without the reasoning.
+This section summarizes the practical conclusion for each clone; 
+The supporting evidence and inference are presented in the later sections:
 Section 3 lists what we measured, grouped by topic rather than by clone.
-Section 8.1 repeats each conclusion with the basis it rests on, Section 8.2 names the delivered file behind
-each finding, Section 8.3 states what these data cannot settle, and Section 8.4 pairs each open question
-with the experiment that would close it.
+Section 8.1 repeats each conclusion with the basis it rests o. 
+Section 8.2 names the delivered file behind each finding. 
+Section 8.3 states what these data cannot settle. 
+Section 8.4 pairs each open question with the experiment that would close it.
 
 | Clone | What you have | What we suggest |
 | :--- | :--- | :---: |
