@@ -1,0 +1,11 @@
+sample	prior_from_client	pipeline_call	agrees	note
+Ctr_1	WT	WT（无 Δ202 证据）	yes	
+Ctr_2	WT	WT（无 Δ202 证据）	yes	
+Ctr_3	WT	WT（无 Δ202 证据）	yes	
+Sample_1	mono	单等位 Δ202（另一等位 WT）	yes	
+Sample_2	mono	单等位 Δ202（另一等位 WT）	yes	
+Sample_3	mono	单等位 Δ202（另一等位 WT）	yes	
+Sample_4	mono	单等位 Δ202（另一等位 WT）	yes	
+Sample_5	bi	双等位编辑：一条 Δ202 + 一条切点 indel(CUT1)	yes	
+Sample_6	bi	深度在缺失区【反而升高】(d_norm=3.26)，不可按缺失解读，需专门查	undetermined	靶点窗口读段 19,620（其余样本 982–1,290）、d_norm=3.26（缺失区深度反而升高）⇒ amplicon 样污染，基因型不可按表面值判读
+Sample_7	bi	双等位 Δ202	yes	

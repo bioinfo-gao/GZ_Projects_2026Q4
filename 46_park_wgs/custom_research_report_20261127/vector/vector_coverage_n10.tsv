@@ -1,0 +1,201 @@
+sample	group	vector	region	start	end	unmasked_bp	mean_depth	genome_depth_dedup_noovl	est_copies_per_diploid
+Ctr_1	control	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	6.75	46.62	0.289
+Ctr_1	control	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	46.62	0.0
+Ctr_1	control	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	46.62	0.0
+Ctr_1	control	pLPC_mCherry_BP1_2	LTR	1978	2447	470	2.61	46.62	0.112
+Ctr_1	control	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	0.54	46.62	0.023
+Ctr_1	control	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.28	46.62	0.012
+Ctr_1	control	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	18.25	46.62	0.783
+Ctr_1	control	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	46.62	NA
+Ctr_1	control	pLPC_mCherry_BP1_2	LTR	7449	7918	470	6.79	46.62	0.291
+Ctr_1	control	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	1.02	46.62	0.044
+Ctr_1	control	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.15	46.62	0.006
+Ctr_1	control	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	46.62	0.0
+Ctr_1	control	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	46.62	0.0
+Ctr_1	control	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.07	46.62	0.003
+Ctr_1	control	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	46.62	0.0
+Ctr_1	control	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	0.78	46.62	0.033
+Ctr_1	control	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	46.62	0.0
+Ctr_1	control	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	1.18	46.62	0.05
+Ctr_1	control	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.17	46.62	0.007
+Ctr_1	control	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	0.47	46.62	0.02
+Ctr_2	control	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	9.45	39.28	0.481
+Ctr_2	control	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	39.28	0.0
+Ctr_2	control	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	39.28	0.0
+Ctr_2	control	pLPC_mCherry_BP1_2	LTR	1978	2447	470	2.34	39.28	0.119
+Ctr_2	control	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	2.38	39.28	0.121
+Ctr_2	control	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.96	39.28	0.049
+Ctr_2	control	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	34.08	39.28	1.735
+Ctr_2	control	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	39.28	NA
+Ctr_2	control	pLPC_mCherry_BP1_2	LTR	7449	7918	470	5.29	39.28	0.269
+Ctr_2	control	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	4.69	39.28	0.239
+Ctr_2	control	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	39.28	0.0
+Ctr_2	control	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	39.28	0.0
+Ctr_2	control	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	39.28	0.0
+Ctr_2	control	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.36	39.28	0.018
+Ctr_2	control	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	2.0	39.28	0.102
+Ctr_2	control	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	9.07	39.28	0.462
+Ctr_2	control	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	39.28	0.0
+Ctr_2	control	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	1.5	39.28	0.076
+Ctr_2	control	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.15	39.28	0.008
+Ctr_2	control	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	3.62	39.28	0.184
+Ctr_3	control	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	5.9	41.62	0.284
+Ctr_3	control	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	41.62	0.0
+Ctr_3	control	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	41.62	0.0
+Ctr_3	control	pLPC_mCherry_BP1_2	LTR	1978	2447	470	2.64	41.62	0.127
+Ctr_3	control	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	1.81	41.62	0.087
+Ctr_3	control	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.52	41.62	0.025
+Ctr_3	control	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	15.16	41.62	0.729
+Ctr_3	control	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	41.62	NA
+Ctr_3	control	pLPC_mCherry_BP1_2	LTR	7449	7918	470	5.04	41.62	0.242
+Ctr_3	control	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	0.59	41.62	0.028
+Ctr_3	control	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	41.62	0.0
+Ctr_3	control	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	0.48	41.62	0.023
+Ctr_3	control	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.04	41.62	0.002
+Ctr_3	control	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	0.58	41.62	0.028
+Sample_1	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	6.13	44.14	0.278
+Sample_1	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	44.14	0.0
+Sample_1	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	44.14	0.0
+Sample_1	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	0.79	44.14	0.036
+Sample_1	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	1.27	44.14	0.057
+Sample_1	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.65	44.14	0.03
+Sample_1	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	20.76	44.14	0.941
+Sample_1	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	44.14	NA
+Sample_1	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	2.84	44.14	0.129
+Sample_1	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	2.71	44.14	0.123
+Sample_1	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	2.2	44.14	0.1
+Sample_1	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	12.94	44.14	0.586
+Sample_1	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	0.84	44.14	0.038
+Sample_1	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	0.0	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.01	44.14	0.0
+Sample_1	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	1.5	44.14	0.068
+Sample_2	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	12.48	38.49	0.649
+Sample_2	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	38.49	0.0
+Sample_2	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	38.49	0.0
+Sample_2	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	4.18	38.49	0.217
+Sample_2	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	5.34	38.49	0.277
+Sample_2	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	1.13	38.49	0.059
+Sample_2	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	34.72	38.49	1.804
+Sample_2	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	38.49	NA
+Sample_2	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	9.19	38.49	0.477
+Sample_2	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	6.11	38.49	0.318
+Sample_2	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	38.49	0.0
+Sample_2	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	38.49	0.0
+Sample_2	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	38.49	0.0
+Sample_2	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	4.52	38.49	0.235
+Sample_2	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	38.49	0.0
+Sample_2	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	3.62	38.49	0.188
+Sample_2	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	38.49	0.0
+Sample_2	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	1.71	38.49	0.089
+Sample_2	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.18	38.49	0.009
+Sample_2	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	2.46	38.49	0.128
+Sample_3	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	23.86	49.42	0.966
+Sample_3	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	49.42	0.0
+Sample_3	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	49.42	0.0
+Sample_3	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	2.1	49.42	0.085
+Sample_3	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	2.16	49.42	0.087
+Sample_3	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.48	49.42	0.019
+Sample_3	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	66.61	49.42	2.696
+Sample_3	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	49.42	NA
+Sample_3	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	3.07	49.42	0.124
+Sample_3	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	12.78	49.42	0.517
+Sample_3	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	49.42	0.0
+Sample_3	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	49.42	0.0
+Sample_3	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	49.42	0.0
+Sample_3	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.07	49.42	0.003
+Sample_3	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	49.42	0.0
+Sample_3	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	30.97	49.42	1.254
+Sample_3	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	49.42	0.0
+Sample_3	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	0.22	49.42	0.009
+Sample_3	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	1.44	49.42	0.058
+Sample_3	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	9.04	49.42	0.366
+Sample_4	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	5.65	42.17	0.268
+Sample_4	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	42.17	0.0
+Sample_4	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	42.17	0.0
+Sample_4	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	1.99	42.17	0.094
+Sample_4	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	1.17	42.17	0.056
+Sample_4	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.72	42.17	0.034
+Sample_4	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	18.51	42.17	0.878
+Sample_4	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	42.17	NA
+Sample_4	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	0.7	42.17	0.033
+Sample_4	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	0.95	42.17	0.045
+Sample_4	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	42.17	0.0
+Sample_4	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	42.17	0.0
+Sample_4	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	42.17	0.0
+Sample_4	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.07	42.17	0.003
+Sample_4	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	42.17	0.0
+Sample_4	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	2.95	42.17	0.14
+Sample_4	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	42.17	0.0
+Sample_4	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	1.7	42.17	0.081
+Sample_4	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.08	42.17	0.004
+Sample_4	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	0.72	42.17	0.034
+Sample_5	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	6.13	40.85	0.3
+Sample_5	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	40.85	0.0
+Sample_5	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	40.85	0.0
+Sample_5	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	1.43	40.85	0.07
+Sample_5	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	2.04	40.85	0.1
+Sample_5	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.55	40.85	0.027
+Sample_5	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	12.69	40.85	0.621
+Sample_5	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	40.85	NA
+Sample_5	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	4.52	40.85	0.221
+Sample_5	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	0.67	40.85	0.033
+Sample_5	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	40.85	0.0
+Sample_5	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	1.01	40.85	0.049
+Sample_5	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.03	40.85	0.001
+Sample_5	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	0.72	40.85	0.035
+Sample_6	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	116.33	32.51	7.155
+Sample_6	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	32.51	0.0
+Sample_6	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	32.51	0.0
+Sample_6	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	0.52	32.51	0.032
+Sample_6	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	1.53	32.51	0.094
+Sample_6	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.27	32.51	0.016
+Sample_6	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	750.59	32.51	46.17
+Sample_6	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	32.51	NA
+Sample_6	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	2.4	32.51	0.147
+Sample_6	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	44.52	32.51	2.738
+Sample_6	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.71	32.51	0.044
+Sample_6	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	32.51	0.0
+Sample_6	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	32.51	0.0
+Sample_6	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.91	32.51	0.056
+Sample_6	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	2.0	32.51	0.123
+Sample_6	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	343.69	32.51	21.141
+Sample_6	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	32.51	0.0
+Sample_6	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	0.43	32.51	0.027
+Sample_6	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	1.24	32.51	0.076
+Sample_6	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	11.88	32.51	0.731
+Sample_7	treated	pLPC_mCherry_BP1_2	WHOLE_VECTOR	1	7985	6275	7.53	46.58	0.323
+Sample_7	treated	pLPC_mCherry_BP1_2	ori	234	822	589	0.0	46.58	0.0
+Sample_7	treated	pLPC_mCherry_BP1_2	AmpR	982	1842	861	0.0	46.58	0.0
+Sample_7	treated	pLPC_mCherry_BP1_2	LTR	1978	2447	470	1.94	46.58	0.083
+Sample_7	treated	pLPC_mCherry_BP1_2	gag (truncated)	2912	3328	417	1.68	46.58	0.072
+Sample_7	treated	pLPC_mCherry_BP1_2	PuroR	3346	3945	600	0.83	46.58	0.036
+Sample_7	treated	pLPC_mCherry_BP1_2	mCherry	4956	5663	595	21.1	46.58	0.906
+Sample_7	treated	pLPC_mCherry_BP1_2	53BP1-FFR (aa1225-1716)	5670	7145	0	nan	46.58	NA
+Sample_7	treated	pLPC_mCherry_BP1_2	LTR	7449	7918	470	6.29	46.58	0.27
+Sample_7	treated	pMSCV_Cas9_EGFP	WHOLE_VECTOR	1	11191	11191	0.52	46.58	0.022
+Sample_7	treated	pMSCV_Cas9_EGFP	5' LTR	1	517	517	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	gag (truncated)	989	1405	417	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	SV40 NLS	1431	1451	21	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	Cas9	1476	5576	4101	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	nucleoplasmin NLS	5577	5624	48	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	EGFP	5640	6356	717	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	PuroR	6887	7486	600	0.0	46.58	0.0
+Sample_7	treated	pMSCV_Cas9_EGFP	3' LTR	7586	8100	515	0.48	46.58	0.021
+Sample_7	treated	pMSCV_Cas9_EGFP	ori	8640	9228	589	0.04	46.58	0.002
+Sample_7	treated	pMSCV_Cas9_EGFP	AmpR	9399	10259	861	0.37	46.58	0.016

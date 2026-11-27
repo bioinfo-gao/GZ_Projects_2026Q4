@@ -38,7 +38,7 @@ Section 8.4 pairs each open question with the experiment that would close it.
 | **Sample_2** | Same situation: the deletion is present in about **32%** of cells. | Re-clone before use. |
 | **Sample_3** | One of the two copies carries the deletion; the clone behaves as a clean heterozygote. | Ready to use as a single-allele clone. |
 | **Sample_4** | One of the two copies carries the deletion; clean heterozygote. | Ready to use as a single-allele clone. |
-| **Sample_5** | **Not two deleted copies.** One copy carries the 202 bp deletion; the other carries a small insertion/deletion at the first cut site. Both copies are disrupted, but by two different events. | Usable if "both copies disrupted" is what you need; not usable if the experiment requires two identical deletions. |
+| **Sample_5** | **Not two deleted copies.** One copy carries the 202 bp deletion; the other carries an **8 bp deletion** at the first cut site. Both copies are disrupted — and both are predicted to lose the protein — but by two different events. | Usable if "both copies disrupted" is what you need; not usable if the experiment requires two identical deletions. |
 | **Sample_6** | The target region is contaminated by what looks like a PCR product (amplicon) of the same locus: ~16× more reads there than in any other clone. **The genotype cannot be read at face value**, and the contamination also inflates the vector signal for this clone. | Re-extract DNA from a fresh culture and re-check this clone before using it. |
 | **Sample_7** | Both copies carry the 202 bp deletion, cleanly. | Ready to use as a two-allele clone. |
 

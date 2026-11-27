@@ -1,0 +1,11 @@
+sample	group	private_sv	hits_offtarget	hits_integration
+Ctr_1	control	9	0	0
+Ctr_2	control	13	0	0
+Ctr_3	control	2	0	0
+Sample_1	treated	6	0	0
+Sample_2	treated	28	0	0
+Sample_3	treated	19	0	0
+Sample_4	treated	14	2	0
+Sample_5	treated	4	0	0
+Sample_6	treated	17	0	0
+Sample_7	treated	6	0	0

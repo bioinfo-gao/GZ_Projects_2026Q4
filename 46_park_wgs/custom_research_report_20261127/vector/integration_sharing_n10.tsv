@@ -1,0 +1,144 @@
+chrom	breakpoint	side	n_samples	n_treated	n_control	samples	gene
+chr1	60617209	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	LINC01748
+chr11	61804435	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	FADS1,FADS2
+chr11	61804455	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	FADS1,FADS2
+chr11	111538690	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	
+chr11	111538709	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	
+chr12	77049618	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	E2F7
+chr12	77049636	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	E2F7
+chr16	50405578	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	
+chr16	50405597	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	
+chr3	89406513	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	EPHA3
+chr4	100591812	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	EMCN
+chr4	100591830	R	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	EMCN
+chr7	64067978	L	10	7	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6,Sample_7	ENSG00000285544,ZNF727
+chr13	56889658	R	9	6	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_5,Sample_6,Sample_7	
+chr2	238290383	L	9	6	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_3,Sample_4,Sample_5,Sample_6	ENSG00000283635
+chr16	25065936	R	7	4	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_4,Sample_7	
+chr7	64067996	R	7	5	2	Ctr_2,Ctr_3,Sample_2,Sample_3,Sample_4,Sample_6,Sample_7	ENSG00000285544,ZNF727
+chrX	19037540	L	7	4	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_4,Sample_5	ADGRG2,ENSG00000286724
+chr13	56889640	L	6	4	2	Ctr_2,Ctr_3,Sample_1,Sample_3,Sample_6,Sample_7	
+chr16	25065918	L	6	3	3	Ctr_1,Ctr_2,Ctr_3,Sample_1,Sample_2,Sample_7	
+chr18	78734254	R	6	3	3	Ctr_1,Ctr_2,Ctr_3,Sample_2,Sample_3,Sample_6	
+chr2	238290403	R	6	4	2	Ctr_1,Ctr_3,Sample_1,Sample_3,Sample_5,Sample_6	ENSG00000283635
+chr8	3524963	L	6	4	2	Ctr_1,Ctr_2,Sample_1,Sample_2,Sample_3,Sample_6	CSMD1
+chrX	129701110	R	6	5	1	Ctr_2,Sample_1,Sample_2,Sample_3,Sample_4,Sample_6	
+chr11	47135208	L	5	4	1	Ctr_2,Sample_2,Sample_3,Sample_4,Sample_6	CSTPP1
+chr11	61967716	L	5	4	1	Ctr_2,Sample_1,Sample_2,Sample_3,Sample_6	
+chr19	33521598	R	5	4	1	Ctr_2,Sample_2,Sample_3,Sample_4,Sample_6	PEPD
+chr3	89406493	L	5	4	1	Ctr_2,Sample_1,Sample_2,Sample_4,Sample_6	EPHA3
+chr8	3524982	R	5	4	1	Ctr_2,Sample_1,Sample_2,Sample_3,Sample_6	CSMD1
+chrX	129701092	L	5	4	1	Ctr_2,Sample_2,Sample_3,Sample_4,Sample_6	
+chr1	20644735	L	4	3	1	Ctr_2,Sample_3,Sample_6,Sample_7	PINK1,PINK1-AS
+chr1	20644754	R	4	3	1	Ctr_2,Sample_3,Sample_6,Sample_7	PINK1,PINK1-AS
+chr11	95899700	R	4	3	1	Ctr_2,Sample_2,Sample_3,Sample_6	MTMR2
+chr2	66275883	R	4	2	2	Ctr_1,Ctr_2,Sample_6,Sample_7	
+chr2	222101869	R	4	3	1	Ctr_2,Sample_2,Sample_3,Sample_6	
+chr3	27626824	R	4	3	1	Ctr_2,Sample_1,Sample_2,Sample_6	
+chr4	186473598	L	4	3	1	Ctr_2,Sample_1,Sample_2,Sample_6	ENSG00000272297,F11-AS1
+chr7	81790583	L	4	3	1	Ctr_2,Sample_2,Sample_3,Sample_6	
+chr8	37966399	L	4	3	1	Ctr_2,Sample_1,Sample_2,Sample_6	ADRB3
+chr1	64847624	R	3	2	1	Ctr_2,Sample_3,Sample_6	JAK1
+chr1	111928627	R	3	2	1	Ctr_2,Sample_3,Sample_6	KCND3
+chr11	57913405	L	3	3	0	Sample_1,Sample_2,Sample_6	
+chr11	70361297	R	3	3	0	Sample_2,Sample_3,Sample_6	ENSG00000254604,PPFIA1
+chr12	18889961	R	3	2	1	Ctr_2,Sample_2,Sample_5	
+chr14	99603977	L	3	2	1	Ctr_2,Sample_3,Sample_6	CCDC85C
+chr14	99603997	R	3	2	1	Ctr_2,Sample_3,Sample_6	CCDC85C
+chr18	78734236	L	3	2	1	Ctr_2,Sample_3,Sample_6	
+chr19	33521580	L	3	3	0	Sample_2,Sample_3,Sample_6	PEPD
+chr2	222101851	L	3	2	1	Ctr_2,Sample_3,Sample_6	
+chr20	57314970	L	3	3	0	Sample_2,Sample_3,Sample_6	
+chr21	43694614	L	3	3	0	Sample_1,Sample_2,Sample_6	RRP1B
+chr3	127798377	R	3	2	1	Ctr_3,Sample_2,Sample_6	MGLL
+chr3	187905448	L	3	3	0	Sample_2,Sample_3,Sample_6	
+chr7	128169615	L	3	2	1	Ctr_2,Sample_3,Sample_6	ENSG00000292309
+chr7	135950611	L	3	2	1	Ctr_2,Sample_3,Sample_6	MTPN
+chr8	26598103	L	3	2	1	Ctr_3,Sample_1,Sample_3	DPYSL2
+chr1	72976316	L	2	2	0	Sample_3,Sample_6	
+chr11	47135226	R	2	2	0	Sample_3,Sample_6	CSTPP1
+chr11	91827157	L	2	2	0	Sample_3,Sample_6	LINC02756
+chr11	95899701	R	2	2	0	Sample_3,Sample_6	MTMR2
+chr13	37744329	R	2	2	0	Sample_3,Sample_6	TRPC4
+chr15	92072994	R	2	2	0	Sample_3,Sample_6	SLCO3A1
+chr17	78660262	L	2	1	1	Ctr_2,Sample_6	
+chr18	33276133	R	2	0	2	Ctr_1,Ctr_3	CCDC178
+chr2	131040362	L	2	2	0	Sample_3,Sample_6	ARHGEF4,SMIM39
+chr3	127798356	L	2	1	1	Ctr_3,Sample_6	MGLL
+chr4	41653427	L	2	2	0	Sample_1,Sample_2	LIMCH1
+chr4	41653445	R	2	2	0	Sample_1,Sample_2	LIMCH1
+chr4	187577471	R	2	2	0	Sample_1,Sample_6	LINC02492
+chr5	150129776	L	2	2	0	Sample_3,Sample_6	PDGFRB
+chr6	30747522	R	2	2	0	Sample_3,Sample_4	HCG20
+chr7	4748097	L	2	1	1	Ctr_2,Sample_6	FOXK1
+chr7	18510149	R	2	0	2	Ctr_1,Ctr_3	HDAC9
+chr8	15944566	R	2	2	0	Sample_1,Sample_2	ENSG00000287476
+chr9	99800689	L	2	2	0	Sample_2,Sample_5	ENSG00000237461,STX17-DT
+chr1	111928609	L	1	1	0	Sample_6	KCND3
+chr1	153929580	R	1	1	0	Sample_6	DENND4B,ENSG00000284738
+chr1	242611889	L	1	1	0	Sample_1	
+chr1	242611908	R	1	1	0	Sample_1	
+chr10	131218921	R	1	1	0	Sample_6	TCERG1L
+chr11	14558958	L	1	0	1	Ctr_2	PSMA1
+chr11	57913423	R	1	1	0	Sample_2	
+chr11	91827176	R	1	1	0	Sample_6	LINC02756
+chr11	134636841	L	1	1	0	Sample_2	
+chr11	134636859	R	1	1	0	Sample_2	
+chr12	34124359	L	1	1	0	Sample_2	
+chr12	102810444	R	1	1	0	Sample_3	LINC00485
+chr12	108617440	L	1	1	0	Sample_2	
+chr12	110468142	R	1	0	1	Ctr_2	GPN3
+chr12	131884154	R	1	1	0	Sample_6	
+chr13	20002957	R	1	1	0	Sample_2	ZMYM2
+chr13	39407385	R	1	1	0	Sample_6	LHFPL6
+chr13	57708755	R	1	1	0	Sample_6	PCDH17
+chr15	50059423	L	1	1	0	Sample_2	ATP8B4
+chr15	50059441	R	1	1	0	Sample_2	ATP8B4
+chr16	2490033	L	1	1	0	Sample_6	TBC1D24
+chr17	11003332	R	1	1	0	Sample_2	
+chr17	20902668	R	1	1	0	Sample_6	CCDC144NL-AS1,RNASEH1P1
+chr17	30094180	L	1	1	0	Sample_1	EFCAB5,ENSG00000265394
+chr17	49263272	R	1	1	0	Sample_2	FLJ40194
+chr17	63872076	R	1	1	0	Sample_6	CSH2
+chr17	77729870	L	1	1	0	Sample_6	
+chr19	9572257	R	1	1	0	Sample_2	ZNF121
+chr19	41928463	L	1	1	0	Sample_6	ARHGEF1
+chr2	3558183	R	1	1	0	Sample_6	ENSG00000286905,RNASEH1
+chr2	66275865	L	1	1	0	Sample_6	
+chr2	70979696	L	1	0	1	Ctr_2	ANKRD53,ENSG00000258881,TEX261
+chr2	131040381	R	1	1	0	Sample_6	ARHGEF4,SMIM39
+chr2	217612045	R	1	1	0	Sample_6	DIRC3
+chr2	226752966	L	1	1	0	Sample_6	IRS1
+chr2	226752986	R	1	1	0	Sample_2	IRS1
+chr20	13669113	L	1	1	0	Sample_3	
+chr20	63643814	R	1	1	0	Sample_6	STMN3
+chr22	20842077	L	1	1	0	Sample_2	PI4KA
+chr22	39566709	R	1	1	0	Sample_6	
+chr3	50915199	L	1	1	0	Sample_2	DOCK3
+chr3	50915217	R	1	1	0	Sample_2	DOCK3
+chr3	58608709	L	1	1	0	Sample_2	FAM107A,FAM3D-AS1
+chr3	146248186	L	1	1	0	Sample_2	PLSCR4
+chr3	149400811	L	1	1	0	Sample_5	
+chr4	7097092	L	1	1	0	Sample_6	LINC02447
+chr4	7097110	R	1	1	0	Sample_6	LINC02447
+chr4	16289820	L	1	1	0	Sample_2	TAPT1-AS1
+chr4	90188931	R	1	1	0	Sample_6	CCSER1
+chr4	187577452	L	1	1	0	Sample_6	LINC02492
+chr5	121005614	L	1	1	0	Sample_3	
+chr6	34766834	R	1	1	0	Sample_6	SNRPC
+chr6	160242022	L	1	1	0	Sample_2	SLC22A2
+chr6	160242040	R	1	1	0	Sample_2	SLC22A2
+chr7	88688	L	1	1	0	Sample_2	ENSG00000232325
+chr7	71536880	L	1	1	0	Sample_6	GALNT17
+chr7	71536898	R	1	1	0	Sample_6	GALNT17
+chr8	15944548	L	1	1	0	Sample_2	ENSG00000287476
+chr8	66313309	L	1	1	0	Sample_2	
+chr8	68583733	R	1	1	0	Sample_6	C8orf34
+chr9	22101905	R	1	1	0	Sample_6	CDKN2B-AS1
+chr9	87859426	L	1	1	0	Sample_2	NPAP1P9
+chr9	87859444	R	1	1	0	Sample_2	NPAP1P9
+chr9	99800708	R	1	1	0	Sample_5	ENSG00000237461,STX17-DT
+chrX	8732046	L	1	1	0	Sample_6	ANOS1
+chrX	34275642	L	1	1	0	Sample_3	ENSG00000233571,ENSG00000233928
+chrX	76973055	R	1	0	1	Ctr_1	MIR325HG
+chrX	120560441	R	1	1	0	Sample_6	CUL4B

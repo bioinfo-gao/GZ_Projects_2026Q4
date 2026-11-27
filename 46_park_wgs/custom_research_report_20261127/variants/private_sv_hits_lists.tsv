@@ -1,0 +1,3 @@
+sample	group	svtype	sv_chrom	sv_pos	list	dist	site	detail
+Sample_4	treated	INV	chr19	46016113	offtarget_candidate	587	46016700	gRNA2_19nt,4
+Sample_4	treated	INV	chr19	46016152	offtarget_candidate	548	46016700	gRNA2_19nt,4
