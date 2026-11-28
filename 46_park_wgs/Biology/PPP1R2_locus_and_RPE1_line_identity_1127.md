@@ -36,8 +36,9 @@ PPP1R2 编码 **protein phosphatase 1 (PP1) inhibitor-2**，习称 **I-2**（旧
 PPP1R2 只是"那个位置"。**所以本基因的生物学在本项目里的作用是潜在混杂因素，不是读出指标。**
 
 **第二段 —— 删掉的 202 bp 恰好是这个基因的翻译起点，而且删得异常"整齐"。**【测】
-缺失 `chr3:195,542,948–195,543,149` 落在 **exon 1**，删去 **5′UTR 远端 124 bp + 起始密码子 ATG
-+ 密码子 1–26（78 bp CDS）**，124 + 78 = 202 ✓。
+缺失 `chr3:195,542,948–195,543,149` 落在 **exon 1**，删去
+**the 3′-most 124 bp of the 5′UTR（紧接 ATG 上游那一段）+ 起始密码子 ATG + 密码子 1–26（78 bp CDS）**，
+124 + 78 = 202 ✓。
 **78 bp 正好是 26 个完整密码子** ⇒ 残余下游 CDS **仍在原读框上**，断点正落在密码子 26/27 之间。
 **转录起点（TSS）与启动子未被删** —— 保留了 176 bp 的 5′UTR，所以这不是启动子缺失，
 **是"起始密码子 + N 端 26 残基"缺失**，转录大概率照常进行。
@@ -190,10 +191,25 @@ P46 数字来源：`analysis/stage3_vector_v2_20261124/tables/vector_coverage_n1
 | 要素 | 坐标 | 长度 | 是否落在本项目缺失内 |
 | :--- | :---: | :---: | :---: |
 | exon 1 5′端（TSS） | 195,543,325 | — | **否**（保留） |
-| 5′UTR | 195,543,026–195,543,325 | 300 bp | **部分**：远端 124 bp 被删，近端 176 bp 保留 |
+| 5′UTR | 195,543,026–195,543,325 | 300 bp | **部分**：被删的是 **the 3′-most 124 bp of the 5′UTR**（`195,543,026–195,543,149`，紧接 ATG 上游）；保留的是 **the 5′-most 176 bp**（`195,543,150–195,543,325`，含 TSS）
+
+原文CC 的错误写法： 5′UTR	195,543,026–195,543,325	300 bp	部分：远端(distal)124 bp被删，近端(proxima) 176 bp 保留， CC的意思是离TSS远，这不符合转录本表述惯例 |
 | **起始密码子 ATG** | **195,543,023–195,543,025** | 3 bp | **是** |
 | exon 1 内 CDS | 195,542,904–195,543,025 | 122 bp | **部分**：78 bp 被删，44 bp 保留 |
 | exon 1 3′端 | 195,542,904 | — | 否 |
+
+⚠ **本文一律不用 distal / proximal（更不用"远端 / 近端"）描述这个 5′UTR。**
+**这两个词本身不含锚点**，而本例有三个互相冲突的候选锚点：
+
+| 锚点 | 来自哪种惯例 | 按它读，"distal 124 bp" 指哪一段 |
+| :--- | :---: | :---: |
+| **TSS / promoter** | promoter 文献（`proximal promoter` / `distal enhancer`） | `195,543,026–195,543,149`（**离 TSS 远、紧接 ATG**）✓ 这是本文原意 |
+| **ATG / CDS** | transcript 结构描述，多数读者的默认 | `195,543,150–195,543,325`（**离 ATG 远、含 TSS**）✗ 与原意相反 |
+| **基因组坐标** | 看 IGV 时的直觉 | ***PPP1R2*** **在负链** ⇒ 坐标方向与转录方向相反，再反一次 |
+
+⇒ 全文改用 **transcript 解剖学方位**：`the 5′-most … of the 5′UTR` / `the 3′-most … of the 5′UTR`，
+后面附坐标区间。**这类表述不需要锚点**，在正负链上读法一致。
+本例：被删 = `the 3′-most 124 bp`（紧接 ATG 上游）；保留 = `the 5′-most 176 bp`（含 TSS）。
 
 ⚠ **起始密码子位置在全部 4 个有注释起始密码子的转录本中完全一致**
 （`ENST00000618156` / `438848` / `625807` / `413183`，均为 195,543,023–195,543,025）
@@ -254,7 +270,7 @@ I-2 被报道定位于中心体与纺锤体，参与染色体分离，并有文�
 
 | 被删掉的 | 长度 |
 | :--- | :---: |
-| 5′UTR 远端 | 124 bp |
+| the 3′-most part of the 5′UTR（紧接 ATG 上游，`195,543,026–195,543,149`） | 124 bp |
 | 起始密码子 + 密码子 2–26 | 78 bp（= **26 个完整密码子**） |
 | **合计** | **202 bp** ✓ |
 
@@ -319,6 +335,106 @@ I-2 被报道定位于中心体与纺锤体，参与染色体分离，并有文�
 1. PTC 落在 **exon 1**，距下游多个 exon-exon junction 很远 ⇒ **NMD 可能发生**，但本轮无 RNA 数据，**未评估**；
 2. 以上全部是**注释层面的预测**，不是蛋白实测（无 Western、无功能试验）；
 3. 前 24 残基保留意味着 `KGILK` 仍在该截短肽上 ⇒ **"短肽完全无害"也是未经验证的假设**。
+
+### 5.4 缺失序列原文（供逐碱基比对，全部【测】）
+
+> 全部由 `samtools faidx` 从 GRCh38 直读，复算命令见 §8。
+> **已交叉核对**：`GATK.GRCh38/Homo_sapiens_assembly38.fasta` 与
+> `human_gencode_v45/GRCh38.primary_assembly.genome.fa` 在本区间 `cmp` 逐字节相同。
+>
+> ⚠ **读之前先认链**：***PPP1R2*** **在负链**。IGV / 参考 FASTA 给的是**正链**；
+> **mRNA sense = 负链 = 坐标从大到小读**。下面每段都给两条链，混用会得出完全错误的密码子。
+
+#### 5.4.1 Δ202：`chr3:195,542,948–195,543,149`（202 bp）
+
+**正链（参考 / IGV 方向），坐标升序**
+```
+195,542,948  CACCATAGAGGAAGTCGTAGAGGTCTTGTTCTTCAAGATCCCCTTGATGGGCCGGTGCGA
+195,543,008  GGCCGTCGAGGCCGCCATTGCCGGGCGCTCCGGCTGTCGGCTCAGGGTCGCTGCTTGGCG
+195,543,068  TGGGGTCCGCGAAGAGAAGGGTCGGCACAGCAGAGACTCGCAGGCAGCCGCAGATCCCGC
+195,543,128  TCAGGGCTAAAGCGGCCGCAAC
+```
+
+**负链 = mRNA sense，5′→3′，坐标降序**
+```
+195,543,149  GTTGCGGCCGCTTTAGCCCTGAGCGGGATCTGCGGCTGCCTGCGAGTCTCTGCTGTGCCG
+195,543,089  ACCCTTCTCTTCGCGGACCCCACGCCAAGCAGCGACCCTGAGCCGACAGCCGGAGCGCCC
+195,543,029  GGCAATGGCGGCCTCGACGGCCTCGCACCGGCCCATCAAGGGGATCTTGAAGAACAAGAC
+195,542,969  CTCTACGACTTCCTCTATGGTG
+```
+
+**同一 202 nt 按功能切成三段（mRNA sense）** —— 脚本断言三段首尾相接 == 上面整块，返回 `True`：
+
+| 段 | 坐标 | 长度 | 序列（mRNA sense，5′→3′） |
+| :--- | :---: | :---: | :---: |
+| **[A] 5′UTR 部分** | `195,543,026–195,543,149` | 124 nt | `GTTGCGGCCGCTTTAGCCCTGAGCGGGATCTGCGGCTGCCTGCGAGTCTCTGCTGTGCCG` + `ACCCTTCTCTTCGCGGACCCCACGCCAAGCAGCGACCCTGAGCCGACAGCCGGAGCGCCC` + `GGCA` |
+| **[B] 起始密码子** | `195,543,023–195,543,025` | 3 nt | `ATG` |
+| **[C] 密码子 2–26** | `195,542,948–195,543,022` | 75 nt | `GCGGCCTCGACGGCCTCGCACCGGCCCATCAAGGGGATCTTGAAGAACAAGACCTCTACG` + `ACTTCCTCTATGGTG` |
+
+124 + 3 + 75 = 202 ✓；**[B] + [C] = 78 nt = 恰好 26 个完整密码子** ⇒ 残余下游 CDS 仍在原读框上。
+翻译 [B]+[C] = **`MAASTASHRPIKGILKNKTSTTSSMV`（26 aa）**，与 §5.1 所列一致。
+
+⭐ **这一段序列顺带提供了一个独立互证**：翻译出的第 12–16 残基正是 **`KGILK`**，
+与 UniProt **P41236**（人 I-2）的 N 端逐字相符 ⇒ **GENCODE 坐标、链向、读框三者同时被验证**，
+而不是只靠注释文件自洽。它也直接说明 **Δ202 删掉的就是 §4.2 那个 PP1 对接基序本身**。
+
+**逐密码子（可直接对着 IGV 点位核）**
+```
+codon  1 ATG M  195,543,023-195,543,025     codon 14 ATC I  195,542,984-195,542,986
+codon  2 GCG A  195,543,020-195,543,022     codon 15 TTG L  195,542,981-195,542,983
+codon  3 GCC A  195,543,017-195,543,019     codon 16 AAG K  195,542,978-195,542,980
+codon  4 TCG S  195,543,014-195,543,016     codon 17 AAC N  195,542,975-195,542,977
+codon  5 ACG T  195,543,011-195,543,013     codon 18 AAG K  195,542,972-195,542,974
+codon  6 GCC A  195,543,008-195,543,010     codon 19 ACC T  195,542,969-195,542,971
+codon  7 TCG S  195,543,005-195,543,007     codon 20 TCT S  195,542,966-195,542,968
+codon  8 CAC H  195,543,002-195,543,004     codon 21 ACG T  195,542,963-195,542,965
+codon  9 CGG R  195,542,999-195,543,001     codon 22 ACT T  195,542,960-195,542,962
+codon 10 CCC P  195,542,996-195,542,998     codon 23 TCC S  195,542,957-195,542,959
+codon 11 ATC I  195,542,993-195,542,995     codon 24 TCT S  195,542,954-195,542,956
+codon 12 AAG K  195,542,990-195,542,992     codon 25 ATG M  195,542,951-195,542,953
+codon 13 GGG G  195,542,987-195,542,989     codon 26 GTG V  195,542,948-195,542,950
+```
+
+**Δ202 的接合处（mRNA sense，两侧各 40 nt）** —— 左侧 40 nt 两型相同，右侧自第 2 位起分叉：
+```
+缺失型:  TGTCGTGACAACCGCTGCGGTAGCCGTTTCCGAGGCAGCA | GCGTCGGCCGAACAGCCCCGCGGGAATGTCGACGAGGAGC
+野生型:  TGTCGTGACAACCGCTGCGGTAGCCGTTTCCGAGGCAGCA | GTTGCGGCCGCTTTAGCCCTGAGCGGGATCTGCGGCTGCC
+```
+
+#### 5.4.2 Sample_5 第二条等位：`chr3:195,542,947–195,542,954`（8 bp）
+
+| 链 | 序列 |
+| :--- | :---: |
+| 正链（参考 / IGV） | `CCACCATA` |
+| 负链（mRNA sense） | `TATGGTGG` |
+
+**逐碱基的密码子归属**（负链；密码子 *n* 占 `195,543,026-3n` … `195,543,028-3n`）：
+
+| 坐标 | 碱基（mRNA sense） | 归属 |
+| :--- | :---: | :---: |
+| `195,542,954` | `T` | 密码子 24 第 3 位 |
+| `195,542,953` | `A` | 密码子 25 第 1 位 |
+| `195,542,952` | `T` | 密码子 25 第 2 位 |
+| `195,542,951` | `G` | 密码子 25 第 3 位 |
+| `195,542,950` | `G` | 密码子 26 第 1 位 |
+| `195,542,949` | `T` | 密码子 26 第 2 位 |
+| `195,542,948` | `G` | 密码子 26 第 3 位 |
+| `195,542,947` | `G` | 密码子 27 第 1 位 |
+
+⇒ 密码子 24 末位 + 密码子 25、26 整个 + 密码子 27 首位 = 8 nt，**非 3 的倍数 ⇒ 移码**（§5.3）。
+
+**接合处（mRNA sense，50 | 8 | 50）**
+```
+野生型:  CACCGGCCCATCAAGGGGATCTTGAAGAACAAGACCTCTACGACTTCCTC [TATGGTGG] CGTCGGCCGAACAGCCCCGCGGGAATGTCGACGAGGAGCTGAGGTGAGCG
+缺失型:  CACCGGCCCATCAAGGGGATCTTGAAGAACAAGACCTCTACGACTTCCTC           CGTCGGCCGAACAGCCCCGCGGGAATGTCGACGAGGAGCTGAGGTGAGCG
+```
+
+⚠ **这段右侧 50 nt 已跨出 exon 1 的 CDS 末端（`195,542,904`），含内含子序列。**
+**不要拿它直接数下游密码子** —— 读框后果必须在拼接后的 mRNA 上算（§5.3 的 45 aa 即如此得出）。
+
+**§5.3 那个"看起来矛盾"的点在序列级闭合**：缺失吃掉密码子 24 的第 3 位（`T` @ `195,542,954`），
+重组后该密码子 = `TC` + 下游首个保留碱基 `C` = **`TCC`**，仍编码 Ser（原为 `TCT`，亦 Ser）。
+⇒ "前 24 残基与野生型相同"与"缺失覆盖密码子 24 末位"**不矛盾**，移码的蛋白层面起点是**残基 25**。
 
 ---
 
@@ -454,11 +570,22 @@ samtools view -F 0x900 $B/Ctr_1.markdup.bam chr7:50000000-50100000 \
 # § 5.3  Sample_5 第二条等位的 8 bp 缺失坐标（CIGAR 直读）
 samtools view $B/Sample_5.markdup.bam chr3:195542900-195543000 \
   | awk '$6 ~ /8D/ {print $4,$6}' | sort | uniq -c | sort -rn | head
+
+# § 5.4  两段缺失的参考序列（正链；负链序列 = 其反向互补）
+samtools faidx $FA chr3:195542948-195543149   # Delta-202，202 bp
+samtools faidx $FA chr3:195542947-195542954   # Sample_5 第二条等位，8 bp
+samtools faidx $FA chr3:195543026-195543149   # 其中的 5'UTR 段，124 bp
+samtools faidx $FA chr3:195543023-195543025   # 起始密码子（负链读作 ATG）
+
+# § 5.4  两个 FASTA 给出同一序列的交叉核对（本文已跑，结果 identical）
+FA2=/Work_bio/references/Homo_sapiens/GRCh38/GATK.GRCh38/Homo_sapiens_assembly38.fasta
+diff <(samtools faidx $FA  chr3:195542948-195543149 | tail -n +2) \
+     <(samtools faidx $FA2 chr3:195542948-195543149 | tail -n +2) && echo identical
 ```
 
-§5.2 / §5.3 的读框与翻译计算用的三个一次性脚本留在 scratchpad
+§5.2 / §5.3 / §5.4 的读框、翻译与序列切分计算用的一次性脚本留在 scratchpad
 （`/tmp/claude-1001/-home-gao/76ac2071-2f9a-4347-a1de-4d68c31a7935/scratchpad/`，
-文件名 `ppp1r2_anno.py`、`frame.py`、`s5_allele.py`、`del202_mrna.py`、`cpg.py`）。
+文件名 `ppp1r2_anno.py`、`frame.py`、`s5_allele.py`、`del202_mrna.py`、`cpg.py`、`delseq.py`）。
 **scratchpad 会被清理** ⇒ 若这些结论要进交付物，需把脚本移进 `scripts/` 并编号。
 
 ---
