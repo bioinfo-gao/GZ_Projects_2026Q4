@@ -184,7 +184,9 @@ indels_near_cutsites / supplementary_alignments / calibration_vs_client / filter
 **报告必须写明的三条边界**：
 1. 只支持 **mismatch**，不支持 DNA/RNA bulge（需 cas-offinder，本机未装）⇒ bulge 型脱靶属已知盲区；
 2. 对照不是 CRISPR-naive ⇒ 结论层级为"与编辑共分离"；
-3. 枚举只覆盖"序列近似"这一类脱靶，不覆盖脱靶后再经修复产生的远端事件（由 Stage 4 兜）。
+3. 枚举只覆盖"序列近似"这一类脱靶，**不覆盖"切断之后经修复产生、但断点不落在任何候选位点上"的事件**
+   —— 例如两处断端互相连接形成的易位、大片段缺失/倒位、以及插入到别处的片段（由 Stage 4 兜）。
+   （原写"远端事件"，**已于 2026-11-27 改写**：「远端」没写相对谁，既可读成"离切点远"也可读成"离靶点远"，是无锚点方位词。）
 
 **产物**：`analysis/stage2a_candidates_20261121/`、`analysis/stage2b_offtarget_evidence_20261123_v2/`、
 `analysis/stage2c_paired_cut_20261123/`
